@@ -21,14 +21,11 @@ const vcols=['#ff3d71','#ff3d71','#ff5c8a','#e14eca','#c026d3','#9b5cff','#7a5cf
 for(let i=0;i<28;i++){const b=$$('i');b.style.animationDuration=rnd(.35,1)+'s';b.style.animationDelay=-rnd(0,1)+'s';b.style.background=vcols[Math.min(vcols.length-1,i*8/28|0)];b.style.height=rnd(8,34)+'px';viz.append(b)}deck.after(viz);
 const X=$$('div','xtra',`<div class="xrow"><button class="pill" id="xs" aria-label="Shuffle">${X_SHUF}</button><button class="pill" id="xr" aria-label="Repeat">${X_REP}<b id="xrb" hidden></b></button><label class="pill sel" aria-label="Playback speed"><select id="xv"><option value="0.75">0.75×</option><option value="1" selected>1×</option><option value="1.25">1.25×</option></select>${X_CHEV}</label><button class="pill" id="xl" aria-label="Like">${X_HEART_O}<span>Like</span></button></div><div class="xrow"><button class="pill" id="xp" aria-label="Previous">⏮</button><button class="pill" id="xz" aria-label="Sleep timer">${X_MOON}<span>Sleep</span><b id="xzb" hidden></b></button><label class="pill sel" aria-label="Sleep duration">${X_SLASH}<select id="xoff"><option value="0" selected>Off</option><option value="15">15</option><option value="30">30</option><option value="60">60</option></select>${X_CHEV}</label><button class="pill" id="xh" aria-label="Share song">${X_SHARE}<span>Share</span></button><button class="pill" id="xd" aria-label="Show video">${X_VIDEO}<span>Show Video</span></button></div><button id="xw" hidden>Resume listening</button>`);$('.ctl').after(X);
 $('aside').append($$('details','',`<summary>Liked songs</summary><ol id="lk2"></ol>`));
-/* v21: the bottom player bar. It sits above the tab bar on EVERY page (Play,
-   Queue, Sing, Room, More) whenever a song is playing or paused, so you can
-   pause/skip/see the song from anywhere without going back to the Play page.
-   Compact: artwork + title + prev / play-pause / next. Prev and play-pause are
-   host/control-only (guests see them greyed out); Next stays enabled for
-   everyone — a guest's tap is a vote to skip. */
-const mini=$$('div','',`<img id="mi" alt="" width="40" height="30"><b id="mt" style="flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis"></b><button id="mprev" aria-label="Previous">⏮</button><button id="mp">Play</button><button id="mnext" aria-label="Next">⏭</button>`);mini.id='mini';document.body.append(mini);
-const updMini=()=>mini.classList.toggle('show',document.body.classList.contains('in-room')&&!!S?.cur);window.updMini=updMini;
+/* Compact transport bar for non-Play tabs. */
+const miniIcon=p=>`<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true">${p}</svg>`;
+const miniPlay=miniIcon('<path d="M7 4.5v15L19.5 12z"/>'),miniPause=miniIcon('<rect x="6" y="5" width="4.5" height="14" rx="1"/><rect x="13.5" y="5" width="4.5" height="14" rx="1"/>');
+const mini=$$('div','',`<img id="mi" alt="" width="36" height="36"><b id="mt" style="flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis"></b><button id="mprev" aria-label="Previous track">${miniIcon('<path d="M6 5v14l9-7zM17 5h2v14h-2z"/>')}</button><button id="mp" aria-label="Play">${miniPlay}</button><button id="mnext" aria-label="Next track">${miniIcon('<path d="M18 5v14l-9-7zM5 5h2v14H5z"/>')}</button>`);mini.id='mini';document.body.append(mini);
+const updMini=()=>mini.classList.toggle('show',document.body.classList.contains('in-room')&&$('#room').dataset.tab!=='play'&&!!S?.cur);window.updMini=updMini;
 /* pink fill on the seek + volume sliders */
 const setFill=el=>{if(el)el.style.setProperty('--p',((el.value-el.min)/(el.max-el.min)*100)+'%')};
 setInterval(()=>{setFill($('#sc'));setFill($('#vol'))},300);
@@ -38,7 +35,7 @@ function paint(){const c=S?.cur,M=S&&(S.hostId===me.id||S.co.includes(me.id)),C=
  const rp=S?.repeat||'off';$('#xr').classList.toggle('on',rp!=='off');const xrb=$('#xrb');xrb.hidden=rp==='off';xrb.textContent=rp==='one'?'1':'ALL';
  $('#xp').disabled=!can;['#xs','#xr','#xv'].forEach(i=>$(i).disabled=!C);$('#xv').closest('.pill').classList.toggle('off',!C);if(c)$('#xv').value=String(c.speed||1);
  $('#xl').innerHTML=(c&&likes().some(x=>x.id===c.videoId)?X_HEART('#ff5c8a'):X_HEART_O)+'<span>Like</span>';
- if(c){$('#mi').src=c.artwork;$('#mt').textContent=c.title;$('#mp').textContent=c.playing?'Pause':'Play'}$('#mp').disabled=!C;$('#mprev').disabled=!C;updMini();showLikes()}
+ if(c){$('#mi').src=c.artwork;$('#mt').textContent=c.title;$('#mp').innerHTML=c.playing?miniPause:miniPlay;$('#mp').setAttribute('aria-label',c.playing?'Pause':'Play')}$('#mp').disabled=!C;$('#mprev').disabled=!C;updMini();showLikes()}
 socket.on('state',paint);
 $('#xp').onclick=()=>act({type:'prev'});$('#xs').onclick=()=>act({type:'shuffle'});$('#xr').onclick=()=>act({type:'repeat'});$('#xv').onchange=e=>act({type:'speed',v:parseFloat(e.target.value)});$('#mp').onclick=()=>{localToggle();act({type:'play'})};$('#mprev').onclick=()=>act({type:'prev'});$('#mnext').onclick=()=>act({type:'skip'});
 $('#xl').onclick=()=>{const c=S?.cur;if(!c){toast('Paste a YouTube link to start the room.');return}let a=likes();a=a.some(x=>x.id===c.videoId)?a.filter(x=>x.id!==c.videoId):[...a,{id:c.videoId,t:c.title}];L.likes=JSON.stringify(a);paint()};

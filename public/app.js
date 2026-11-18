@@ -10,6 +10,10 @@ socket.on('pong',t=>{const d=Date.now()-t;rtt=rtt?rtt*.7+d*.3:d});
 const code=(location.pathname.match(/^\/room\/(\w+)/)||[])[1];
 const act=a=>socket.emit('act',a),fmt=t=>{t=Math.max(0,t|0);return(t/60|0)+':'+String(t%60).padStart(2,'0')};
 const toast=m=>{const d=document.createElement('div');d.className='toast';d.textContent=m;$('#toasts').append(d);setTimeout(()=>d.remove(),3500)};
+const volumeOnIcon=$('#vm').innerHTML,volumeMutedIcon='<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="17" y1="9" x2="22" y2="14"/><line x1="22" y1="9" x2="17" y2="14"/></svg>';
+let volume=80,lastVolume=80,volumeMuted=false;
+function applyVolume(pl){if(!pl)return;if(volumeMuted){pl.setVolume?.(0);pl.mute?.()}else{pl.setVolume?.(volume);pl.unMute?.()}}
+function setVolume(value){volume=Math.max(0,Math.min(100,Math.round(Number(value)||0)));if(volume>0)lastVolume=volume;volumeMuted=volume===0;$('#vol').value=String(volume);[P,P2].forEach(applyVolume);$('#vm').innerHTML=volumeMuted?volumeMutedIcon:volumeOnIcon;$('#vm').setAttribute('aria-label',volumeMuted?'Unmute':'Mute');$('#vm').setAttribute('aria-pressed',String(volumeMuted))}
 /* clean line icons (Feather-style) for the header, like the mockup */
 const AIC=(p)=>'<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+p+'</svg>';
 const AIC_LOCK=AIC('<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>');
@@ -30,7 +34,7 @@ else{$('#gate').hidden=false;$('#gn').value=me.name;$('#gc').value=me.color.leng
   $('#gate').hidden=true;$('#room').hidden=false;initPlayer();if(S)render()})};
  const s=document.createElement('script');s.src='https://www.youtube.com/iframe_api';document.head.append(s)}
 window.onYouTubeIframeAPIReady=()=>{window.ytr=1};
-function pReady(e){const pl=e.target;if(pl.unMute)pl.unMute();if(pl.setVolume)pl.setVolume(+$('#vol').value);capQuality();sync()}
+function pReady(e){applyVolume(e.target);capQuality();sync()}
 function pState(e){if(e.target!==P)return;if(e.data===0&&S?.cur)act({type:'ended',v:S.cur.videoId});if(e.data===1||e.data===2)sync()}
 function pErr(e){if(e.target===P&&S?.cur)act({type:'bad',v:S.cur.videoId})}
 function initPlayer(){if(!window.ytr)return setTimeout(initPlayer,200);
@@ -96,6 +100,8 @@ function render(){if(!joined)return;const isH=S.hostId===me.id,M=isH||S.co.inclu
  /* v20: song requests — a guest's link waits here until the host approves it (into the queue) or rejects it (gone) */
  const rq=S.reqs||[];$('#rqw').hidden=!rq.length;
  $('#rq').innerHTML=rq.map(q=>`<li style="--c:${esc(q.color||'#ff2d87')}"><img src="${esc(q.artwork)}" alt=""><div><b>${esc(q.title)}</b><small>Requested by ${esc(q.by)}${q.byId===me.id?' • Waiting for host approval':''}</small></div>${isH?`<button class="ap" data-ap="${esc(q.rid)}">Approve</button><button class="rj" data-rj="${esc(q.rid)}">Reject</button>`:''}</li>`).join('');
+ $('#current-track').hidden=!c;
+ $('#current-song').innerHTML=c?`<li class="current-song"><img src="${esc(c.artwork)}" alt=""><div><b>${esc(c.title)}</b><small>${esc(c.by)}</small></div><span class="current-state ${c.playing?'playing':'paused'}">${c.playing?'Playing':'Paused'}</span></li>`:'';
  $('#q').innerHTML=S.queue.length?S.queue.map((t,i)=>`<li style="--c:${esc(t.color||'#ff2d87')}"><img src="${esc(t.artwork)}" alt=""><div><b>${esc(t.title)}</b><small>${esc(t.by)}</small>${kq(t,M)}</div>${C||t.byId===me.id?`<button data-rm="${i}" aria-label="Remove ${esc(t.title)}">Remove</button>`:''}</li>`).join(''):'<li><div><small>Nothing queued. Paste a link above.</small></div></li>';
  $('#h').innerHTML=S.history.map(t=>`<li><img src="${esc(t.artwork)}" alt=""><div><b>${esc(t.title)}</b><small>${esc(t.by)}</small></div></li>`).reverse().join('');
  $('#ul').innerHTML=S.users.map(u=>{const hasCtrl=S.ctrl&&S.ctrl.includes(u.id);
@@ -119,7 +125,8 @@ let localT=0,localWas=null;
 const localToggle=()=>{if(!S?.cur||!P)return;localT=Date.now();localWas=S.cur.playing;if(P.unMute)P.unMute();if(S.cur.playing)P.pauseVideo?.();else P.playVideo?.()};
 $('#pp').onclick=()=>{if(!S?.cur){toast('Paste a YouTube link to start the room.');return}[P,P2].forEach(pl=>pl&&pl.unMute&&pl.unMute());localToggle();act({type:'play'})};$('#sk').onclick=()=>act({type:'skip'});$('#lock').onclick=()=>act({type:'lock'});
 $('#af').onsubmit=e=>{e.preventDefault();const u=$('#au').value.trim();if(u){act({type:'add',url:u});$('#au').value=''}};
-$('#vol').oninput=e=>{[P,P2].forEach(pl=>{if(pl){if(pl.unMute)pl.unMute();if(pl.setVolume)pl.setVolume(+e.target.value)}})};
+$('#vol').oninput=e=>setVolume(e.target.value);
+$('#vm').onclick=()=>setVolume(volumeMuted?lastVolume:0);$('#vmx').onclick=()=>setVolume(100);
 $('#sc').onpointerdown=()=>seeking=true;$('#sc').onchange=e=>{seeking=false;if(P)act({type:'seek',pos:e.target.value/1000*P.getDuration()})};
 $('#share').onclick=()=>{const u=location.origin+'/room/'+S.code;$('#lk').value=u;$('#qr').innerHTML='';
  try{if(window.QRCode)new QRCode($('#qr'),{text:u,width:200,height:200});else throw new Error('no QR lib')}

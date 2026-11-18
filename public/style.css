@@ -121,6 +121,8 @@ input[type=range]::-moz-range-thumb{width:24px;height:24px;border:0;border-radiu
 #xp,#sk{width:48px;height:48px;padding:0;font-size:1rem;border-radius:50%;background:linear-gradient(180deg, rgba(160,90,255,.75), rgba(90,35,160,.85));border:1px solid rgba(255,255,255,.2);box-shadow:0 10px 24px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.3), inset 0 -3px 6px rgba(0,0,0,.3)}
 .vol{flex-basis:100%;display:flex;gap:12px;align-items:center;justify-content:center;margin-top:2px}
 .vol .spk{font-size:1.15rem;flex:none;display:grid;place-items:center;color:#e9e2ff}
+.vol button.spk{width:36px;height:44px;min-height:44px;padding:0;border:0;background:transparent}
+.vol button.spk:hover{background:rgba(255,255,255,.12)}
 .vol .spk svg{width:22px;height:22px}
 .vol input{width:min(240px,60%)}
 /* pill rows: 4 across, 2 rows — exactly like the mockup */
@@ -437,17 +439,15 @@ li div{min-width:0!important}
    Play page. Now the stage is a 1px invisible box instead: still rendered, so
    the player keeps playing, but it takes no space and shows nothing. */
 #room:not([data-tab=play]) .stage{display:block!important;position:absolute!important;left:0!important;top:0!important;width:1px!important;height:1px!important;overflow:hidden!important;visibility:hidden!important;pointer-events:none!important;opacity:0!important}
-/* v21: (2) the bottom player bar. It used to be a top bar that only showed on
-   the Play page when the deck scrolled out of view. Now it sits just above the
-   floating tab bar on EVERY page, whenever a song is playing or paused, so you
-   can pause/skip/see the song from anywhere. Compact: artwork + title + prev /
-   play-pause / next. Slides down out of sight when there is no song. */
-#mini{top:auto!important;bottom:133px!important;left:50%!important;right:auto!important;width:min(calc(100% - 24px),520px)!important;transform:translateX(-50%) translateY(160%)!important;border-radius:16px!important;border:1px solid rgba(255,255,255,.16)!important;box-shadow:0 10px 26px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.14)!important;padding:7px 10px!important;gap:8px!important}
-#mini.show{transform:translateX(-50%) translateY(0)!important}
-#mini button{width:34px!important;height:34px!important;border-radius:50%!important;flex:none!important;display:grid!important;place-items:center!important;background:rgba(255,255,255,.12)!important;border:1px solid rgba(255,255,255,.2)!important;color:#fff!important;font-size:.85rem!important;padding:0!important}
-#mini #mp{width:42px!important;height:42px!important;background:linear-gradient(135deg,#ff3d71,#b026ff)!important;border-color:rgba(255,255,255,.35)!important;font-size:.8rem!important;box-shadow:0 4px 14px rgba(255,61,113,.45)!important}
+/* Compact glass transport controls appear above the tab bar on secondary tabs. */
+#mini{top:auto!important;bottom:calc(120px + env(safe-area-inset-bottom))!important;left:50%!important;right:auto!important;width:min(calc(100% - 28px),480px)!important;min-height:48px!important;visibility:hidden!important;pointer-events:none!important;transform:translateX(-50%) translateY(160%)!important;border:1px solid rgba(255,255,255,.2)!important;border-radius:18px!important;background:linear-gradient(135deg,rgba(80,48,150,.86),rgba(22,8,52,.9))!important;box-shadow:0 12px 30px rgba(0,0,0,.45),0 0 22px rgba(143,91,255,.16),inset 0 1px 0 rgba(255,255,255,.2)!important;backdrop-filter:blur(20px) saturate(1.35)!important;-webkit-backdrop-filter:blur(20px) saturate(1.35)!important;padding:5px 8px!important;gap:7px!important;z-index:5!important}
+#mini.show{visibility:visible!important;pointer-events:auto!important;transform:translateX(-50%) translateY(0)!important}
+#mini button{width:32px!important;height:32px!important;min-height:32px!important;border-radius:50%!important;flex:none!important;display:grid!important;place-items:center!important;background:rgba(255,255,255,.1)!important;border:1px solid rgba(255,255,255,.2)!important;color:#fff!important;font-size:0!important;padding:0!important}
+#mini #mp{width:36px!important;height:36px!important;min-height:36px!important;background:linear-gradient(135deg,#ff3d71,#b026ff)!important;border-color:rgba(255,255,255,.38)!important;box-shadow:0 4px 14px rgba(255,61,113,.38)!important}
+#mini button svg{display:block;width:17px;height:17px}
 #mini button:disabled{opacity:.35!important}
-#mini img{border-radius:6px!important;flex:none!important}
+#mini img{width:36px!important;height:36px!important;border-radius:10px!important;object-fit:cover!important;flex:none!important}
+#mini #mt{font-size:.76rem;line-height:1.25}
 /* v21: on the list pages the bottom bar floats over the list, so give those
    pages extra bottom room — the last item no longer hides behind the bar.
    The Play page is untouched, so its one-screen fit is unchanged. */
@@ -458,6 +458,11 @@ li div{min-width:0!important}
   overflow-wrap:anywhere;
   text-overflow:clip;
 }
+#current-song li>div>b{white-space:normal;overflow-wrap:anywhere;text-overflow:clip}
+.current-song{background:linear-gradient(135deg,rgba(118,27,255,.2),rgba(255,38,184,.12));border-color:rgba(255,255,255,.16);box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 8px 18px rgba(15,0,45,.18)}
+.current-song img{box-shadow:0 0 14px rgba(0,217,255,.2)}
+.current-state{flex:none;padding:5px 8px;border-radius:999px;background:rgba(255,138,36,.14);color:#ffd2a8;font-size:.68rem;font-weight:700}
+.current-state.playing{background:rgba(182,255,59,.13);color:var(--li)}
 
 #gate{min-height:100vh;min-height:100svh;align-content:center;gap:22px}
 #gate .gate-badge{width:min(42vw,156px);margin:0 auto}
@@ -477,3 +482,69 @@ li div{min-width:0!important}
 #gate.gate-error .gate-badge{width:min(34vw,124px)}
 #gate.gate-error #ge{padding:10px 12px;border:1px solid rgba(255,255,255,.12);border-radius:14px;background:rgba(255,61,113,.12)}
 body:not(.in-room) #mini{display:none!important}
+
+/* Animated neon smoke is isolated to the clipped player card. */
+.stage{isolation:isolate}
+.stage>*{position:relative;z-index:2}
+.stage>.dnote{position:absolute}
+.stage::before{
+  inset:-14%;left:-14%;top:-14%;width:auto;height:auto;transform:none;border-radius:inherit;
+  z-index:0;pointer-events:none;mix-blend-mode:screen;opacity:.62;
+  background:
+    radial-gradient(ellipse at 16% 27%,rgba(0,217,255,.95),rgba(21,59,255,.42) 28%,transparent 48%),
+    radial-gradient(ellipse at 79% 20%,rgba(118,27,255,.96),rgba(255,38,184,.48) 32%,transparent 53%),
+    radial-gradient(ellipse at 76% 75%,rgba(255,38,184,.9),rgba(255,57,127,.45) 30%,transparent 50%),
+    radial-gradient(ellipse at 22% 78%,rgba(255,138,36,.9),rgba(255,57,127,.42) 29%,transparent 48%),
+    radial-gradient(ellipse at 50% 49%,rgba(21,59,255,.78),rgba(118,27,255,.4) 38%,transparent 62%),
+    conic-gradient(from 20deg at 50% 50%,rgba(118,27,255,.14),rgba(0,217,255,.34),rgba(255,38,184,.28),rgba(255,138,36,.2),rgba(118,27,255,.14));
+  filter:blur(18px) saturate(1.9) contrast(1.04);
+  transition:opacity 1.4s ease,filter 1.4s ease;
+  animation:cosmicSmoke 30s ease-in-out infinite alternate;
+  will-change:transform,opacity
+}
+.stage.on::before{
+  opacity:.96;filter:blur(22px) saturate(2.2) contrast(1.06);
+  animation:cosmicSmoke 19s ease-in-out infinite alternate,cosmicPulse 4.8s ease-in-out infinite
+}
+.stage::after{
+  z-index:1;mix-blend-mode:screen;opacity:.48;pointer-events:none;
+  background:
+    radial-gradient(320px 220px at var(--mx,50%) var(--my,28%),rgba(255,255,255,.13),transparent 70%),
+    radial-gradient(1.5px 1.5px at 16% 20%,rgba(255,255,255,.95) 50%,transparent 100%),
+    radial-gradient(1.5px 1.5px at 78% 30%,rgba(0,217,255,.95) 50%,transparent 100%),
+    radial-gradient(2px 2px at 72% 78%,rgba(255,138,36,.9) 50%,transparent 100%),
+    radial-gradient(1.5px 1.5px at 27% 68%,rgba(255,38,184,.9) 50%,transparent 100%),
+    radial-gradient(1.5px 1.5px at 48% 14%,rgba(255,255,255,.8) 50%,transparent 100%),
+    linear-gradient(116deg,transparent 28%,rgba(0,217,255,.055) 43%,transparent 49%),
+    linear-gradient(32deg,transparent 50%,rgba(255,38,184,.06) 59%,transparent 66%);
+  background-size:100% 100%,140% 150%,150% 140%,130% 160%,160% 150%,145% 135%,100% 100%,100% 100%;
+  background-repeat:no-repeat;
+  background-position:0 0,0 0,100% 8%,12% 100%,92% 78%,40% 0,0 0,0 0;
+  animation:cosmicParticles 32s ease-in-out infinite alternate;
+  transition:opacity 1.4s ease
+}
+.stage.on::after{opacity:.78;animation-duration:16s}
+@keyframes cosmicSmoke{
+  0%{transform:translate(-2%,-1%) rotate(-4deg) scale(.96)}
+  50%{transform:translate(2%,1%) rotate(4deg) scale(1.04)}
+  100%{transform:translate(-1%,3%) rotate(-3deg) scale(1.1)}
+}
+@keyframes cosmicPulse{0%,100%{opacity:.72}50%{opacity:.94}}
+@keyframes cosmicParticles{
+  0%{background-position:0 0,0 0,100% 8%,12% 100%,92% 78%,40% 0,0 0,0 0}
+  50%{background-position:0 0,48% 72%,35% 88%,74% 14%,8% 30%,83% 72%,0 0,0 0}
+  100%{background-position:0 0,100% 34%,0 44%,24% 0,68% 100%,0 18%,0 0,0 0}
+}
+#room:not([data-tab=play]) .stage::before,
+#room:not([data-tab=play]) .stage::after{animation:none!important}
+@media(max-width:600px){
+  .stage::before{filter:blur(12px) saturate(1.8)}
+  .stage.on::before{filter:blur(15px) saturate(2.2)}
+  .stage::after{animation-duration:40s}
+  .stage.on::after{animation-duration:22s}
+}
+@media(prefers-reduced-motion:reduce){
+  .stage::before,.stage::after{animation:none!important;transition:none!important}
+  .stage.on::before{opacity:.64}
+  .stage.on::after{opacity:.58}
+}
