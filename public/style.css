@@ -1,0 +1,409 @@
+/* Vibe Room — Neon Vinyl design (built from the mockup) */
+:root{--bg:#12041f;--acc:linear-gradient(135deg,#ff9a1f,#ff3d71 55%,#c026d3);--pink:#ff3d71;--cy:#22e1ff;--li:#b6ff3b;--mu:#c4b5e0;--h:320;--e:rgba(255,255,255,.15);--red:#ff2d55;--glass:linear-gradient(180deg,rgba(255,255,255,.11),rgba(255,255,255,.045))}
+*{box-sizing:border-box}html{background:#12041f}
+body{margin:0;min-height:100vh;color:#fff;font:400 15px/1.45 "Poppins",system-ui,sans-serif;background:radial-gradient(120% 60% at 50% 108%,rgba(255,61,113,.14),transparent 60%),radial-gradient(130% 55% at 50% -8%,#9d4edd 0%,#6d1fa8 28%,#2a0b4d 58%,#0d0218 100%) fixed}
+.glow{position:fixed;inset:-20%;z-index:-1;background:radial-gradient(45% 35% at 50% 18%,hsl(var(--h) 90% 55%/.45),transparent),radial-gradient(30% 22% at 85% 90%,rgba(192,38,211,.22),transparent);transition:background 1s}
+[hidden]{display:none!important}
+
+/* ---------- logo mark (gradient play triangle, like the mockup) ---------- */
+.logo{flex:none;width:34px;height:34px;background:var(--acc);clip-path:polygon(18% 2%,98% 50%,18% 98%);font-size:0;filter:drop-shadow(0 4px 12px rgba(255,61,113,.65))}
+.logo.lg{width:56px;height:56px;margin:0 auto}
+
+/* ---------- landing + join gate ---------- */
+main{max-width:480px;margin:0 auto;padding:7vh 24px 40px;display:grid;gap:18px;text-align:center}
+h1{font-size:clamp(2.8rem,13vw,4.4rem);margin:0;font-weight:800;letter-spacing:-.03em;line-height:1;background:var(--acc);-webkit-background-clip:text;background-clip:text;color:transparent}
+#gt{font-size:clamp(2rem,10vw,3rem)}
+.lead,.steps,label{color:var(--mu);margin:0}.err{color:#ff8aa8}
+.hero-disc{width:200px;aspect-ratio:1;margin:0 auto;border-radius:50%;background:radial-gradient(circle,#ff3d71 0 17%,#000 18% 21%,transparent 22%),repeating-radial-gradient(#06020c 0 3px,#1b1030 3px 4px);box-shadow:0 30px 50px rgba(0,0,0,.6),0 0 90px #ff3d71aa;animation:spin 6s linear infinite}
+button,input,select{font:inherit;color:inherit}
+button{background:rgba(255,255,255,.1);border:1px solid var(--e);border-radius:999px;padding:.5em 1.1em;cursor:pointer;min-height:44px;transition:transform .12s, box-shadow .2s, background .2s}
+button:active{transform:scale(.94)}button:disabled{opacity:.4}
+button.big,#af button,[data-sing],[data-pick],#kl,#mb{background:var(--acc);border:0;font-weight:700;box-shadow:0 8px 24px -6px #ff3d71aa, inset 0 1px 0 rgba(255,255,255,.35)}
+button.big{font-size:1.1rem;padding:.9em 1.4em}
+input:not([type]),select{background:rgba(255,255,255,.1);border:1px solid var(--e);border-radius:999px;padding:.6em 1em;min-height:44px;width:100%;font-size:16px}
+select{width:auto}select option{color:#111}::placeholder{color:#b9a8d8}
+:focus-visible{outline:2px solid var(--cy);outline-offset:2px}
+.row{display:flex;gap:8px}.row input{text-transform:uppercase}#gn{text-transform:none}#gc{width:56px;padding:2px;background:none;border:0;min-height:44px}
+#recent a{display:inline-block;margin:2px 6px}
+
+/* ---------- room shell + header (mockup) ---------- */
+#room{max-width:520px;margin:auto;padding:0 14px 118px}
+header{display:flex;gap:8px;align-items:center;padding:10px 0}
+header .rt{display:grid;line-height:1.15;min-width:0;flex:none;overflow:hidden}
+header .rt b{font-size:1.12rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+header .rt small{color:var(--li);font-size:.78rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.who{flex:1;display:flex;justify-content:flex-end;align-items:center;min-width:0}
+.who .pill-who{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.09);border:1px solid var(--e);border-radius:999px;padding:4px 10px 4px 4px;backdrop-filter:blur(12px)}
+.who .av{margin-left:-8px}
+.who .av:first-child{margin-left:0}
+.who small{color:#e9e2ff;font-size:.8rem;white-space:nowrap}
+.who small svg{width:14px;height:14px;vertical-align:-2px}
+.av{width:30px;height:30px;border-radius:50%;margin-left:-8px;border:2px solid #2a0b4d;display:grid;place-items:center;font-weight:700;color:#000;font-size:.8rem}
+#share{background:linear-gradient(135deg,#ff3d71,#c026d3);border:0;font-weight:700;box-shadow:0 8px 22px -6px #ff3d71aa, inset 0 1px 0 rgba(255,255,255,.35);white-space:nowrap}
+#share .ic{font-weight:800}
+#share .ic svg,#lock .ic svg{width:15px;height:15px;vertical-align:-2px}
+#lock{white-space:nowrap;background:linear-gradient(180deg,rgba(255,255,255,.17),rgba(255,255,255,.07));box-shadow:0 6px 16px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.28)}
+header button{min-height:40px;padding:.45em .95em;font-size:.92rem}
+
+/* ---------- glass cards ---------- */
+.stage,.pane{background:var(--glass);border:1px solid rgba(255,255,255,.14);border-radius:30px;padding:12px 16px 12px;backdrop-filter:blur(20px);box-shadow:0 24px 60px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.14)}
+.stage{text-align:center;position:relative;overflow:hidden;perspective:900px}
+/* soft pink aura behind the vinyl, like the mockup's neon glow */
+.stage::before{content:"";position:absolute;left:50%;top:0;transform:translateX(-50%);width:100%;height:42%;background:radial-gradient(50% 62% at 50% 42%,rgba(255,61,113,.30),rgba(192,38,211,.14) 55%,transparent 75%);filter:blur(4px);pointer-events:none}
+/* light that follows the pointer across the glass card */
+.stage::after{content:"";position:absolute;inset:0;border-radius:inherit;background:radial-gradient(320px 220px at var(--mx,50%) var(--my,28%),rgba(255,255,255,.13),transparent 70%);pointer-events:none;z-index:4}
+
+/* ---------- vinyl deck (flat, like the mockup) ---------- */
+.disc{position:relative;width:100%;aspect-ratio:1;border-radius:50%;display:grid;place-items:center;background:url(/vinyl.jpg) center/cover,repeating-radial-gradient(#07070c 0 2px,#131320 2px 3px);transform-style:preserve-3d;animation:spin 24s linear infinite}
+.disc.on{animation-duration:7s}
+/* the side of the record: a black disc 6px behind the grooves, visible as thickness when the deck tilts */
+.disc::before{content:"";position:absolute;inset:0;border-radius:50%;background:#08080d;transform:translateZ(-6px)}
+.label{width:62%;aspect-ratio:1;border-radius:50%;overflow:hidden;position:relative;background:#000;border:4px solid #000}
+.label iframe,.label #pl{position:absolute;top:50%;left:50%;width:178%!important;height:100%!important;transform:translate(-50%,-50%);pointer-events:none;border:0}
+@keyframes spin{from{transform:rotate(0deg) translateZ(24px)}to{transform:rotate(360deg) translateZ(24px)}}
+.deck{position:relative;transform:none;margin:2px auto 6px;width:min(70vw,300px);transform-style:preserve-3d}
+/* contact shadow: the disc floats above the card, its shadow stays on the card */
+.deck::before{content:"";position:absolute;left:50%;top:50%;width:94%;aspect-ratio:1;border-radius:50%;transform:translate(-50%,-44%) translateZ(2px);background:radial-gradient(circle,rgba(0,0,0,.6),rgba(0,0,0,.25) 55%,transparent 72%);filter:blur(4px);pointer-events:none}
+/* static light sweep across the grooves — stays fixed while the vinyl spins */
+.deck::after{content:"";position:absolute;inset:0;border-radius:50%;background:conic-gradient(from 205deg, transparent 0deg, rgba(255,255,255,.20) 35deg, transparent 80deg, transparent 175deg, rgba(255,255,255,.10) 215deg, transparent 260deg),radial-gradient(circle at 30% 24%, rgba(255,255,255,.15), transparent 42%);pointer-events:none;z-index:1;transform:translateZ(28px)}
+.deck.vid::after{display:none}
+.deck .disc{box-shadow:0 0 0 2px rgba(255,120,180,.85),0 0 12px rgba(255,61,113,.9),0 0 34px rgba(255,61,113,.8),0 0 90px rgba(192,38,211,.6),0 34px 44px rgba(10,0,30,.7)}
+.deck.vid{transform:none!important;width:100%}
+.deck.vid .disc{aspect-ratio:16/9;border-radius:24px;animation:none;background:#000;box-shadow:0 24px 50px rgba(0,0,0,.5)}
+.deck.vid .label{width:100%;height:100%;aspect-ratio:auto;border-radius:24px;border:0}
+.deck.vid .label iframe,.deck.vid .label #pl{width:100%!important}
+/* gradient hub button over the disc centre (the YouTube player stays mounted behind it; Show Video reveals it) */
+.disc-btn{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) translateZ(60px);width:42%;aspect-ratio:1;border-radius:50%;border:0;background:radial-gradient(circle at 32% 28%, #ffb020, #ff3d71 45%, #c026d3 78%, #7c1fa8);color:#fff;font-size:clamp(1.4rem,6vw,2rem);display:grid;place-items:center;cursor:pointer;z-index:3;padding:0;min-height:0;box-shadow:0 0 0 4px #050507,0 0 0 6px rgba(255,255,255,.16),0 0 34px rgba(255,61,113,.85),0 12px 30px rgba(0,0,0,.55),inset 0 2px 6px rgba(255,255,255,.45),inset 0 -4px 10px rgba(0,0,0,.25);text-shadow:0 2px 8px rgba(0,0,0,.35)}
+.disc-btn:hover{filter:brightness(1.08)}
+.disc-btn:disabled{opacity:1;cursor:default}
+/* slow breathing ring around the hub so the deck feels alive even idle */
+.disc-btn::after{content:"";position:absolute;inset:-7px;border-radius:50%;border:2px solid rgba(255,61,113,.55);animation:ring 2.4s ease-out infinite;pointer-events:none}
+@keyframes ring{0%{transform:scale(.85);opacity:.9}70%{opacity:0}100%{transform:scale(1.25);opacity:0}}
+.deck.vid .disc-btn{display:none}
+/* tonearm: silver pivot, metallic arm, red headshell */
+.arm{position:absolute;right:3%;top:1%;width:10px;height:62%;background:linear-gradient(90deg,#d9d9e8,#ffffff 30%,#8f8fa8 55%,#e8e8f4 80%,#b9b9cc);border-radius:6px;transform-origin:top center;transform:translateZ(48px) rotate(-16deg);transition:transform .9s cubic-bezier(.3,1.4,.5,1);box-shadow:0 10px 14px rgba(0,0,0,.4), inset 0 0 2px rgba(255,255,255,.8);z-index:2}
+.arm::before{content:"";position:absolute;top:-16px;left:50%;transform:translateX(-50%);width:44px;height:44px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff,#c9c9d8 42%,#6f6f85 78%,#3c3c50);box-shadow:0 0 0 10px #14141c,0 0 0 13px rgba(255,255,255,.14),0 6px 14px rgba(0,0,0,.55),inset 0 0 0 3px rgba(255,255,255,.28)}
+.arm::after{content:"";position:absolute;bottom:-7px;left:-8px;width:26px;height:16px;background:linear-gradient(135deg,#ff7aa2,#e11d48 60%,#9d0f31);border-radius:4px;box-shadow:0 3px 8px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.4)}
+.deck.on .arm{transform:translateZ(48px) rotate(15deg)}.deck.vid .arm{display:none}
+/* floating notes around the disc, like the mockup */
+.dnote{position:absolute;z-index:1;font-size:1.7rem;pointer-events:none;opacity:.9;animation:noteFloat 5s ease-in-out infinite alternate}
+.dnote.n1{left:7%;top:16%;color:var(--pink);font-size:2rem}
+.dnote.n2{left:4%;top:46%;color:var(--cy);font-size:1.3rem;animation-delay:-1.5s}
+.dnote.n3{right:6%;top:58%;color:#7db4ff;font-size:1.6rem;animation-delay:-2.5s}
+.dnote.n4{right:10%;top:10%;color:var(--pink);font-size:1.1rem;animation-delay:-.8s}
+@keyframes noteFloat{to{transform:translateY(-10px) rotate(8deg)}}
+/* visualizer: pink -> purple -> blue bars, always moving (gentle when idle) */
+.viz{display:flex;gap:4px;align-items:flex-end;justify-content:center;height:36px;width:88%;margin:0 auto 4px}
+.viz i{width:5px;height:8px;border-radius:4px;min-height:8px}
+.viz i{animation:bar .8s ease-in-out infinite alternate}@keyframes bar{to{height:36px}}
+
+h2{font-size:1.28rem;margin:0;line-height:1.2;font-weight:700}
+#tt{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+#ch,#by{margin:2px 0;display:inline}
+#by:not(:empty)::before{content:" • "}
+#tt::before{content:"♪ ";color:var(--pink)}
+p{margin:.3em 0}#ch{color:var(--mu)}.by{color:var(--li)}
+
+/* ---------- seek + time ---------- */
+input[type=range]{-webkit-appearance:none;appearance:none;background:transparent;width:100%;height:22px;cursor:pointer;--p:0%}
+input[type=range]::-webkit-slider-runnable-track{height:12px;border-radius:999px;background:linear-gradient(90deg,#a855f7,#ec4899 var(--p),rgba(255,255,255,.16) var(--p));box-shadow:0 0 12px rgba(168,85,247,.35)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:24px;height:24px;border-radius:50%;background:#fff;margin-top:-6px;box-shadow:0 0 14px rgba(255,255,255,.7),0 2px 10px rgba(0,0,0,.55);cursor:pointer}
+input[type=range]::-moz-range-track{height:12px;border-radius:999px;background:rgba(255,255,255,.16)}
+input[type=range]::-moz-range-progress{height:12px;border-radius:999px;background:linear-gradient(90deg,#a855f7,#ec4899)}
+input[type=range]::-moz-range-thumb{width:24px;height:24px;border:0;border-radius:50%;background:#fff;box-shadow:0 0 14px rgba(255,255,255,.7),0 2px 10px rgba(0,0,0,.55)}
+#sc{margin-top:10px}
+.time{display:flex;justify-content:space-between;align-items:baseline;color:var(--mu);font-size:.85rem}
+#sync{color:var(--li);font-weight:600}#sync.off{color:var(--pink)}
+
+/* ---------- transport controls ---------- */
+.ctl{display:flex;gap:12px;justify-content:center;align-items:center;flex-wrap:wrap;margin:6px 0 4px}
+#pp{width:64px;height:64px;padding:0;border-radius:50%;background:radial-gradient(circle at 32% 28%, #ffb020, #ff3d71 48%, #c026d3 80%);border:0;font-weight:700;font-size:1.3rem;color:#fff;box-shadow:0 12px 34px -4px #ff3d71cc,0 0 26px rgba(255,61,113,.55), inset 0 1px 0 rgba(255,255,255,.4), inset 0 -6px 14px rgba(0,0,0,.28)}
+#xp,#sk{width:48px;height:48px;padding:0;font-size:1rem;border-radius:50%;background:linear-gradient(180deg, rgba(160,90,255,.75), rgba(90,35,160,.85));border:1px solid rgba(255,255,255,.2);box-shadow:0 10px 24px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.3), inset 0 -3px 6px rgba(0,0,0,.3)}
+.vol{flex-basis:100%;display:flex;gap:12px;align-items:center;justify-content:center;margin-top:2px}
+.vol .spk{font-size:1.15rem;flex:none;display:grid;place-items:center;color:#e9e2ff}
+.vol .spk svg{width:22px;height:22px}
+.vol input{width:min(240px,60%)}
+/* pill rows: 4 across, 2 rows — exactly like the mockup */
+/* icon-only control rows: two rows of four round icon buttons, evenly spaced */
+.xtra{margin:8px 0 4px}
+.xrow{display:flex;align-items:center;gap:6px}
+.xrow + .xrow{margin-top:10px}
+/* pills exactly like the mockup: glass, icon + label, glossy top edge */
+.xrow .pill{flex:1;min-width:0;height:38px;padding:0 4px;border-radius:999px;background:linear-gradient(180deg,rgba(255,255,255,.16),rgba(122,63,196,.5) 48%,rgba(74,28,130,.62));border:1px solid rgba(255,255,255,.22);box-shadow:0 8px 18px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.3),inset 0 -2px 4px rgba(0,0,0,.28);display:flex;align-items:center;justify-content:center;gap:4px;color:#fff;font-size:.72rem;font-weight:600;position:relative;min-height:0;white-space:nowrap;overflow:hidden}
+.xrow .pill svg{width:15px;height:15px;flex:none}
+.xrow .pill.on{background:var(--acc);border:0;box-shadow:0 8px 22px -4px #ff3d71cc, inset 0 1px 0 rgba(255,255,255,.35)}
+.xrow .pill.off{opacity:.45}
+.xrow .pill b{position:absolute;top:-5px;right:-5px;background:#ff3d71;color:#fff;font-size:.55rem;font-weight:700;line-height:1;min-width:17px;height:17px;border-radius:9px;display:grid;place-items:center;padding:0 4px;box-shadow:0 2px 6px rgba(0,0,0,.4)}
+/* the two dropdown pills: a transparent select + chevron, like the mockup's 1x ⌄ / Off ⌄ */
+.xrow .pill.sel select{appearance:none;-webkit-appearance:none;background:transparent;border:0;color:#fff;font:inherit;font-weight:600;text-align:center;flex:1;min-width:0;padding:0;cursor:pointer}
+.xrow .pill.sel select option{color:#111}
+.xrow .pill.sel .chev{width:12px;height:12px;flex:none}
+/* Prev lives in the transport row (moved there by starmaker): a 48px circle, not a pill */
+.ctl #xp{flex:none;width:48px;height:48px;border-radius:50%;font-size:1rem}
+/* Show Video has the longest label, so its pill gets a little extra width */
+#xd{flex:1.3}
+#xw{width:100%;margin-top:10px}
+
+/* ---------- tab panes ---------- */
+aside .pane{display:none}#room[data-tab=queue] #p-queue,#room[data-tab=sing] #p-sing,#room[data-tab=room] #p-room,#room[data-tab=me] #p-me{display:block}
+#room:not([data-tab=play]) .stage{display:none}#room[data-tab=play] aside{display:none}
+.pane h3{margin:18px 0 8px;font-size:1rem;color:var(--cy)}.pane h3:first-child{margin-top:0}
+#af{display:flex;gap:8px}.hero{text-align:center;padding:6px 0 12px}
+ol,ul{list-style:none;padding:0;margin:0;display:grid;gap:10px}
+li{display:flex;gap:12px;align-items:center;padding:8px;border-radius:18px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);border-left:4px solid var(--c,var(--pink))}
+li img{width:56px;height:56px;border-radius:14px;object-fit:cover}li div{flex:1;min-width:0}li b,li small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}li small{color:var(--mu)}
+li button{min-height:34px;padding:.25em .9em;font-size:.8rem}li small button{margin-left:6px;min-height:30px}.hist{opacity:.7}
+#kar{margin-top:12px;text-align:left}#kar h3{color:var(--pink)}#kf{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}#kf button{min-height:36px;font-size:.85rem}#kf button.on{background:var(--acc);border:0}
+#kar label{display:inline-flex;gap:6px;align-items:center;margin:4px 8px 4px 0}#kar details{margin-top:8px}#kar .sl{display:grid;grid-template-columns:90px 1fr;gap:6px;align-items:center}
+#mb{margin:0 0 10px}
+
+/* ---------- bottom tab bar (floating glass bar, mockup) ---------- */
+#tabs{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);width:min(calc(100% - 24px),520px);display:flex;align-items:flex-end;padding:8px 6px calc(8px + env(safe-area-inset-bottom));background:rgba(30,8,60,.92);backdrop-filter:blur(18px);border:1px solid rgba(255,255,255,.16);border-radius:26px;box-shadow:0 18px 40px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.14);z-index:6}
+#tabs button{background:none;border:0;flex:1;display:grid;justify-items:center;color:var(--mu);padding:2px;min-height:48px;border-radius:12px;position:relative}
+#tabs button + button{border-left:1px solid rgba(255,255,255,.07)}
+#tabs i{font-style:normal;font-size:1.25rem;display:grid;place-items:center}#tabs i svg{width:22px;height:22px}#tabs span{font-size:.7rem}
+#tabs button.on{color:#fff}
+#tabs button.on i{filter:drop-shadow(0 0 8px rgba(255,61,113,.9))}
+#tabs button.on span{font-weight:700;color:var(--pink)}
+#tabs button.on::after{content:"";position:absolute;left:22%;right:22%;bottom:-1px;height:3px;border-radius:3px;background:var(--pink);box-shadow:0 0 10px var(--pink)}
+#tabs .mic{margin-top:-34px}
+#tabs .mic i{width:74px;height:74px;border-radius:50%;background:radial-gradient(circle at 32% 28%, #ffb020, #ff3d71 48%, #c026d3 80%);display:grid;place-items:center;font-size:1.7rem;color:#fff;box-shadow:0 10px 28px #ff3d71cc, inset 0 1px 0 rgba(255,255,255,.4), inset 0 -4px 10px rgba(0,0,0,.25);border:4px solid #1e083c}
+#tabs .mic i svg{width:30px;height:30px}
+#tabs .mic span{margin-top:2px}
+#tabs em{position:absolute;top:0;right:calc(50% - 26px);min-width:19px;height:19px;border-radius:50%;background:var(--red);color:#fff;font-style:normal;font-size:.68rem;font-weight:700;display:grid;place-items:center;padding:0 4px;box-shadow:0 2px 8px rgba(0,0,0,.5)}
+
+/* ---------- invite dialog ---------- */
+dialog{background:linear-gradient(180deg,#2a0b4d,#1a0633);color:#fff;border:1px solid rgba(255,255,255,.18);border-radius:24px;text-align:center;box-shadow:0 30px 70px rgba(0,0,0,.6);padding:22px}
+dialog::backdrop{background:rgba(5,0,15,.75)}
+dialog h3{margin:0 0 6px}
+#qr{background:#fff;padding:12px;border-radius:16px;display:inline-block;margin:10px}
+#qr small{color:#333}
+#lk{margin:6px 0 12px;text-align:center}
+#dlg button{margin:4px}
+#cp{background:var(--acc);border:0;font-weight:700;box-shadow:0 8px 22px -6px #ff3d71aa}
+
+/* ---------- toasts, floating reactions, ambient extras ---------- */
+#toasts{position:fixed;top:12px;left:50%;transform:translateX(-50%);display:grid;gap:6px;z-index:9;width:min(90vw,380px)}
+.toast{background:rgba(30,10,60,.95);border:1px solid var(--e);border-radius:14px;padding:.6em 1em;animation:fade .3s}@keyframes fade{from{opacity:0;transform:translateY(-8px)}}
+.fl{position:fixed;bottom:110px;font-size:2rem;animation:up 2.4s ease-out forwards;pointer-events:none;z-index:8}@keyframes up{to{transform:translateY(-60vh) translateX(20px);opacity:0}}
+.orb{position:fixed;border-radius:50%;opacity:.35;z-index:-1;animation:fl 14s ease-in-out infinite alternate;background:radial-gradient(circle at 30% 30%,rgba(255,255,255,.7),var(--o) 60%);box-shadow:inset -12px -12px 30px rgba(0,0,0,.3)}
+@keyframes fl{to{transform:translate(50px,-70px) scale(1.25)}}
+.note{position:fixed;bottom:-50px;z-index:-1;font-size:2rem;opacity:.45;animation:rise linear infinite}@keyframes rise{to{transform:translateY(-115vh) rotate(40deg)}}
+.burst i{position:fixed;width:11px;height:11px;border-radius:50%;animation:pop .9s ease-out forwards;z-index:9;pointer-events:none}@keyframes pop{to{transform:translate(var(--dx),var(--dy)) scale(.2);opacity:0}}
+#mini{position:fixed;top:0;left:0;right:0;display:flex;gap:10px;align-items:center;padding:8px 14px;background:rgba(30,8,60,.94);backdrop-filter:blur(14px);z-index:7;transform:translateY(-100%);transition:transform .3s}#mini.show{transform:none}#mini img{border-radius:6px;object-fit:cover}
+
+/* ---------- narrow phones: keep the mockup's full header (pill + labels), compact ---------- */
+@media(max-width:430px){
+  #room{padding:0 8px 118px}
+  header{gap:3px}
+  .logo{width:22px;height:22px}
+  header .rt b{font-size:.72rem}
+  header .rt small{font-size:.62rem}
+  header button{min-height:32px;padding:.35em .45em;font-size:.72rem}
+  #lock .ic{font-size:.8em}
+  .who .pill-who{padding:2px 6px 2px 2px;gap:4px}
+  .who small{font-size:.6rem}
+  .who .av{width:22px;height:22px;font-size:.62rem}
+}
+@media(prefers-reduced-motion:reduce){.hero-disc,.disc,.orb,.note,.viz i,.burst i,.fl,.dnote{animation:none}.deck,.arm{transition:none}}
+
+/* ===== v10: exact-mockup theme (matte, glossy, 3D) ===== */
+:root{--chip:linear-gradient(180deg,#5a37c8,#33198a);--acc:linear-gradient(135deg,#ffa23c,#ff3d9a 52%,#b026ff)}
+html{background:#12063a}
+body{background:radial-gradient(75% 38% at 100% 100%,rgba(205,35,175,.5),transparent),radial-gradient(90% 30% at 0 0,rgba(120,70,255,.35),transparent),linear-gradient(180deg,#4a1fc4,#2a1275 40%,#14073f) fixed!important}
+#room{padding-bottom:150px!important}
+#share{background:linear-gradient(135deg,#b026ff,#5b3bff)!important;border:0!important;box-shadow:0 8px 20px -6px #8a3bff,inset 0 1px 0 rgba(255,255,255,.35)!important}
+#lock,.pill-who{background:linear-gradient(180deg,rgba(80,48,190,.6),rgba(40,20,120,.7))!important}
+.stage{position:relative;background:linear-gradient(165deg,#6a34dc,#43209f 32%,#2a1270 62%,#3a1585)!important;border:1px solid rgba(255,255,255,.2)!important;border-radius:44px!important;padding:22px 20px!important;box-shadow:0 34px 60px -24px rgba(8,0,40,.8),inset 0 2px 0 rgba(255,255,255,.28),inset 0 -26px 50px rgba(20,0,70,.35)!important}
+.stage>.gloss{position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:linear-gradient(180deg,rgba(255,255,255,.14),transparent 22%)}
+.deck{width:60%!important;margin:36px auto 24px!important}
+.ring{position:absolute;inset:-3.6%;border-radius:50%;background:conic-gradient(from 200deg,#ffc2ea,#ff3d9a,#b026ff,#6f4bff,#ff3d9a,#ffc2ea);box-shadow:0 0 34px rgba(255,61,154,.55),0 26px 38px rgba(8,0,40,.55)}
+.deck .disc{position:relative;z-index:1;box-shadow:0 0 0 5px #140a34,inset 0 0 40px rgba(0,0,0,.5)!important}.deck::before{opacity:.45}
+.disc-btn{width:34%!important}.deck.vid .ring{display:none}
+.arm{left:90.5%!important;right:auto!important;top:-4%!important;width:28%!important;height:auto!important;background:none!important;border-radius:0!important;transform-origin:26.7% 14.2%;transform:rotate(-3deg)!important;transition:transform .9s cubic-bezier(.3,1.4,.5,1);z-index:4;filter:drop-shadow(0 10px 10px rgba(0,0,0,.5))}
+.arm::before,.arm::after{display:none!important}.arm svg{width:100%;height:auto;display:block}.deck.on .arm{transform:rotate(8deg)!important}
+.dnote{font-size:2.6rem!important;opacity:1!important;filter:drop-shadow(0 4px 10px rgba(0,0,0,.35))}
+.dnote.n1{left:6%!important;top:35%!important;color:#6f9bff!important;font-size:2rem!important}.dnote.n2{left:7%!important;top:9%!important;color:#e655d9!important}
+.dnote.n3{right:6%!important;top:40%!important;color:#6f9bff!important}.dnote.n4{display:none}
+.viz{height:58px!important;width:84%!important;margin:22px auto 14px!important;gap:6px!important}.viz i{width:6px!important}@keyframes bar{to{height:56px}}
+.ctl{gap:28px!important;margin:18px 0 6px!important}
+#pp{width:78px!important;height:78px!important;background:var(--acc)!important;border:0!important;border-radius:50%!important;display:grid;place-items:center;padding:0;color:#fff;box-shadow:0 12px 28px -6px rgba(255,61,154,.8),inset 0 2px 0 rgba(255,255,255,.4),inset 0 -10px 18px rgba(120,0,120,.35)!important}
+#pp svg{width:38px;height:38px}
+#xp,#sk{width:62px!important;height:62px!important;padding:0!important;border-radius:50%!important;display:grid;place-items:center;color:#fff;background:radial-gradient(circle at 35% 28%,#6a49e0,#2c1480 75%)!important;border:1px solid rgba(255,255,255,.16)!important;box-shadow:0 10px 20px rgba(8,0,40,.5),inset 0 1px 0 rgba(255,255,255,.28),inset 0 -8px 14px rgba(0,0,40,.35)!important}
+#xp svg,#sk svg{width:26px;height:26px}
+.xtra{margin:16px 0 0!important}.xrow{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:10px!important;margin-bottom:10px!important}
+.xtra .pill{position:relative;display:flex!important;align-items:center;justify-content:center;gap:6px;min-height:50px;padding:0 6px!important;border-radius:28px!important;border:1px solid rgba(255,255,255,.15)!important;background:var(--chip)!important;color:#fff;font-weight:600;font-size:.8rem;white-space:nowrap;cursor:pointer;box-shadow:inset 0 1px 0 rgba(255,255,255,.26),inset 0 -8px 14px rgba(15,0,70,.35),0 8px 16px rgba(8,0,40,.4)!important}
+.xtra .pill:active{transform:translateY(2px)}.xtra .pill svg{width:20px;height:20px;flex:none}.xtra .pill .chev{width:13px;height:13px}
+#xs svg,#xr svg{color:#7f9bff}#xr.on svg{color:#ff5c9a}.pill.sel svg:first-child:not(.chev){color:#c43bff}
+.xtra select{position:absolute;opacity:0;pointer-events:none;width:1px;height:1px}
+.menu{position:fixed;z-index:20;display:grid;gap:4px;padding:8px;border-radius:22px;background:linear-gradient(180deg,#4a2bb4,#27126f);border:1px solid rgba(255,255,255,.2);box-shadow:0 24px 50px rgba(5,0,30,.7),inset 0 1px 0 rgba(255,255,255,.25)}
+.menu button{background:none;border:0;border-radius:16px;padding:.6em 1.1em;min-height:42px;text-align:left;color:#fff;font-weight:600;box-shadow:none}.menu button:hover{background:rgba(255,255,255,.14)}.menu button.on,.menu button.on:hover{background:var(--acc)}
+#tabs{border-radius:34px!important;background:linear-gradient(180deg,#43249f,#241068)!important;border:1px solid rgba(255,255,255,.2)!important;box-shadow:0 24px 40px rgba(5,0,30,.6),inset 0 1px 0 rgba(255,255,255,.25)!important;padding:10px 6px 8px!important}
+#tabs button+button{border-left:0!important}#tabs button:first-child{border-right:1px solid rgba(255,255,255,.1)}
+#tabs i{color:var(--mu)}#tabs button.on i{color:#a56bff;filter:none!important}#tabs .mic i{color:#fff}
+#tabs .mic{margin-top:-46px!important}#tabs .mic i{width:82px!important;height:82px!important;border:6px solid #1a0b4a!important;box-shadow:0 0 34px rgba(255,61,154,.7),inset 0 3px 0 rgba(255,255,255,.35)!important}
+/* v10 fixes */
+.stage{perspective-origin:50% 21%!important;padding:20px 18px!important}
+.arm{box-shadow:none!important;border:0!important;outline:0!important;backdrop-filter:none!important}
+.dnote.n1{top:27%!important}.dnote.n3{top:31%!important}
+.xrow{gap:8px!important}.xtra .pill{font-size:.72rem!important;gap:4px!important;padding:0 3px!important}.xtra .pill svg{width:17px;height:17px}
+#tabs button{border:0!important;border-radius:0!important}#tabs button:first-child{border-right:1px solid rgba(255,255,255,.1)!important}
+#tt::before,#tt i{color:#fff!important}
+.spk svg{fill:currentColor!important}
+.ring{inset:-8%!important}#xd{font-size:.66rem!important}
+.ring{inset:-5%!important}
+
+/* ===== v11: glass 3D icon buttons ===== */
+.xrow{display:flex!important;justify-content:space-evenly!important;gap:0!important;margin-bottom:16px!important}
+.xtra .pill{position:relative;width:56px!important;height:56px!important;min-height:0!important;padding:0!important;border-radius:50%!important;display:grid!important;place-items:center;overflow:visible;
+ background:radial-gradient(120% 120% at 30% 12%,rgba(255,255,255,.42),rgba(255,255,255,.1) 45%,rgba(120,80,255,.2))!important;backdrop-filter:blur(14px) saturate(1.5);-webkit-backdrop-filter:blur(14px) saturate(1.5);
+ border:1px solid rgba(255,255,255,.45)!important;transition:transform .15s,box-shadow .15s,opacity .2s;
+ box-shadow:0 14px 22px -8px rgba(8,0,50,.8),0 0 0 1px rgba(25,8,90,.45),inset 0 2px 3px rgba(255,255,255,.7),inset 0 -12px 18px rgba(70,30,190,.5)!important}
+.xtra .pill::before{content:"";position:absolute;left:13%;right:13%;top:5%;height:42%;border-radius:50%;background:linear-gradient(180deg,rgba(255,255,255,.6),rgba(255,255,255,0));pointer-events:none}
+.xtra .pill::after{content:"";position:absolute;left:24%;right:24%;bottom:7%;height:20%;border-radius:50%;background:var(--g,#fff);opacity:.5;filter:blur(5px);pointer-events:none}
+.xtra .pill:hover{transform:translateY(-3px) scale(1.05)}.xtra .pill:active{transform:translateY(1px) scale(.95)}
+.xtra .pill svg{position:relative;z-index:1;width:25px!important;height:25px!important;color:var(--g,#fff)!important;stroke-width:2.2;filter:drop-shadow(0 0 6px var(--g,#fff)) drop-shadow(0 2px 2px rgba(0,0,0,.45))}
+.xtra .pill.on{box-shadow:0 14px 22px -8px rgba(8,0,50,.8),0 0 0 2px #ff5c9a,0 0 22px rgba(255,92,154,.75),inset 0 2px 3px rgba(255,255,255,.7),inset 0 -12px 18px rgba(255,61,154,.45)!important}
+.xtra .pill.off,.xtra .pill:disabled{opacity:.45}
+.xtra .pill>span:not(.dd-l),.xtra .chev{display:none!important}
+.xtra .dd-l,.xtra .pill b{position:absolute;top:-5px;right:-6px;z-index:2;min-width:21px;height:21px;padding:0 6px;border-radius:11px;background:var(--acc);color:#fff;font:700 .62rem/21px Poppins,sans-serif;text-align:center;box-shadow:0 4px 9px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.55)}
+.xtra .dd-l.hid{display:none}
+#xs{--g:#9fb8ff}#xr{--g:#7fe8ff}.pill:has(#xv){--g:#c9ff55}#xl{--g:#ff5c9a}#xz{--g:#ffe08a}.pill:has(#xoff){--g:#ff9be0}#xh{--g:#8ff5cf}#xd{--g:#ffbb6b}
+.stage{perspective:none!important}.deck{perspective:900px}
+.xtra .pill{flex:0 0 56px!important;max-width:56px!important;aspect-ratio:1/1}
+.arm svg{overflow:visible}
+.arm{left:81%!important;width:35%!important;top:-7%!important}
+.arm{left:71%!important}
+.arm{left:77%!important;transform:translateZ(80px) rotate(-3deg)!important}.deck.on .arm{transform:translateZ(80px) rotate(8deg)!important}
+.arm{left:72%!important}
+
+/* ===== v13: one-screen fit — everything scaled ~0.8x in proportion =====
+   Measured on 390x844: the Play page was 175px too tall (second orb row
+   hidden behind the tab bar). Every visual block shrinks by the same
+   factor, so the design keeps its proportions — just smaller. */
+.stage{padding:14px 16px!important}
+.deck{width:48%!important;margin:24px auto 16px!important}
+.viz{height:40px!important;margin:12px auto 8px!important;gap:5px!important}
+.viz i{width:5px!important}
+@keyframes bar{to{height:38px}}
+#tt{font-size:1.1rem!important}
+#sc{margin-top:6px!important}
+.ctl{gap:16px!important;margin:10px 0 4px!important}
+#pp{width:62px!important;height:62px!important}
+#pp svg{width:30px!important;height:30px!important}
+#xp,#sk{width:50px!important;height:50px!important}
+#xp svg,#sk svg{width:21px!important;height:21px!important}
+.vol{margin-top:0!important}
+.vol .spk svg{width:18px!important;height:18px!important}
+.xtra{margin:10px 0 0!important}
+.xrow{margin-bottom:10px!important}
+.xtra .pill{flex:0 0 44px!important;max-width:44px!important;width:44px!important;height:44px!important}
+.xtra .pill svg{width:20px!important;height:20px!important}
+.xtra .dd-l,.xtra .pill b{min-width:18px!important;height:18px!important;font-size:.55rem!important;line-height:18px!important}
+
+/* ===== v14: landing + gate redesign, structured header, premium dropdowns ===== */
+/* --- FX layer: glowing colourful smoke + twinkling stars + flowing notes --- */
+/* visible on the landing + gate only; hidden once inside a room */
+#fx{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none;transition:opacity .6s}
+body.in-room #fx{opacity:0;visibility:hidden}
+main,#room{position:relative;z-index:1}
+#home{perspective:900px}
+#fx .smoke{position:absolute;border-radius:50%;filter:blur(55px);mix-blend-mode:screen;opacity:.5;animation:smokeDrift ease-in-out infinite alternate}
+#fx .s1{width:58vmax;height:58vmax;left:-14%;top:-12%;background:radial-gradient(circle,#ff3d9a,transparent 65%);--dx:12vw;--dy:9vh;--s:1.18;animation-duration:26s}
+#fx .s2{width:52vmax;height:52vmax;right:-18%;top:6%;background:radial-gradient(circle,#22e1ff,transparent 65%);--dx:-11vw;--dy:10vh;--s:1.22;animation-duration:32s}
+#fx .s3{width:46vmax;height:46vmax;left:22%;bottom:-20%;background:radial-gradient(circle,#b026ff,transparent 65%);--dx:9vw;--dy:-11vh;--s:1.15;animation-duration:29s}
+#fx .s4{width:40vmax;height:40vmax;right:8%;bottom:-8%;background:radial-gradient(circle,#ffb020,transparent 65%);--dx:-10vw;--dy:-8vh;--s:1.25;animation-duration:24s}
+#fx .s5{width:34vmax;height:34vmax;left:48%;top:30%;background:radial-gradient(circle,#c026d3,transparent 65%);--dx:-8vw;--dy:12vh;--s:1.2;animation-duration:35s}
+#fx .s6{width:30vmax;height:30vmax;left:-8%;top:44%;background:radial-gradient(circle,#2de2ff,transparent 65%);--dx:10vw;--dy:-9vh;--s:1.18;animation-duration:27s}
+#fx .s7{width:28vmax;height:28vmax;right:28%;top:-6%;background:radial-gradient(circle,#ff5c9a,transparent 65%);--dx:7vw;--dy:11vh;--s:1.22;animation-duration:31s}
+@keyframes smokeDrift{to{transform:translate(var(--dx,10vw),var(--dy,8vh)) scale(var(--s,1.15))}}
+#stars span{position:absolute;border-radius:50%;animation:twinkle 2.8s ease-in-out infinite}
+@keyframes twinkle{0%,100%{opacity:.15;transform:scale(.7)}50%{opacity:1;transform:scale(1.3)}}
+#fnotes span{position:absolute;bottom:-8vh;opacity:0;animation:floatUp linear infinite;text-shadow:0 0 12px currentColor}
+@keyframes floatUp{0%{transform:translateY(0) rotate(-8deg);opacity:0}12%{opacity:.9}85%{opacity:.75}100%{transform:translateY(-118vh) rotate(14deg);opacity:0}}
+/* --- landing hero: premium vinyl photo, slow spin + 3D pointer tilt --- */
+.hero3d{position:relative;width:min(62vw,240px);aspect-ratio:1;margin:6px auto 4px;transition:transform .25s ease-out;transform-style:preserve-3d}
+.hero3d::before{content:"";position:absolute;inset:-12%;border-radius:50%;background:conic-gradient(from 0deg,#ff3d9a,#b026ff,#22e1ff,#ffb020,#ff3d9a);filter:blur(28px);opacity:.55;z-index:-1;animation:heroSpin 14s linear infinite}
+.hero-img{width:100%;height:100%;object-fit:cover;border-radius:50%;display:block;box-shadow:0 0 0 3px rgba(255,120,180,.7),0 0 40px rgba(255,61,113,.8),0 0 90px rgba(192,38,211,.55),0 30px 50px rgba(0,0,0,.6);animation:heroSpin 30s linear infinite}
+@keyframes heroSpin{to{transform:rotate(360deg)}}
+.hero-title{font-size:2.6rem;font-weight:800;line-height:1.05;margin:8px 0 2px;background:linear-gradient(135deg,#ffb020,#ff3d71 45%,#b026ff);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 4px 18px rgba(255,61,113,.55))}
+/* --- flowing music: animated equalizer + feature chips --- */
+.eq{display:flex;gap:4px;align-items:flex-end;justify-content:center;height:34px;margin:12px auto 2px}
+.eq i{width:5px;border-radius:4px;background:linear-gradient(180deg,#ff3d71,#b026ff);animation:eqB 1s ease-in-out infinite alternate}
+.eq i:nth-child(odd){background:linear-gradient(180deg,#22e1ff,#7a5cff)}
+.eq i:nth-child(3n){animation-duration:.7s}
+.eq i:nth-child(4n){animation-duration:1.3s}
+.eq i:nth-child(2){animation-delay:-.2s}.eq i:nth-child(5){animation-delay:-.5s}.eq i:nth-child(7){animation-delay:-.1s}.eq i:nth-child(9){animation-delay:-.7s}.eq i:nth-child(11){animation-delay:-.3s}.eq i:nth-child(13){animation-delay:-.6s}.eq i:nth-child(15){animation-delay:-.4s}
+@keyframes eqB{from{height:8px}to{height:32px}}
+.chips{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:10px 0 4px}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.22);backdrop-filter:blur(12px);font-size:.78rem;font-weight:600;color:#fff;box-shadow:0 6px 16px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.25)}
+.chip svg{width:14px;height:14px;color:#ffd166}
+/* --- big buttons: 3D shine sweep --- */
+#home .big,#gate .big{position:relative;overflow:hidden;box-shadow:0 14px 30px -6px rgba(255,61,113,.7),inset 0 2px 0 rgba(255,255,255,.4),inset 0 -6px 14px rgba(120,0,120,.3);transition:transform .15s,box-shadow .15s}
+#home .big::after,#gate .big::after{content:"";position:absolute;top:0;left:-60%;width:40%;height:100%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.5),transparent);transform:skewX(-20deg);animation:shine 3.6s ease-in-out infinite}
+@keyframes shine{0%,55%{left:-60%}100%{left:130%}}
+#home .big:active,#gate .big:active{transform:translateY(2px) scale(.98)}
+/* --- gate badge: premium headphones photo, gentle float --- */
+.gate-badge{width:min(52vw,180px);aspect-ratio:1;margin:4px auto 8px;border-radius:50%;overflow:hidden;box-shadow:0 0 0 3px rgba(255,120,180,.7),0 0 34px rgba(255,61,113,.75),0 0 80px rgba(192,38,211,.5),0 24px 40px rgba(0,0,0,.55);animation:gateFloat 5s ease-in-out infinite}
+.gate-badge img{width:100%;height:100%;object-fit:cover;display:block}
+@keyframes gateFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+#gate h1{background:linear-gradient(135deg,#ffb020,#ff3d71 45%,#b026ff);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 4px 16px rgba(255,61,113,.5))}
+/* --- structured room header: title row + actions row, never overlaps --- */
+header{display:flex!important;flex-direction:column!important;gap:6px!important;padding:10px 0!important}
+.hrow1{display:flex;gap:8px;align-items:center;min-width:0}
+.hrow2{display:flex;gap:8px}
+.hrow2 button{flex:1;min-width:0}
+#mb{margin:0!important}
+@media(min-width:900px){
+  header{flex-direction:row!important;align-items:center!important}
+  .hrow1{flex:1;min-width:0}
+  .hrow2{flex:none}
+  .hrow2 button{flex:none}
+}
+/* --- premium dropdown chevron: every <details> on every page --- */
+summary{list-style:none;cursor:pointer}
+summary::-webkit-details-marker{display:none}
+summary::marker{content:""}
+details summary{display:flex!important;align-items:center;justify-content:space-between;gap:10px;padding:10px 14px;border-radius:18px;background:linear-gradient(180deg,rgba(255,255,255,.13),rgba(122,63,196,.45));border:1px solid rgba(255,255,255,.22);box-shadow:0 8px 18px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.3);font-weight:600;color:#fff}
+details summary::after{content:"";flex:none;width:26px;height:26px;border-radius:50%;background:radial-gradient(circle at 32% 28%,#ffb020,#ff3d71 55%,#b026ff);box-shadow:0 4px 10px rgba(255,61,113,.6),inset 0 1px 0 rgba(255,255,255,.5);background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:center;background-size:14px 14px;transition:transform .3s}
+details[open] summary::after{transform:rotate(180deg)}
+details[open] summary{border-color:rgba(255,92,154,.6);box-shadow:0 8px 22px rgba(255,61,113,.35),inset 0 1px 0 rgba(255,255,255,.3)}
+/* --- v14 fit: the two-row header is taller, so give the room back the space --- */
+#room{padding-bottom:128px!important}
+.deck{margin:14px auto 16px!important}
+.stage{padding:12px 16px 14px!important}
+
+/* ===== v15: header back to ONE row, side by side + gap above dropdowns ===== */
+/* --- one-row header: room name flexes and truncates, pill + buttons keep width --- */
+header{display:flex!important;flex-direction:row!important;gap:8px!important;align-items:center!important;padding:10px 0!important}
+header .rt{flex:1 1 auto!important;min-width:0!important}
+header .rt b,header .rt small{min-width:0!important}
+header #who{flex:none!important}
+header button{flex:none!important;white-space:nowrap!important}
+@media(max-width:430px){header{gap:3px!important}}
+@media(max-width:360px){.who small{display:none!important}}
+/* --- fit: the header is one row again, so restore the v13 spacing --- */
+#room{padding-bottom:150px!important}
+.deck{margin:24px auto 16px!important}
+.stage{padding:14px 16px!important}
+/* --- dropdowns: a minimum gap above each one, never stuck to the section above --- */
+#p-me details,aside>details{margin-top:14px!important}
+/* --- track title: compact, small, professional — one clean line --- */
+#tt{display:block!important;-webkit-line-clamp:unset!important;-webkit-box-orient:unset!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;font-size:.95rem!important;font-weight:600!important;line-height:1.3!important;margin:4px 0 2px!important}
+#tt::before{content:none!important}
+#by{font-size:.82rem!important;margin:0!important}
+
+/* ===== v16: 3D play-button logo + icon-only header buttons with drop-down labels ===== */
+/* --- premium 3D play button (header logo): glossy sphere + white play triangle --- */
+.logo{clip-path:none!important;filter:none!important;border-radius:50%!important;display:flex!important;align-items:center!important;justify-content:center!important;background:radial-gradient(circle at 30% 25%,#ffd166 0%,#ff3d71 45%,#b026ff 100%)!important;box-shadow:0 4px 14px rgba(255,61,113,.65),inset 0 2px 3px rgba(255,255,255,.7),inset 0 -5px 9px rgba(90,0,90,.45),0 0 0 1px rgba(255,255,255,.25)!important}
+.logo svg{width:55%!important;height:55%!important;margin-left:8%!important;filter:drop-shadow(0 1px 2px rgba(0,0,0,.45))!important}
+@media(max-width:430px){.logo{width:30px!important;height:30px!important}}
+/* --- Invite / Lock are icon-only premium orbs; the label drops down below on tap --- */
+header{position:relative!important;padding:9px 0!important}
+#share,#lock{width:34px!important;height:34px!important;min-height:0!important;padding:0!important;border-radius:50%!important;display:flex!important;align-items:center!important;justify-content:center!important}
+#share .tx,#lock .tx{display:none!important}
+#share .ic svg,#lock .ic svg{width:17px!important;height:17px!important}
+#share{background:linear-gradient(135deg,#b026ff,#5b3bff)!important;box-shadow:0 6px 16px rgba(90,40,255,.55),inset 0 1px 0 rgba(255,255,255,.4),inset 0 -4px 8px rgba(40,0,120,.4)!important}
+#lock{background:linear-gradient(180deg,rgba(80,48,190,.6),rgba(40,20,120,.7))!important;box-shadow:0 6px 16px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.25),inset 0 -4px 8px rgba(0,0,0,.35)!important}
+.hdr-tip{position:absolute;z-index:20;background:rgba(30,8,60,.95);border:1px solid rgba(255,255,255,.25);backdrop-filter:blur(12px);border-radius:12px;padding:6px 12px;font-size:.8rem;font-weight:600;color:#fff;white-space:nowrap;box-shadow:0 10px 24px rgba(0,0,0,.5);cursor:pointer}
+.hdr-tip::before{content:"";position:absolute;left:50%;top:-5px;transform:translateX(-50%) rotate(45deg);width:10px;height:10px;background:rgba(30,8,60,.95);border-left:1px solid rgba(255,255,255,.25);border-top:1px solid rgba(255,255,255,.25)}

@@ -1,0 +1,43 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Vibe Room</title><meta name="theme-color" content="#3a1bb8">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css"></head><body>
+<div class="glow"></div>
+<div id="fx" aria-hidden="true"><div class="smoke s1"></div><div class="smoke s2"></div><div class="smoke s3"></div><div class="smoke s4"></div><div class="smoke s5"></div><div class="smoke s6"></div><div class="smoke s7"></div><div id="stars"></div><div id="fnotes"></div></div>
+<main id="home" hidden>
+ <div class="hero3d"><img class="hero-img" src="/hero-vinyl.jpg" alt="Vibe Room vinyl"></div>
+ <h1 class="hero-title">Vibe Room</h1><p class="lead">One link. No login. Everyone hears the same song, at the same second.</p>
+ <div class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+ <div class="chips"><span class="chip"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>No login</span><span class="chip"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>In sync</span><span class="chip"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>YouTube audio</span></div>
+ <button id="create" class="big">Create a Vibe Room</button>
+ <form id="jf"><label for="jc">Have a code?</label><div class="row"><input id="jc" maxlength="6" autocomplete="off" placeholder="VIBE99"><button>Join</button></div></form>
+ <p class="steps">Create a room, share the link, paste YouTube links, listen together.</p>
+ <div id="recent"></div>
+</main>
+<main id="gate" hidden>
+ <div class="gate-badge"><img src="/gate-vibe.jpg" alt="Join the vibe"></div>
+ <h1 id="gt">Joining…</h1><p class="lead" id="gs"></p>
+ <div class="row"><input id="gn" maxlength="20" aria-label="Your name"><input id="gc" type="color" aria-label="Your colour"></div>
+ <button id="go" class="big" disabled>Join audio stream</button><p id="ge" class="err"></p></main>
+<div id="room" data-tab="play" hidden>
+ <header><div class="logo" aria-hidden="true"><svg viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="M7 4.5v15l12.5-7.5z"/></svg></div><div class="rt"><b id="rn"></b><small>● Live Room</small></div><div id="who" class="who"></div><button id="share"><span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg></span> <span class="tx">Invite</span></button><button id="lock" hidden></button></header>
+ <section class="stage"><span class="dnote n1" aria-hidden="true">♪</span><span class="dnote n2" aria-hidden="true">♫</span><span class="dnote n3" aria-hidden="true">♪</span><span class="dnote n4" aria-hidden="true">♬</span>
+  <div class="disc" id="disc"><div class="label"><div id="pl"></div></div></div>
+  <h2 id="tt">Queue is empty</h2><p id="ch">Paste a YouTube link to start the room.</p><p class="by" id="by"></p>
+  <input type="range" id="sc" min="0" max="1000" value="0" aria-label="Seek"><div class="time"><span id="t1">0:00</span><span id="sync" title="In sync">● In Sync</span><span id="t2">0:00</span></div>
+  <div class="ctl"><button id="pp" aria-label="Play or pause">Play</button><button id="sk">Skip</button><label class="vol"><span class="spk" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/></svg></span><input id="vol" type="range" min="0" max="100" value="80" aria-label="Volume"><span class="spk" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></span></label></div>
+</section>
+ <div id="pl2" style="position:fixed;left:0;top:0;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none" aria-hidden="true"></div>
+ <aside>
+  <div class="pane" id="p-queue"><form id="af"><input id="au" placeholder="Paste a YouTube link…" autocomplete="off" aria-label="YouTube link"><button>Add</button></form>
+   <h3>Up next</h3><ol id="q"></ol><h3>Tonight</h3><ol id="h" class="hist"></ol></div>
+  <div class="pane" id="p-sing"><div class="hero"><h2>Karaoke</h2><p id="sh"></p></div></div>
+  <div class="pane" id="p-room"><h3>In the room</h3><ul id="ul"></ul></div>
+  <div class="pane" id="p-me"><h3>You</h3><ul id="me"></ul></div>
+ </aside>
+ <nav id="tabs" aria-label="Sections"><button data-t="play" class="on"><i>▶</i><span>Play</span></button><button data-t="queue"><i>☰</i><span>Queue <em id="tq"></em></span></button><button data-t="sing" class="mic"><i><svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></i><span>Sing</span></button><button data-t="room"><i><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></i><span>Room</span></button><button data-t="me"><i>▼</i><span>More</span></button></nav>
+</div>
+<dialog id="dlg"><h3>Invite people</h3><div id="qr"></div><input id="lk" readonly aria-label="Room link"><button id="cp">Copy link</button><button id="cl">Close</button></dialog>
+<div id="toasts" aria-live="polite"></div><div id="fl"></div>
+<script src="/qrcode.min.js"></script>
+<script src="/socket.io/socket.io.js"></script><script src="/app.js"></script><script src="/karaoke.js"></script><script src="/extras.js"></script><script src="/starmaker.js"></script></body></html>

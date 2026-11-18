@@ -1,0 +1,108 @@
+const $=s=>document.querySelector(s),esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const L=localStorage,hex=()=>'#'+[0,1,2].map(()=>(100+Math.random()*155|0).toString(16)).join('');
+const me={id:L.vid||(L.vid=crypto.randomUUID()),name:L.vname||'Guest'+(10+Math.random()*89|0),color:L.vcolor||(L.vcolor=hex())};
+const socket=io();let S=null,P=null,P2=null,joined=false,cv=null,cv2=null,recv=0,seeking=false,rtt=0,clockOff=0,pendT=null,needCatchup=false;
+/* v13: measure the round-trip to this device so the position estimate can
+   subtract half of it (the one-way delay) — otherwise every listener lags
+   by their own network delay. Smoothed so one slow packet can't jerk it. */
+setInterval(()=>{if(socket.connected)socket.emit('ping',Date.now())},5000);
+socket.on('pong',t=>{const d=Date.now()-t;rtt=rtt?rtt*.7+d*.3:d});
+const code=(location.pathname.match(/^\/room\/(\w+)/)||[])[1];
+const act=a=>socket.emit('act',a),fmt=t=>{t=Math.max(0,t|0);return(t/60|0)+':'+String(t%60).padStart(2,'0')};
+const toast=m=>{const d=document.createElement('div');d.className='toast';d.textContent=m;$('#toasts').append(d);setTimeout(()=>d.remove(),3500)};
+/* clean line icons (Feather-style) for the header, like the mockup */
+const AIC=(p)=>'<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+p+'</svg>';
+const AIC_LOCK=AIC('<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>');
+const AIC_UNLOCK=AIC('<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/>');
+const AIC_USERS='<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>';
+if(!code){$('#home').hidden=false;
+ $('#create').onclick=()=>socket.emit('create',me,r=>location.href='/room/'+r.code);
+ $('#jf').onsubmit=e=>{e.preventDefault();const c=$('#jc').value.trim().toUpperCase();if(c)location.href='/room/'+c};
+ const rc=JSON.parse(L.recent||'[]');$('#recent').innerHTML=rc.length?'<p class="steps">Recent rooms</p>'+rc.map(c=>`<a href="/room/${esc(c)}" style="color:var(--cy)">${esc(c)}</a>`).join(' '):''}
+else{$('#gate').hidden=false;$('#gn').value=me.name;$('#gc').value=me.color.length==7?me.color:'#ff2d87';
+ socket.on('connect',()=>socket.emit('join',{code,...me},r=>{if(r.error){$('#gt').textContent='Can’t join';$('#ge').textContent=r.error;return}
+  $('#gt').textContent='Room '+code.toUpperCase();$('#gs').textContent='Pick a name, then tap to start listening in sync.';$('#go').disabled=false;
+  L.recent=JSON.stringify([...new Set([code.toUpperCase(),...JSON.parse(L.recent||'[]')])].slice(0,5))}));
+ $('#go').onclick=()=>{me.name=L.vname=$('#gn').value.trim()||me.name;me.color=L.vcolor=$('#gc').value;socket.emit('join',{code,...me},()=>{});
+  joined=true;document.body.classList.add('in-room'); /* v14: hide the landing/gate FX once inside a room */
+  $('#gate').hidden=true;$('#room').hidden=false;initPlayer();if(S)render()};
+ const s=document.createElement('script');s.src='https://www.youtube.com/iframe_api';document.head.append(s)}
+window.onYouTubeIframeAPIReady=()=>{window.ytr=1};
+function pReady(e){const pl=e.target;if(pl.setVolume)pl.setVolume(+$('#vol').value);capQuality();sync()}
+function pState(e){if(e.target!==P)return;if(e.data===0&&S?.cur)act({type:'ended',v:S.cur.videoId});if(e.data===1||e.data===2)sync()}
+function pErr(e){if(e.target===P&&S?.cur)act({type:'bad',v:S.cur.videoId})}
+function initPlayer(){if(!window.ytr)return setTimeout(initPlayer,200);
+ P=new YT.Player('pl',{width:427,height:240,playerVars:{controls:0,disablekb:1,playsinline:1,modestbranding:1,rel:0,vq:'small'},
+ events:{onReady:pReady,onStateChange:pState,onError:pErr}});
+ /* v17: a 2nd hidden player that pre-buffers the next track so a song change starts instantly instead of re-buffering */
+ try{P2=new YT.Player('pl2',{width:320,height:180,playerVars:{controls:0,disablekb:1,playsinline:1,modestbranding:1,rel:0,vq:'small'},
+ events:{onReady:pReady,onStateChange:pState,onError:pErr}})}catch(e){P2=null} /* if the 2nd player can't start, the room still works on the single player */}
+/* audio-only room: the video is hidden behind the hub, so cap it at 240p.
+   The sound is identical at every quality — only the hidden picture gets
+   smaller — and a 240p stream needs a fraction of the bandwidth, so it
+   stops re-buffering on ordinary connections. */
+function capQuality(){[P,P2].forEach(pl=>{if(!pl||!pl.setPlaybackQuality)return;try{pl.setPlaybackQuality('small');if(pl.setPlaybackQualityRange)pl.setPlaybackQualityRange('tiny','small')}catch(e){}})}
+/* v17: keep the next track buffered in the hidden 2nd player while the current one plays */
+function preloadNext(){if(!P2||!P2.cueVideoById||!S)return;const n=S.queue&&S.queue[0];
+ if(!n)return; /* no next track — leave cv2 alone so a just-preloaded track can still be swapped in when it becomes current */
+ if(cv2!==n.videoId){cv2=n.videoId;try{P2.cueVideoById(n.videoId)}catch(e){}capQuality()}}
+const est=()=>S?.cur?S.cur.pos+(S.cur.playing?(Date.now()-recv+rtt/2)/1000*(S.cur.speed||1):0):0;
+let bufSince=0;
+function sync(){if(!P||!P.loadVideoById||!S)return;const c=S.cur;if(!c){P.stopVideo?.();cv=null;needCatchup=false;return}
+ /* v17 scheduled start: if this action is for a future server time, don't touch the player yet — wait until that instant, then apply it */
+ const at=c.playAt?c.playAt-clockOff:0;
+ if(at>Date.now()+30){clearTimeout(pendT);pendT=setTimeout(()=>{pendT=null;sync()},at-Date.now());return}
+ if(cv!==c.videoId){
+  /* v17 preload swap: if the 2nd player already has this track buffered, make it the live player so it starts instantly */
+  if(P2&&cv2===c.videoId&&P2.getPlayerState){const tmp=P;P=P2;P2=tmp;cv2=cv;cv=c.videoId;P2.stopVideo?.();capQuality()}
+  else{cv=c.videoId;P.loadVideoById(c.videoId,est());capQuality()}
+  needCatchup=true /* v17: fresh load — jump straight to the live position instead of drifting there */}
+ const st=P.getPlayerState(),t=est(),now=P.getCurrentTime?.()||0,d=t-now,ad=Math.abs(d),rate=c.speed||1;
+ /* v13 tighter correction, still no hard jumps: ignore drift under a
+    quarter-second (YouTube's own clock jitters by about that much),
+    nudge the speed ±8% for drift up to 1.5s, and only seek past 1.5s —
+    and never seek while the player is still buffering, or the seek
+    throws the buffer away and the stall starts all over again. */
+ let target=rate;if(ad>=.25&&ad<1.5)target=rate*(d>0?1.08:.92);
+ P.setPlaybackRate(target);
+ if(c.playing&&st!==1&&st!==3)P.playVideo();if(!c.playing&&st===1)P.pauseVideo();
+ /* v17 catch-up: on a fresh load, seek straight to the live position the moment the player can seek (don't wait for the drift to grow past the normal threshold) */
+ if(needCatchup&&(st===1||st===2)){P.seekTo(t,true);needCatchup=false}
+ else if(st===1&&ad>=1.5)P.seekTo(t,true);
+ else if(st===2&&ad>.5)P.seekTo(t,true);
+ const syn=$('#sync');
+ if(st===3){syn.className='off';syn.textContent='● Buffering…'}
+ else{const ok=ad<1.5;syn.className=ok?'':'off';syn.textContent=ok?'● In Sync':'● Syncing…'}}
+socket.on('state',s=>{S=s;recv=Date.now();
+/* v17: server clock minus this device's clock (one-way delay already removed) — used to run scheduled actions at the same instant on every device */
+clockOff=S.now+rtt/2-recv;
+render();sync();preloadNext()});socket.on('say',toast);
+socket.on('react',r=>{const d=document.createElement('div');d.className='fl';d.textContent=r.e;d.style.left=(10+Math.random()*80)+'%';$('#fl').append(d);setTimeout(()=>d.remove(),2400)});
+function render(){if(!joined)return;const isH=S.hostId===me.id,M=isH||S.co.includes(me.id),can=M||!S.locked,c=S.cur;
+ $('#rn').textContent='Room '+S.code;
+ $('#who').innerHTML='<span class="pill-who">'+S.users.slice(0,8).map(u=>`<span class="av" style="background:${esc(u.color)}" title="${esc(u.name)}">${esc(u[0]=u.name[0]||'?')}</span>`).join('')+`<small>${AIC_USERS} ${S.users.length} listening</small></span>`;
+ const lk=$('#lock');lk.hidden=!isH;lk.innerHTML=S.locked?'<span class="ic" aria-hidden="true">'+AIC_UNLOCK+'</span> <span class="tx">Unlock Playback</span>':'<span class="ic" aria-hidden="true">'+AIC_LOCK+'</span> <span class="tx">Lock Playback</span>';
+ $('#disc').classList.toggle('on',!!c&&c.playing);
+ let h=0;if(c)for(const ch of c.videoId)h=(h*31+ch.charCodeAt(0))%360;document.documentElement.style.setProperty('--h',h);
+ $('#tt').textContent=c?c.title:'Queue is empty';$('#ch').textContent=c?c.channel:'Paste a YouTube link to start the room.';$('#by').textContent=c?'Added by '+c.by:'';
+ $('#pp').innerHTML=c&&c.playing?IC_PAUSE:IC_PLAY;$('#pp').disabled=!can;$('#sk').innerHTML=IC_NEXT;$('#sk').setAttribute('aria-label',M?'Skip':'Vote to skip');$('#sc').disabled=!can||!c;
+ $('#q').innerHTML=S.queue.length?S.queue.map((t,i)=>`<li style="--c:${esc(t.color||'#ff2d87')}"><img src="${esc(t.artwork)}" alt=""><div><b>${esc(t.title)}</b><small>${esc(t.by)}</small>${kq(t,M)}</div>${M||t.byId===me.id?`<button data-rm="${i}" aria-label="Remove ${esc(t.title)}">Remove</button>`:''}</li>`).join(''):'<li><div><small>Nothing queued. Paste a link above.</small></div></li>';
+ $('#h').innerHTML=S.history.map(t=>`<li><img src="${esc(t.artwork)}" alt=""><div><b>${esc(t.title)}</b><small>${esc(t.by)}</small></div></li>`).reverse().join('');
+ $('#ul').innerHTML=S.users.map(u=>`<li style="--c:${esc(u.color)}"><div><b>${esc(u.name)}${u.id===S.hostId?' 👑':S.co.includes(u.id)?' ★':''}</b></div>${isH&&u.id!==me.id?`${ku(u)}<button data-h="${u.id}">Make host</button><button data-c="${u.id}">Co-host</button><button data-k="${u.id}">Remove</button>`:M&&u.id!==S.hostId&&u.id!==me.id?`<button data-k="${u.id}">Remove</button>`:''}</li>`).join('');karRender()}
+document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const d=b.dataset;
+ if(d.rm)act({type:'remove',i:+d.rm});if(d.h)act({type:'host',id:d.h});if(d.c)act({type:'cohost',id:d.c});if(d.k)act({type:'kick',id:d.k});if(d.e)act({type:'react',e:d.e})});
+$('#pp').onclick=()=>{if(!S?.cur){toast('Paste a YouTube link to start the room.');return}act({type:'play'})};$('#sk').onclick=()=>act({type:'skip'});$('#lock').onclick=()=>act({type:'lock'});
+$('#af').onsubmit=e=>{e.preventDefault();const u=$('#au').value.trim();if(u){act({type:'add',url:u});$('#au').value=''}};
+$('#vol').oninput=e=>{[P,P2].forEach(pl=>pl&&pl.setVolume&&pl.setVolume(+e.target.value))};
+$('#sc').onpointerdown=()=>seeking=true;$('#sc').onchange=e=>{seeking=false;if(P)act({type:'seek',pos:e.target.value/1000*P.getDuration()})};
+$('#share').onclick=()=>{const u=location.origin+'/room/'+S.code;$('#lk').value=u;$('#qr').innerHTML='';
+ try{if(window.QRCode)new QRCode($('#qr'),{text:u,width:200,height:200});else throw new Error('no QR lib')}
+ catch(e){$('#qr').innerHTML='<small>QR code unavailable — copy the link below.</small>'}
+ $('#dlg').showModal()};
+$('#cl').onclick=()=>$('#dlg').close();$('#cp').onclick=()=>{navigator.clipboard.writeText($('#lk').value);$('#cp').textContent='Copied'};
+setInterval(()=>{if(!P||!P.getDuration||!S?.cur)return;const d=P.getDuration()||0,t=est();$('#t1').textContent=fmt(t);$('#t2').textContent=fmt(d);if(!seeking&&d)$('#sc').value=Math.min(1000,t/d*1000);
+ /* stuck-buffer safety net: buffering for 12s straight while the room is
+    playing means the stream is wedged — reload it at the live position. */
+ if(S.cur.playing&&P.getPlayerState){const st=P.getPlayerState();if(st===3){if(!bufSince)bufSince=Date.now();else if(Date.now()-bufSince>12000){bufSince=0;cv=null;sync()}}else bufSince=0}},500);
+if('mediaSession'in navigator){navigator.mediaSession.setActionHandler('play',()=>act({type:'play'}));navigator.mediaSession.setActionHandler('pause',()=>act({type:'play'}));navigator.mediaSession.setActionHandler('nexttrack',()=>act({type:'skip'}))}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)sync()});
