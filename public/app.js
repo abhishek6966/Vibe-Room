@@ -4,7 +4,7 @@ const newId=()=>crypto.randomUUID?crypto.randomUUID():Array.from(crypto.getRando
 /* Migrate the old shared ID once, then keep each tab's identity in sessionStorage. */
 const getId=()=>{if(T.vid)return T.vid;const old=L.vid;if(old){L.removeItem('vid');return T.vid=old}return T.vid=newId()};
 const me={id:getId(),name:L.vname||'Guest'+(10+Math.random()*89|0),color:L.vcolor||(L.vcolor=hex())};
-const socket=io();let S=null,P=null,joined=false,cv=null,recv=0,seeking=false,rtt=0,clockOff=0,pendT=null,needCatchup=false,playbackWaitSince=0;
+const socket=io();let S=null,P=null,joined=false,cv=null,recv=0,seeking=false,rtt=0,clockOff=0,pendT=null,needCatchup=false;
 /* v13: measure the round-trip to this device so the position estimate can
    subtract half of it (the one-way delay) — otherwise every listener lags
    by their own network delay. Smoothed so one slow packet can't jerk it. */
@@ -49,15 +49,29 @@ else{$('#gate').hidden=false;$('#home-link').hidden=false;$('#gn').value=me.name
   $('#gate').classList.remove('gate-error');$('#gt').textContent='Room '+code.toUpperCase();$('#gs').textContent='Choose your name, then join the room.';$('#ge').textContent='';$('#join-fields').hidden=false;$('#go').hidden=false;$('#go').disabled=false;$('#new-room').hidden=true;$('#new-room').disabled=false;$('#new-room').textContent='Create a new room';
   L.recent=JSON.stringify([...new Set([code.toUpperCase(),...JSON.parse(L.recent||'[]')])].slice(0,5))});
  rejoinRoom=joinRoom;socket.on('connect',joinRoom);
- $('#go').onclick=()=>{me.name=L.vname=$('#gn').value.trim()||me.name;me.color=L.vcolor=$('#gc').value;$('#go').disabled=true;$('#go').textContent='Joining…';socket.emit('join',{code,...me},r=>{if(r.error){showJoinError(r.error);return}if(r.id)me.id=T.vid=r.id;
+ /* v24: create the player NOW, while the gate is showing, so it already exists
+    when the person taps "Join audio stream". That tap is the gesture the
+    browser needs to allow sound — if the player is only created after the
+    join comes back (as before), the tap has already finished and the browser
+    may still block the sound. */
+ initPlayer();
+ $('#go').onclick=()=>{me.name=L.vname=$('#gn').value.trim()||me.name;me.color=L.vcolor=$('#gc').value;$('#go').disabled=true;$('#go').textContent='Joining…';
+  /* v24: unlock this person's sound INSIDE the Join tap, while it is still a
+     user gesture. The browser only allows sound after THIS person taps on
+     THIS device — the host pressing Play does nothing for a guest's browser.
+     So the Join tap (which everyone already does) is the moment to unlock
+     it. After this, when the host plays a song, it just plays. */
+  if(P){applyVolume(P);if(P.playVideo&&S?.cur?.playing)P.playVideo()}
+  socket.emit('join',{code,...me},r=>{if(r.error){showJoinError(r.error);return}if(r.id)me.id=T.vid=r.id;
   joined=true;document.body.classList.add('in-room'); /* v14: hide the landing/gate FX once inside a room */
   $('#gate').hidden=true;$('#room').hidden=false;initPlayer();if(S)render()})};
  const s=document.createElement('script');s.src='https://www.youtube.com/iframe_api';document.head.append(s)}
 window.onYouTubeIframeAPIReady=()=>{window.ytr=1};
 function pReady(e){applyVolume(e.target);capQuality();sync()}
-function pState(e){if(e.target!==P)return;if(e.data===0&&S?.cur)act({type:'ended',v:S.cur.videoId});if(e.data===1){playbackWaitSince=0;$('#audio-unlock').hidden=true}if(e.data===1||e.data===2)sync()}
+function pState(e){if(e.target!==P)return;if(e.data===0&&S?.cur)act({type:'ended',v:S.cur.videoId});if(e.data===1)$('#audio-unlock').hidden=true;if(e.data===1||e.data===2)sync()}
 function pErr(e){if(e.target!==P||!S?.cur)return;const message={2:'YouTube rejected the video request on this device.',5:'YouTube could not decode this video on this device.',100:'This video is unavailable or private.',101:'This video does not allow embedded playback.',150:'This video does not allow embedded playback.',153:"YouTube could not verify this embed's referrer."};toast(message[e.data]||'YouTube could not play this track on this device.');act({type:'bad',v:S.cur.videoId,code:e.data})}
-function initPlayer(){if(!window.ytr)return setTimeout(initPlayer,200);
+function initPlayer(){if(P)return; /* v24: only create the player once — it is now created early (on the gate) so it exists when the user taps Join, and again after joining */
+ if(!window.ytr)return setTimeout(initPlayer,200);
  P=new YT.Player('pl',{width:427,height:240,playerVars:{controls:0,disablekb:1,playsinline:1,modestbranding:1,rel:0,vq:'small'},
  events:{onReady:pReady,onStateChange:pState,onError:pErr,onAutoplayBlocked:()=>{if(S?.cur?.playing&&!volumeMuted)$('#audio-unlock').hidden=false}}});
 }
@@ -66,23 +80,27 @@ function initPlayer(){if(!window.ytr)return setTimeout(initPlayer,200);
    smaller — and a 240p stream needs a fraction of the bandwidth, so it
    stops re-buffering on ordinary connections. */
 function capQuality(){if(!P||!P.setPlaybackQuality)return;try{P.setPlaybackQuality('small');if(P.setPlaybackQualityRange)P.setPlaybackQualityRange('tiny','small')}catch(e){}}
+/* v23: re-apply the 240p cap every 2s. YouTube's adaptive streaming can creep
+   the hidden player's quality up mid-song (more data = more buffering on a
+   slow connection), and the cap was only applied when a track loaded. */
+setInterval(()=>capQuality(),2000);
 const est=()=>S?.cur?S.cur.pos+(S.cur.playing?(Date.now()-recv+rtt/2)/1000*(S.cur.speed||1):0):0;
 let bufSince=0;
-function sync(){if(!P||!P.loadVideoById||!S)return;const c=S.cur;if(!c){P.stopVideo?.();cv=null;needCatchup=false;playbackWaitSince=0;return}
+function sync(){if(!P||!P.loadVideoById||!S)return;const c=S.cur;if(!c){P.stopVideo?.();cv=null;needCatchup=false;return}
  /* v17 scheduled start: if this action is for a future server time, don't touch the player yet — wait until that instant, then apply it */
  const at=c.playAt?c.playAt-clockOff:0;
  if(at>Date.now()+30){clearTimeout(pendT);pendT=setTimeout(()=>{pendT=null;sync()},at-Date.now());return}
  if(cv!==c.videoId){
-  cv=c.videoId;playbackWaitSince=c.playing?Date.now():0;
-  if(c.playing)P.loadVideoById(c.videoId,est());else P.cueVideoById(c.videoId,est());capQuality();
+  cv=c.videoId;if(c.playing)P.loadVideoById(c.videoId,est());else P.cueVideoById(c.videoId,est());capQuality();
   needCatchup=true /* v17: fresh load — jump straight to the live position instead of drifting there */}
  const st=P.getPlayerState(),t=est(),now=P.getCurrentTime?.()||0,d=t-now,ad=Math.abs(d),rate=c.speed||1;
- /* v20 tighter correction so every listener hears the same second: ignore drift
-    under 0.15s (YouTube's own clock jitters by about that much), nudge the speed
-    ±15% for drift up to 0.5s, and seek past 0.5s — and never seek while the
-    player is still buffering, or the seek throws the buffer away and the stall
-    starts all over again. */
- let target=rate;if(ad>=.15&&ad<.5)target=rate*(d>0?1.15:.85);
+ /* v23 smooth playback: a seek throws the buffer away and stalls the song,
+    so seeks are now rare — only past 1.0s while playing (was 0.5s). Drift up
+    to 1.0s is corrected gently by nudging the speed ±15%, which never
+    interrupts the audio. That keeps everyone within about a second while the
+    song plays straight through with no mid-song stall. Never seek while the
+    player is buffering, or the stall starts all over again. */
+ let target=rate;if(ad>=.15&&ad<1)target=rate*(d>0?1.15:.85);
  P.setPlaybackRate(target);
  /* v21: while your own tap is still on its way to the server (~200ms), don't
     let the sync loop undo it — it still sees the old server state. The guard
@@ -91,16 +109,15 @@ function sync(){if(!P||!P.loadVideoById||!S)return;const c=S.cur;if(!c){P.stopVi
  if(!localPending){if(c.playing&&st!==1&&st!==3)P.playVideo();if(!c.playing&&st===1)P.pauseVideo()}
  /* v17 catch-up: on a fresh load, seek straight to the live position the moment the player can seek (don't wait for the drift to grow past the normal threshold) */
  if(needCatchup&&(st===1||st===2)){P.seekTo(t,true);needCatchup=false}
- else if(st===1&&ad>=.5)P.seekTo(t,true);
+ else if(st===1&&ad>=1)P.seekTo(t,true);
  else if(st===2&&ad>.5)P.seekTo(t,true);
  const syn=$('#sync');
  if(st===3){syn.className='off';syn.textContent='● Buffering…'}
- else{const ok=ad<.5;syn.className=ok?'':'off';syn.textContent=ok?'● In Sync':'● Syncing…'}}
-socket.on('state',s=>{const previousVideo=S?.cur?.videoId;S=s;recv=Date.now();
+ else{const ok=ad<1;syn.className=ok?'':'off';syn.textContent=ok?'● In Sync':'● Syncing…'}}
+socket.on('state',s=>{S=s;recv=Date.now();
 /* v17: server clock minus this device's clock (one-way delay already removed) — used to run scheduled actions at the same instant on every device */
 clockOff=S.now+rtt/2-recv;
-if(!S.cur||!S.cur.playing){$('#audio-unlock').hidden=true;playbackWaitSince=0}
-else if(previousVideo!==S.cur.videoId||!playbackWaitSince)playbackWaitSince=Date.now();
+if(!S.cur||!S.cur.playing)$('#audio-unlock').hidden=true;
 render();sync();updateMediaSession()});socket.on('say',toast);
 socket.on('react',r=>{const d=document.createElement('div');d.className='fl';d.textContent=r.e;d.style.left=(10+Math.random()*80)+'%';$('#fl').append(d);setTimeout(()=>d.remove(),2400)});
 function render(){if(!joined)return;const isH=S.hostId===me.id,M=isH||S.co.includes(me.id),C=M||(S.ctrl&&S.ctrl.includes(me.id)),can=C,c=S.cur;
@@ -114,10 +131,16 @@ function render(){if(!joined)return;const isH=S.hostId===me.id,M=isH||S.co.inclu
  $('#au').placeholder=C?'Paste a YouTube link…':'Paste a YouTube link to request it';$('#af button').textContent=C?'Add':'Request';
  /* v20: song requests — a guest's link waits here until the host approves it (into the queue) or rejects it (gone) */
  const rq=S.reqs||[];$('#rqw').hidden=!rq.length;
+ /* v28: section counts, so the headings read like a premium queue */
+ const setH=(sel,txt)=>{const e=document.querySelector(sel);if(e)e.innerHTML=txt};
+ setH('#rqw h3',`Requests <em>${rq.length}</em>`);
+ const qh=document.querySelector('#q')?.previousElementSibling,hH=document.querySelector('#h')?.previousElementSibling;
+ if(qh)qh.innerHTML=`Up next <em>${S.queue.length}</em>`;
+ if(hH)hH.innerHTML=`Recently played <em>${S.history.length}</em>`;
  $('#rq').innerHTML=rq.map(q=>`<li style="--c:${esc(q.color||'#ff2d87')}"><img src="${esc(q.artwork)}" alt=""><div><b>${esc(q.title)}</b><small>Requested by ${esc(q.by)}${q.byId===me.id?' • Waiting for host approval':''}</small></div>${isH?`<button class="ap" data-ap="${esc(q.rid)}">Approve</button><button class="rj" data-rj="${esc(q.rid)}">Reject</button>`:''}</li>`).join('');
  $('#current-track').hidden=!c;
- $('#current-song').innerHTML=c?`<li class="current-song"><img src="${esc(c.artwork)}" alt=""><div><b>${esc(c.title)}</b><small>${esc(c.by)}</small></div><span class="current-state ${c.playing?'playing':'paused'}">${c.playing?'Playing':'Paused'}</span></li>`:'';
- $('#q').innerHTML=S.queue.length?S.queue.map((t,i)=>`<li style="--c:${esc(t.color||'#ff2d87')}"><img src="${esc(t.artwork)}" alt=""><div><b>${esc(t.title)}</b><small>${esc(t.by)}</small>${kq(t,M)}</div>${C||t.byId===me.id?`<button data-rm="${i}" aria-label="Remove ${esc(t.title)}">Remove</button>`:''}</li>`).join(''):'<li><div><small>Nothing queued. Paste a link above.</small></div></li>';
+ $('#current-song').innerHTML=c?`<li class="current-song"><img src="${esc(c.artwork)}" alt=""><div><b>${esc(c.title)}</b><small>${esc(c.by)}</small></div><span class="current-state ${c.playing?'playing':'paused'}"><i></i>${c.playing?'Playing':'Paused'}</span></li>`:'';
+ $('#q').innerHTML=S.queue.length?S.queue.map((t,i)=>`<li style="--c:${esc(t.color||'#ff2d87')}"><img src="${esc(t.artwork)}" alt=""><div><b>${esc(t.title)}</b><small>${esc(t.by)}</small>${kq(t,M)}</div>${C||t.byId===me.id?`<button data-rm="${i}" aria-label="Remove ${esc(t.title)}">Remove</button>`:''}</li>`).join(''):'<li class="empty"><div><small>Nothing queued. Paste a link above.</small></div></li>';
  $('#h').innerHTML=S.history.map(t=>`<li><img src="${esc(t.artwork)}" alt=""><div><b>${esc(t.title)}</b><small>${esc(t.by)}</small></div><button data-replay="${esc(t.videoId)}" aria-label="${C?'Replay':'Request'} ${esc(t.title)}">${C?'Replay':'Request'}</button></li>`).reverse().join('');
  $('#ul').innerHTML=S.users.map(u=>{const hasCtrl=S.ctrl&&S.ctrl.includes(u.id);
   return `<li style="--c:${esc(u.color)}"><div><b>${esc(u.name)}${u.id===S.hostId?' 👑':S.co.includes(u.id)?' ★':hasCtrl?' 🎛':''}</b></div>${isH&&u.id!==me.id?`<div class="uacts">${ku(u)}<button data-h="${u.id}">Make host</button><button data-c="${u.id}">Co-host</button><button data-ctrl="${u.id}">${hasCtrl?'Take control':'Give control'}</button><button data-k="${u.id}">Remove</button></div>`:M&&u.id!==S.hostId&&u.id!==me.id?`<div class="uacts"><button data-k="${u.id}">Remove</button></div>`:''}</li>`}).join('');karRender()}
@@ -125,7 +148,16 @@ document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)r
  if(d.rm)act({type:'remove',i:+d.rm});if(d.h)act({type:'host',id:d.h});if(d.c)act({type:'cohost',id:d.c});if(d.k)act({type:'kick',id:d.k});if(d.e)act({type:'react',e:d.e});
  if(d.ap)act({type:'approve',rid:d.ap});if(d.rj)act({type:'reject',rid:d.rj});if(d.ctrl)act({type:'ctrl',id:d.ctrl});if(d.replay)act({type:'add',url:'https://youtu.be/'+d.replay})});
 $('#leave').onclick=()=>{socket.emit('leave');setTimeout(()=>{socket.disconnect();location.href='/'},300)}; /* v20: leave the room — the server hands the host on at once if you were the host */
-$('#audio-unlock').onclick=()=>{if(!S?.cur?.playing||!P)return;applyVolume(P);P.playVideo?.();sync()};
+$('#audio-unlock').onclick=()=>{if(!S?.cur?.playing||!P)return;applyVolume(P);P.playVideo?.();sync();$('#audio-unlock').hidden=true};
+/* v22: the browser only allows sound after the user taps the page. A joiner
+   who never taps anything hears nothing, even though the room is playing.
+   So the FIRST tap anywhere in the room (a tab, a button, the page itself)
+   unmutes the player and starts it if it should be playing. That one tap is
+   the gesture the browser needs — after it, sound works for the whole session.
+   It is a no-op once the player is playing and unmuted, and the localT guard
+   keeps it from undoing your own intentional pause. */
+const unlockOnTap=()=>{if(!joined||!S?.cur?.playing||!P||Date.now()-localT<1000)return;const st=P.getPlayerState&&P.getPlayerState();if(st===1&&!P.isMuted?.())return;applyVolume(P);if(st!==1)P.playVideo?.();$('#audio-unlock').hidden=true};
+document.addEventListener('pointerdown',unlockOnTap);
 /* v21: pause/play acts instantly on the device you tap. The server still
    schedules the action for the group (SCHED 200ms), so the sound used to keep
    playing ~1s after you tapped pause. localToggle pauses/plays THIS player's
@@ -170,17 +202,33 @@ $('#af').onsubmit=e=>{e.preventDefault();const u=$('#au').value.trim(),submit=$(
 };
 $('#vol').oninput=e=>setVolume(e.target.value);
 $('#vm').onclick=()=>setVolume(volumeMuted?lastVolume:0);$('#vmx').onclick=()=>setVolume(100);
-$('#sc').onpointerdown=()=>seeking=true;$('#sc').onchange=e=>{seeking=false;if(P)act({type:'seek',pos:e.target.value/1000*P.getDuration()})};
+$('#sc').onpointerdown=()=>seeking=true;$('#sc').onchange=e=>{seeking=false;if(P)act({type:'seek',pos:e.target.value/1000*(S?.cur?.duration||P.getDuration())})};
 $('#share').onclick=()=>{const u=location.origin+'/room/'+S.code;$('#lk').value=u;$('#qr').innerHTML='';
  try{if(window.QRCode)new QRCode($('#qr'),{text:u,width:200,height:200});else throw new Error('no QR lib')}
  catch(e){$('#qr').innerHTML='<small>QR code unavailable — copy the link below.</small>'}
  $('#dlg').showModal()};
 $('#cl').onclick=()=>$('#dlg').close();$('#cp').onclick=()=>{navigator.clipboard.writeText($('#lk').value);$('#cp').textContent='Copied'};
-setInterval(()=>{if(!P||!P.getDuration||!S?.cur)return;const d=P.getDuration()||0,t=est();$('#t1').textContent=fmt(t);$('#t2').textContent=fmt(d);if(!seeking&&d)$('#sc').value=Math.min(1000,t/d*1000);updateMediaSession();
- if(S.cur.playing&&playbackWaitSince&&Date.now()-playbackWaitSince>6000){const st=P.getPlayerState?.();if(st===-1||st===2||st===5)$('#audio-unlock').hidden=false}
+let lastDurSent='';
+setInterval(()=>{if(!P||!P.getDuration||!S?.cur)return;const ld=P.getDuration()||0,t=est();
+ /* v27: the total length is the SERVER's shared value, not each phone's own
+    player — that is what kept it different (or 0:00) across participants.
+    Whichever phone's player first learns the real length reports it once,
+    the server keeps it, and from then on everyone shows the same number. */
+ const d=S.cur.duration||ld;
+ if(ld>0&&!S.cur.duration){const key=S.cur.tid+':'+Math.round(ld);if(key!==lastDurSent){lastDurSent=key;act({type:'dur',tid:S.cur.tid,dur:ld})}}
+ $('#t1').textContent=fmt(t);$('#t2').textContent=fmt(d);if(!seeking&&d)$('#sc').value=Math.min(1000,t/d*1000);updateMediaSession();
  /* stuck-buffer safety net: buffering for 12s straight while the room is
     playing means the stream is wedged — reload it at the live position. */
- if(S.cur.playing&&P.getPlayerState){const st=P.getPlayerState();if(st===3){if(!bufSince)bufSince=Date.now();else if(Date.now()-bufSince>12000){bufSince=0;cv=null;sync()}}else bufSince=0}},500);
+ if(S.cur.playing&&P.getPlayerState){const st=P.getPlayerState();if(st===3){if(!bufSince)bufSince=Date.now();else if(Date.now()-bufSince>12000){bufSince=0;cv=null;sync()}}else bufSince=0}
+ /* v22: autoplay-blocked safety net. Browsers block sound until the user taps
+    the page, so a joiner can sit on a "playing" room in silence. That shows
+    up two ways: the player's video is paused (state 2) while the room says
+    playing, OR it is playing but muted (the browser let the video run and
+    silenced it — the common case). The YouTube onAutoplayBlocked event does
+    not fire in every browser, so this check covers both. The localT guard
+    keeps your own intentional pause (which takes ~200ms for the server to
+    confirm) from flashing the button. */
+ if(S.cur.playing&&P.getPlayerState&&!volumeMuted&&Date.now()-localT>1500){const st=P.getPlayerState();if(st===2||P.isMuted?.())$('#audio-unlock').hidden=false}},500);
 let mediaMetadataKey=null,mediaPlaybackState='';
 function updateMediaSession(){
  if(!navigator.mediaSession)return;const ms=navigator.mediaSession,c=S?.cur;
@@ -189,7 +237,7 @@ function updateMediaSession(){
  const playbackState=c?(c.playing?'playing':'paused'):'none';
  if(playbackState!==mediaPlaybackState){mediaPlaybackState=playbackState;ms.playbackState=playbackState}
  if(!c||typeof ms.setPositionState!=='function'||!P?.getDuration)return;
- const duration=P.getDuration(),position=est();
+ const duration=c.duration||P.getDuration(),position=est();
  if(Number.isFinite(duration)&&duration>0&&Number.isFinite(position))ms.setPositionState({duration,position:Math.max(0,Math.min(duration,position)),playbackRate:c.speed||1})
 }
 if('mediaSession'in navigator){

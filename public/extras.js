@@ -32,7 +32,7 @@ function paint(){const c=S?.cur,M=S&&(S.hostId===me.id||S.co.includes(me.id)),C=
  const rp=S?.repeat||'off';$('#xr').classList.toggle('on',rp!=='off');const xrb=$('#xrb');xrb.hidden=rp==='off';xrb.textContent=rp==='one'?'1':'ALL';
  $('#xp').disabled=!can;['#xs','#xr','#xv'].forEach(i=>$(i).disabled=!C);$('#xv').closest('.pill').classList.toggle('off',!C);if(c)$('#xv').value=String(c.speed||1);
  $('#xl').innerHTML=(c&&likes().some(x=>x.id===c.videoId)?X_HEART('#ff5c8a'):X_HEART_O)+'<span>Like</span>';
- if(c){$('#mi').src=c.artwork;$('#mt').textContent=c.title;$('#mp').innerHTML=c.playing?miniPause:miniPlay;$('#mp').setAttribute('aria-label',c.playing?'Pause':'Play')}$('#mp').disabled=!C;$('#mprev').disabled=!C;updMini();showLikes()}
+ if(c){$('#mi').src=c.artwork;$('#mt').textContent=c.title;$('#mp').innerHTML=c.playing?miniPause:miniPlay;$('#mp').setAttribute('aria-label',c.playing?'Pause':'Play')}$('#mp').disabled=!C;$('#mprev').disabled=!C;$('#mnext').disabled=!C;updMini();showLikes()}
 socket.on('state',paint);
 $('#xp').onclick=()=>act({type:'prev'});$('#xs').onclick=()=>act({type:'shuffle'});$('#xr').onclick=()=>act({type:'repeat'});$('#xv').onchange=e=>act({type:'speed',v:parseFloat(e.target.value)});$('#mp').onclick=()=>{localToggle();act({type:'play'})};$('#mprev').onclick=()=>act({type:'prev'});$('#mnext').onclick=()=>act({type:'skip'});
 $('#xl').onclick=()=>{const c=S?.cur;if(!c){toast('Paste a YouTube link to start the room.');return}let a=likes();a=a.some(x=>x.id===c.videoId)?a.filter(x=>x.id!==c.videoId):[...a,{id:c.videoId,t:c.title}];L.likes=JSON.stringify(a);paint()};

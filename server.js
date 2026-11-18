@@ -13,7 +13,7 @@ const mod=(r,id)=>r.hostId===id||r.co.has(id);
 const ctrl=(r,id)=>mod(r,id)||r.ctrl.has(id);
 const pub=r=>({code:r.code,hostId:r.hostId,co:[...r.co],ctrl:[...r.ctrl],reqs:r.reqs,locked:r.locked,repeat:r.repeat,mode:r.mode,adders:[...r.adders],queue:r.queue,history:r.history.slice(-20),
   users:[...r.users.values()].filter(u=>u.connected).map(({id,name,color})=>({id,name,color})),
-  cur:r.cur&&{videoId:r.cur.videoId,title:r.cur.title,channel:r.cur.channel,artwork:r.cur.artwork,by:r.cur.by,tid:r.cur.tid,reqs:r.cur.reqs,singerId:r.cur.singerId,singerName:r.cur.singerName,speed:r.cur.speed||1,live:r.cur.live,playing:r.cur.playing,playAt:r.cur.playAt||0,pos:pos(r)},now:now()});
+  cur:r.cur&&{videoId:r.cur.videoId,title:r.cur.title,channel:r.cur.channel,artwork:r.cur.artwork,by:r.cur.by,tid:r.cur.tid,duration:r.cur.duration||0,reqs:r.cur.reqs,singerId:r.cur.singerId,singerName:r.cur.singerName,speed:r.cur.speed||1,live:r.cur.live,playing:r.cur.playing,playAt:r.cur.playAt||0,pos:pos(r)},now:now()});
 const push=r=>io.to(r.code).emit('state',pub(r));
 const say=(r,m)=>io.to(r.code).emit('say',m);
 function start(r,t,at){at=at||now();r.cur={...t,anchor:at,playing:true,pausedAt:0,live:false,speed:r.speed,playAt:at};r.bad=new Set()}
@@ -51,7 +51,17 @@ io.on('connection',s=>{let r=null,me=null,lastVideoCheck=0;
   s.on('join',(u,cb)=>{const x=rooms.get(String(u.code||'').toUpperCase());if(!x)return cb({error:'That room doesn\u2019t exist or has ended.'});
     const requestedId=String(u.id||'');if(!requestedId)return cb({error:'Could not identify this session. Reload the page and try again.'});
     if(x.bans.has(requestedId))return cb({error:'You were removed from this room.'});
-    let id=requestedId,old=x.users.get(id);if(old&&old.connected&&old.sid!==s.id){id=randomUUID();old=null}
+    let id=requestedId,old=x.users.get(id);
+    /* v25: if this id is already in the room on a DIFFERENT socket, it is
+       normally a second tab — give that tab a fresh id so the two tabs do not
+       fight over one identity. BUT if the old socket is already dead, this is
+       not a second tab, it is the same person reconnecting (their phone went
+       to another app and the connection dropped, or the network blipped).
+       In that case keep the SAME id, so they keep their name, their role,
+       and — if they were the host — the host seat. Giving them a new id here
+       was the bug: the host came back from another app as a "new" person and
+       lost the host seat on the spot. */
+    if(old&&old.connected&&old.sid!==s.id){const oldSock=io.sockets.sockets.get(old.sid);if(oldSock&&oldSock.connected){id=randomUUID();old=null}}
     r=x;s.join(r.code);old=r.users.get(id);
     me={id,name:String(u.name).slice(0,20)||'Guest',color:String(u.color).slice(0,30),connected:true,at:old?old.at:now(),sid:s.id};
     r.users.set(me.id,me);clearTimeout(r.t);if(!old)say(r,me.name+' joined');
@@ -73,7 +83,7 @@ io.on('connection',s=>{let r=null,me=null,lastVideoCheck=0;
       const check=await youtubeEmbedStatus(v);if(check.status==='blocked')return fail('YouTube marks this video as not embeddable, so it cannot play in this room.');
       if(check.status==='unavailable')return fail('YouTube could not find a public video for that link.');
       let title='YouTube track',channel='';try{const j=await(await fetch('https://www.youtube.com/oembed?format=json&url=https://www.youtube.com/watch?v='+v,{signal:AbortSignal.timeout(8000)})).json();title=j.title;channel=j.author_name}catch{return fail('That video can\u2019t be played here. Try another link.')}
-      const t={videoId:v,title,channel,artwork:'https://i.ytimg.com/vi/'+v+'/hqdefault.jpg',by:me.name,byId:id,color:me.color,tid:Math.random().toString(36).slice(2,9),reqs:[],singerId:null,singerName:null};
+      const t={videoId:v,title,channel,artwork:'https://i.ytimg.com/vi/'+v+'/hqdefault.jpg',by:me.name,byId:id,color:me.color,tid:Math.random().toString(36).slice(2,9),duration:0,reqs:[],singerId:null,singerName:null};
       if(C){ /* host, co-host or a person the host gave control to: straight into the queue */
       if(r.queue.length>=100)return fail('The queue is full (100 tracks).');
       const dup=r.queue.find(t=>t.videoId===v)||(r.cur&&r.cur.videoId===v&&r.cur);if(dup)return fail('Already queued by '+dup.by);
@@ -108,6 +118,12 @@ io.on('connection',s=>{let r=null,me=null,lastVideoCheck=0;
     case'sing':{const t=r.cur&&r.cur.tid===a.tid?r.cur:r.queue.find(x=>x.tid===a.tid);if(!t||t.singerId)return;const i=t.reqs.findIndex(x=>x.id===id);i<0?t.reqs.push({id,name:me.name}):t.reqs.splice(i,1);push(r);break}
     case'assign':{const t=r.cur&&r.cur.tid===a.tid?r.cur:r.queue.find(x=>x.tid===a.tid);if(!M||!t)return;const u=a.id&&r.users.get(a.id);t.singerId=u?u.id:null;t.singerName=u?u.name:null;t.reqs=t.reqs.filter(x=>x.id!==a.id);t.live=false;if(u)say(r,u.name+' will sing '+t.title);push(r);break}
     case'live':if(r.cur&&r.cur.singerId===id){r.cur.live=!!a.on;push(r)}break;
+    /* v27: the song's total length is shared, not per-device. Whichever
+       participant's player first learns the real length (from YouTube's
+       metadata) reports it; the server keeps it on the track and sends it to
+       everyone, so every screen shows the same duration. First valid report
+       wins — the length of one video never changes. */
+    case'dur':{if(!r.cur||r.cur.tid!==a.tid||r.cur.duration>0)return;const d=Math.round(+a.dur);if(!Number.isFinite(d)||d<=0||d>86400)return;r.cur.duration=d;push(r);break}
     case'prev':if(!C||!r.cur)return;{const T=now()+SCHED;
       if(pos(r)>3||!r.history.length){r.cur.anchor=T;r.cur.pausedAt=T;r.cur.playing=true;r.cur.playAt=T}
       else{const p=r.history.pop();r.queue.unshift(r.cur);start(r,p,T)}}push(r);break;
@@ -117,9 +133,13 @@ io.on('connection',s=>{let r=null,me=null,lastVideoCheck=0;
     case'ended':if(r.cur&&r.cur.videoId===a.v&&now()-r.cur.anchor>3000)next(r);break;
     case'bad':if(r.cur&&r.cur.videoId===a.v){r.bad.add(id);if(r.bad.size>=Math.floor(online(r).length/2)+1){say(r,a.code===101||a.code===150?'YouTube blocked embedded playback for "'+r.cur.title+'". Try a video that allows embedding.':'That track can\u2019t be played here. Skipped to the next one.');next(r)}}break}});
   s.on('leave',()=>{if(!r||!me)return;const u=r.users.get(me.id);if(!u||u.sid!==s.id)return;u.connected=false;if(r.cur&&r.cur.singerId===me.id)r.cur.live=false;clearTimeout(r.gone);push(r);const rr=r;
-    if(rr.hostId===me.id)succeed(rr);rr.last=now()}); /* v20: explicit Leave — host passes on at once instead of the 30s disconnect grace */
+    if(rr.hostId===me.id)succeed(rr);rr.last=now()}); /* v20: explicit Leave — host passes on at once instead of the 12s disconnect grace */
   s.on('rtc',m=>{const u=r&&me&&r.users.get(m.to);if(u&&u.connected)io.to(u.sid).emit('rtc',{from:me.id,data:m.data})});
   s.on('disconnect',()=>{if(!r||!me)return;const u=r.users.get(me.id);if(!u||u.sid!==s.id)return;u.connected=false;if(r.cur&&r.cur.singerId===me.id)r.cur.live=false;push(r);const rr=r;
-    if(rr.hostId===me.id)rr.gone=setTimeout(()=>succeed(rr),30000);rr.last=now()})});
+    /* v25: the host only loses the seat after being offline for 12 seconds.
+       Going to another app (or a short network blip) drops the connection,
+       but if the host comes back within 12s the rejoin clears this timer and
+       they keep the seat. */
+    if(rr.hostId===me.id)rr.gone=setTimeout(()=>succeed(rr),12000);rr.last=now()})});
 setInterval(()=>{for(const [c,r] of rooms){if(r.cur&&r.cur.playing)push(r);else if(online(r).length)push(r);if(!online(r).length&&now()-r.last>864e5)rooms.delete(c)}},2000); /* v13: 2s heartbeat (was 5s) so drift is corrected sooner */
 srv.listen(process.env.PORT||3000,()=>console.log('Vibe Room on :'+(process.env.PORT||3000)));
