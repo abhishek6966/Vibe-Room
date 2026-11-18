@@ -714,8 +714,16 @@ dialog{max-height:90dvh;overflow-y:auto}
 .kar-hear{display:inline-flex;align-items:center;gap:6px;font-size:.88rem;white-space:nowrap}
 .kar-fx{background:#ffffff0a;border:1px solid #ffffff14;border-radius:16px;padding:14px}
 .kar-fx h4{margin:0 0 10px;font-size:.8rem;letter-spacing:.08em;text-transform:uppercase;color:#c9a7ff}
-#kf{display:grid!important;grid-template-columns:repeat(3,1fr);gap:8px;margin:0!important}
-#kf button{min-height:40px;font-size:.85rem;border-radius:12px}
+/* v48: VOICE EFFECTS — one sliding row. All 11 effects sit in a single
+   horizontal row you swipe/scroll through (no more 3-column grid). Each
+   effect is a compact pill sized to its label; the row snaps as you
+   swipe, and the scrollbar is hidden for a clean look. The selected
+   effect still gets the gradient. */
+#kf{display:flex!important;flex-wrap:nowrap;gap:8px;margin:0!important;overflow-x:auto;padding:2px 2px 8px;scroll-snap-type:x mandatory;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+#kf::-webkit-scrollbar{display:none}
+#kf button{flex:0 0 auto;min-height:40px;font-size:.85rem;border-radius:999px;padding:4px 14px 4px 5px;white-space:nowrap;scroll-snap-align:start;display:inline-flex;align-items:center;gap:8px}
+#kf button img{width:30px;height:30px;border-radius:50%;object-fit:cover;flex:none;box-shadow:0 0 0 2px #ffffff2a}
+#kf button.on img{box-shadow:0 0 0 2px #ffffffcc}
 #kar details{margin-top:10px}
 #kar .sl{display:grid;grid-template-columns:90px 1fr;gap:6px;align-items:center}
 #mb{margin:0 0 2px}
@@ -1152,3 +1160,30 @@ header #who{margin-left:auto!important}
 .kar-mix .sl{display:grid!important;grid-template-columns:64px 1fr 34px!important;gap:8px;align-items:center;margin:6px 0!important}
 .kar-mix .sl b{font-size:.82rem;font-weight:700;color:#fff;text-align:right}
 .kar-mix-tip{margin:10px 0 0;font-size:.74rem;line-height:1.45;color:#b9a8e8}
+
+/* v48: BACKGROUND PLAY TIP — shown only in the home-screen app (More tab).
+   A calm card that explains the phone pauses the music when you leave the
+   app, and links the room into Safari, where YouTube audio keeps playing
+   in the background. */
+.bg-tip{background:#ffffff0a;border:1px solid #ffffff14;border-radius:16px;padding:14px;margin:12px 0}
+.bg-tip[hidden]{display:none}
+.bg-tip h4{margin:0 0 6px;font-size:.86rem;font-weight:800;color:#fff}
+.bg-tip p{margin:0 0 10px;font-size:.8rem;line-height:1.5;color:#cfc4ef}
+.bg-tip a{display:inline-block;padding:9px 16px;border-radius:999px;background:linear-gradient(90deg,#ffb020,#ff3d71 55%,#b026ff);color:#fff;font-size:.82rem;font-weight:800;text-decoration:none}
+
+/* v49: 10-SECOND SKIP — compact premium buttons flanking the play button.
+   A circular arrow with "10" in the middle (the standard skip icon), in the
+   same glass-purple family as prev/next but smaller (40px), so they read as
+   quick secondary controls. On tap the arrow spins once (backwards for -10s,
+   forwards for +10s) and the button presses in — a small, lively animation. */
+.skip10{width:40px!important;height:40px!important;padding:0!important;border-radius:50%!important;display:grid!important;place-items:center!important;color:#fff!important;background:radial-gradient(circle at 35% 28%,#6a49e0,#2c1480 75%)!important;border:1px solid rgba(255,255,255,.16)!important;box-shadow:0 8px 16px rgba(8,0,40,.5),inset 0 1px 0 rgba(255,255,255,.28),inset 0 -6px 10px rgba(0,0,40,.35)!important;flex:none;transition:transform .12s ease}
+.skip10 svg{width:20px;height:20px}
+.skip10:active{transform:scale(.86)}
+.skip10:disabled{opacity:.45}
+@keyframes spinBack{to{transform:rotate(-360deg)}}
+@keyframes spinFwd{to{transform:rotate(360deg)}}
+.skip10.spin-back svg{animation:spinBack .45s ease}
+.skip10.spin-fwd svg{animation:spinFwd .45s ease}
+/* v49: five transport buttons now share the row — tighten the gap so they
+   fit on a phone without crowding. */
+.ctl{gap:14px!important}

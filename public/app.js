@@ -107,7 +107,7 @@ const act=(a,cb)=>cb?socket.emit('act',a,cb):socket.emit('act',a),fmt=t=>{t=Math
    plays the sound is already on. In an installed app (home screen) this is
    the first thing the person sees. */
 let __ac=null,sndOn=false;
-async function unlockAudio(){try{__ac=__ac||new (window.AudioContext||window.webkitAudioContext)();await __ac.resume()}catch{}if(P){try{P.unMute()}catch{}}/* v32: a tap also unlocks the singer's voice (the karaoke audio element) if it is already streaming. */
+async function unlockAudio(){try{__ac=__ac||new (window.AudioContext||window.webkitAudioContext)();await __ac.resume()}catch{}if(P){try{applyVolume(P)}catch{}}/* v32: a tap also unlocks the singer's voice (the karaoke audio element) if it is already streaming. */
  if(typeof kvPlay==='function')kvPlay();sndOn=true;hideSndModal();
  document.querySelectorAll('.snd').forEach(b=>{b.innerHTML=IC.check+' Sound on';b.classList.add('on');b.disabled=true});
  try{L.snd='1'}catch{}}
@@ -201,8 +201,8 @@ function renderVideoCheck(result){
 }
 const volumeOnIcon=$('#vm').innerHTML,volumeMutedIcon='<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="17" y1="9" x2="22" y2="14"/><line x1="22" y1="9" x2="17" y2="14"/></svg>';
 let volume=80,lastVolume=80,volumeMuted=false;
-function applyVolume(pl){if(!pl)return;if(volumeMuted){pl.setVolume?.(0);pl.mute?.()}else{pl.setVolume?.(volume);pl.unMute?.()}}
-function setVolume(value,immediate){volume=Math.max(0,Math.min(100,Math.round(Number(value)||0)));if(volume>0)lastVolume=volume;volumeMuted=volume===0;const vEl=$('#vol');vEl.value=String(volume);vEl.style.setProperty('--p',volume+'%');$('#vm').innerHTML=volumeMuted?volumeMutedIcon:volumeOnIcon;$('#vm').setAttribute('aria-label',volumeMuted?'Unmute':'Mute');$('#vm').setAttribute('aria-pressed',String(volumeMuted));/* v47: keep the karaoke Mix music slider in sync with the main volume slider — both control the same YouTube volume. */const mm=document.querySelector('#kmix-m');if(mm){mm.value=String(volume);mm.style.setProperty('--p',volume+'%')}const mmv=document.querySelector('#kmix-mv');if(mmv)mmv.textContent=String(volume);/* v45: SMOOTH volume drag — the old code called the YouTube iframe's setVolume on EVERY input event while dragging, flooding the iframe and making the slider stutter. Now the UI (slider + icon) updates instantly on every move, but the iframe is told at most once every 60ms while dragging, and immediately on release (change) or on a button tap. */if(immediate){if(volT){clearTimeout(volT);volT=null}[P,P2].forEach(applyVolume);return}if(volT)return;volT=setTimeout(()=>{volT=null;[P,P2].forEach(applyVolume)},60)}
+function applyVolume(pl){if(!pl)return;pl.setVolume?.(volume) /* v49: never mute()/unMute() — mute is just volume 0. mute() is a separate player state the phone's volume buttons cannot undo, so a muted player stayed silent even when the user pressed volume up. setVolume(0) mutes, setVolume(n) unmutes, and the phone buttons always work. */}
+function setVolume(value,immediate){volume=Math.max(0,Math.min(100,Math.round(Number(value)||0)));if(volume>0)lastVolume=volume;const wasMuted=volumeMuted;volumeMuted=volume===0;const vEl=$('#vol');vEl.value=String(volume);vEl.style.setProperty('--p',volume+'%');/* v49: the mute icon is only rebuilt when the muted state actually flips — the old code replaced the SVG innerHTML on EVERY input event while dragging, and that rebuild is what made the slider stutter. */if(wasMuted!==volumeMuted){$('#vm').innerHTML=volumeMuted?volumeMutedIcon:volumeOnIcon;$('#vm').setAttribute('aria-label',volumeMuted?'Unmute':'Mute');$('#vm').setAttribute('aria-pressed',String(volumeMuted))}/* v47: keep the karaoke Mix music slider in sync with the main volume slider — both control the same YouTube volume. */const mm=document.querySelector('#kmix-m');if(mm){mm.value=String(volume);mm.style.setProperty('--p',volume+'%')}const mmv=document.querySelector('#kmix-mv');if(mmv)mmv.textContent=String(volume);/* v45: the iframe is told at most once every 60ms while dragging, and immediately on release (change) or on a button tap. */if(immediate){if(volT){clearTimeout(volT);volT=null}[P,P2].forEach(applyVolume);return}if(volT)return;volT=setTimeout(()=>{volT=null;[P,P2].forEach(applyVolume)},60)}
 let volT=null;
 /* clean line icons (Feather-style) for the header, like the mockup */
 const AIC=(p)=>'<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+p+'</svg>';
@@ -375,7 +375,7 @@ function render(){if(!joined)return;const isH=S.hostId===me.id,M=isH||S.co.inclu
  if(c&&c.playing)smokeStart();else smokeStop(); /* v43: beat-reactive smoke */
  let h=0;if(c)for(const ch of c.videoId)h=(h*31+ch.charCodeAt(0))%360;document.documentElement.style.setProperty('--h',h);
  $('#tt-in').textContent=c?c.title:'Queue is empty';fitTitle();$('#ch').textContent=c?c.channel:'Paste a YouTube link to start the room.';$('#by').textContent=c?'Added by '+c.by:'';$('#addlink').hidden=!!c; /* v40: the empty-state button shows only while the queue is empty */
- $('#pp').innerHTML=c&&c.playing?IC_PAUSE:IC_PLAY;$('#pp').disabled=!can;$('#sk').innerHTML=IC_NEXT;$('#sk').disabled=!can||!c;$('#sk').setAttribute('aria-label',C?'Skip':'Skip (host control only)');$('#sk').title=C?'Skip to next track':'Only the host, co-hosts, or authorized controllers can skip';$('#sc').disabled=!can||!c;
+ $('#pp').innerHTML=c&&c.playing?IC_PAUSE:IC_PLAY;$('#pp').disabled=!can;$('#sk').innerHTML=IC_NEXT;$('#sk').disabled=!can||!c;$('#sk').setAttribute('aria-label',C?'Skip':'Skip (host control only)');$('#sk').title=C?'Skip to next track':'Only the host, co-hosts, or authorized controllers can skip';$('#sc').disabled=!can||!c;/* v49: 10s skip buttons follow the same rule as the seek bar — only controllers can move the room. */const b10=$('#b10'),f10=$('#f10');if(b10)b10.disabled=!can||!c;if(f10)f10.disabled=!can||!c;
  $('#au').placeholder=C?'Paste a YouTube link…':'Paste a YouTube link to request it';$('#af button').textContent=C?'Add':'Request';
  /* v20: song requests — a guest's link waits here until the host approves it (into the queue) or rejects it (gone) */
  const rq=S.reqs||[];$('#rqw').hidden=!rq.length;
@@ -398,7 +398,16 @@ function render(){if(!joined)return;const isH=S.hostId===me.id,M=isH||S.co.inclu
  if(S){const ts=[];if(S.cur)ts.push(S.cur);(S.queue||[]).forEach(t=>ts.push(t));ts.forEach(t=>{if(t&&t.videoId&&(myPastes.has(t.videoId)||t.byId===me.id))addToPlaylist(t)})}
  renderPlaylist();
  $('#ul').innerHTML=S.users.map(u=>{const hasCtrl=S.ctrl&&S.ctrl.includes(u.id);
-  return `<li style="--c:${esc(u.color)}"><div><b>${esc(u.name)}${u.id===S.hostId?' '+IC.crown:S.co.includes(u.id)?' '+IC.star:hasCtrl?' '+IC.ctrl:''}</b></div>${isH&&u.id!==me.id?`<div class="uacts">${ku(u)}<button data-h="${u.id}">Make host</button><button data-c="${u.id}">Co-host</button><button data-ctrl="${u.id}">${hasCtrl?'Take control':'Give control'}</button><button data-k="${u.id}">Remove</button></div>`:M&&u.id!==S.hostId&&u.id!==me.id?`<div class="uacts"><button data-k="${u.id}">Remove</button></div>`:''}</li>`}).join('');karRender()}
+  return `<li style="--c:${esc(u.color)}"><div><b>${esc(u.name)}${u.id===S.hostId?' '+IC.crown:S.co.includes(u.id)?' '+IC.star:hasCtrl?' '+IC.ctrl:''}</b></div>${isH&&u.id!==me.id?`<div class="uacts">${ku(u)}<button data-h="${u.id}">Make host</button><button data-c="${u.id}">Co-host</button><button data-ctrl="${u.id}">${hasCtrl?'Take control':'Give control'}</button><button data-k="${u.id}">Remove</button></div>`:M&&u.id!==S.hostId&&u.id!==me.id?`<div class="uacts"><button data-k="${u.id}">Remove</button></div>`:''}</li>`}).join('');karRender();wakeSync() /* v48: hold/release the screen wake lock with the playing state */
+ /* v48: BACKGROUND PLAY TIP — only shown when the app runs from the home
+    screen (a PWA), where the phone pauses the music when you leave the
+    app. Safari keeps YouTube audio playing in the background, so the tip
+    links the current room there. In a normal browser tab the tip stays
+    hidden. */
+ const bgTip=document.querySelector('#bg-tip');
+ if(bgTip){const standalone=(window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches)||navigator.standalone===true;
+  bgTip.hidden=!standalone;
+  if(standalone){const a=document.querySelector('#bg-safari');if(a)a.href=location.origin+'/room/'+S.code}}}
 document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const d=b.dataset;
  if(d.rm)act({type:'remove',i:+d.rm});if(d.h)act({type:'host',id:d.h});if(d.c)act({type:'cohost',id:d.c});if(d.k)act({type:'kick',id:d.k});if(d.e)act({type:'react',e:d.e});
  if(d.ap)act({type:'approve',rid:d.ap});if(d.rj)act({type:'reject',rid:d.rj});if(d.ctrl)act({type:'ctrl',id:d.ctrl});if(d.replay){myPastes.add(d.replay);act({type:'add',url:'https://youtu.be/'+d.replay})}
@@ -430,8 +439,15 @@ document.addEventListener('pointerdown',unlockOnTap);
    hits play again). While the broadcast is still on its way, sync() leaves
    the play/pause alone and only fixes the position/rate. */
 let localT=0,localWas=null;
-const localToggle=()=>{if(!S?.cur||!P)return;localT=Date.now();localWas=S.cur.playing;if(P.unMute)P.unMute();if(S.cur.playing)P.pauseVideo?.();else P.playVideo?.()};
-$('#pp').onclick=()=>{if(!S?.cur){toast('Paste a YouTube link to start the room.');return}[P,P2].forEach(pl=>pl&&pl.unMute&&pl.unMute());localToggle();act({type:'play'})};$('#addlink').onclick=()=>{document.querySelector('[data-t=queue]').click();setTimeout(()=>document.querySelector('#au')?.focus(),120)}; /* v40: empty-state button — jump to the Queue tab and focus the paste box, so a first-time user lands where the link goes */$('#sk').onclick=()=>act({type:'skip'});$('#lock').onclick=()=>act({type:'lock'});
+const localToggle=()=>{if(!S?.cur||!P)return;localT=Date.now();localWas=S.cur.playing;applyVolume(P);if(S.cur.playing)P.pauseVideo?.();else P.playVideo?.()};
+$('#pp').onclick=()=>{if(!S?.cur){toast('Paste a YouTube link to start the room.');return}[P,P2].forEach(applyVolume);localToggle();act({type:'play'})};$('#addlink').onclick=()=>{document.querySelector('[data-t=queue]').click();setTimeout(()=>document.querySelector('#au')?.focus(),120)}; /* v40: empty-state button — jump to the Queue tab and focus the paste box, so a first-time user lands where the link goes */$('#sk').onclick=()=>act({type:'skip'});$('#lock').onclick=()=>act({type:'lock'});
+/* v49: 10-SECOND SKIP — jump back or forward 10s in the current song. The
+   seek is the same action the seek bar sends, so the whole room moves
+   together. The arrow spins once on tap (backwards for -10s, forwards for
+   +10s) — the class is re-triggered by forcing a reflow, then removed. */
+const seekBy=(d,btn,cls)=>{if(!S?.cur)return;const dur=S.cur.duration||P?.getDuration?.()||0;const pos=dur>0?Math.max(0,Math.min(dur,est()+d)):Math.max(0,est()+d);act({type:'seek',pos});btn.classList.remove(cls);void btn.offsetWidth;btn.classList.add(cls);setTimeout(()=>btn.classList.remove(cls),480)};
+$('#b10').onclick=e=>seekBy(-10,e.currentTarget,'spin-back');
+$('#f10').onclick=e=>seekBy(10,e.currentTarget,'spin-fwd');
 $('#au').addEventListener('input',()=>{
  clearTimeout(videoCheckTimer);const url=$('#au').value.trim(),sequence=++videoCheckSequence;
  checkedVideoUrl='';checkedVideoStatus='';
@@ -465,7 +481,8 @@ $('#playlist-clear').onclick=()=>{savePlaylist([]);renderPlaylist();toast('Playl
 /* v46: the playlist is rendered on load too, so your saved songs are there
    before the first state update arrives. */
 renderPlaylist();
-$('#vol').oninput=e=>setVolume(e.target.value,false);
+/* v49: FREE volume drag — the old oninput called setVolume, which rebuilt the mute icon's SVG, synced the mix slider and scheduled an iframe call on EVERY tiny move, and the drag stuttered. Now oninput only moves the slider itself (the browser already sets the value; here we store it and paint the pink fill) — nothing else runs while the thumb moves, so the drag is free. onchange (release) runs the full setVolume once: icon, mix slider and the player. NOTE: oninput deliberately does NOT touch volumeMuted — setVolume on release compares the old muted state with the new one to decide whether to rebuild the icon, and if oninput already flipped it, the icon would never update. */
+$('#vol').oninput=e=>{volume=Math.max(0,Math.min(100,Math.round(Number(e.target.value)||0)));if(volume>0)lastVolume=volume;e.target.style.setProperty('--p',volume+'%')};
 $('#vol').onchange=e=>setVolume(e.target.value,true);
 $('#vm').onclick=()=>setVolume(volumeMuted?lastVolume:0,true);$('#vmx').onclick=()=>setVolume(100,true);
 /* v45: SMOOTH seek drag — the old code only set `seeking` on pointerdown and only
@@ -516,7 +533,7 @@ if('mediaSession'in navigator){
  const ms=navigator.mediaSession,setAction=(name,handler)=>{try{ms.setActionHandler(name,handler)}catch(e){if(e.name!=='NotSupportedError'&&e.name!=='TypeError')throw e}};
  const canControl=()=>!!S&&(S.hostId===me.id||S.co.includes(me.id)||(S.ctrl||[]).includes(me.id));
  const seekTo=position=>{if(canControl()&&S?.cur&&Number.isFinite(position))act({type:'seek',pos:Math.max(0,position)})};
- setAction('play',()=>{if(S?.cur&&!S.cur.playing){[P,P2].forEach(pl=>pl&&pl.unMute&&pl.unMute());localToggle();act({type:'play'})}});
+ setAction('play',()=>{if(S?.cur&&!S.cur.playing){[P,P2].forEach(applyVolume);localToggle();act({type:'play'})}});
  setAction('pause',()=>{if(S?.cur?.playing){localToggle();act({type:'play'})}});
  setAction('nexttrack',()=>{if(canControl())act({type:'skip'})});
  setAction('previoustrack',()=>{if(canControl())act({type:'prev'})});
@@ -537,7 +554,30 @@ function fitTitle(){const t=$('#tt'),inner=$('#tt-in');if(!t||!inner)return;
  if(over>4){t.style.setProperty('--tt-dx',over+'px');t.style.setProperty('--tt-dur',(over/30).toFixed(1)+'s');t.classList.add('scroll')}
  else{t.classList.remove('scroll');t.style.removeProperty('--tt-dx');t.style.removeProperty('--tt-dur')}}
 window.addEventListener('resize',()=>{clearTimeout(fitTitle._t);fitTitle._t=setTimeout(fitTitle,150)});
-const keepPlaying=()=>{if(!S?.cur?.playing||!P)return;try{if(P.unMute)P.unMute()}catch(e){}try{if(P.getPlayerState&&P.getPlayerState()!==1&&P.playVideo)P.playVideo()}catch(e){}try{updateMediaSession()}catch(e){}};
+const keepPlaying=()=>{if(!S?.cur?.playing||!P)return;try{applyVolume(P)}catch(e){}try{if(P.getPlayerState&&P.getPlayerState()!==1&&P.playVideo)P.playVideo()}catch(e){}try{updateMediaSession()}catch(e){}};
+/* v48: SCREEN WAKE LOCK — the #1 reason music stops on lock is that the
+   screen locks and iOS then suspends the app. While a song is playing,
+   hold a screen wake lock so the screen stays on and the app stays in
+   the foreground — the music cannot stop if the screen never locks.
+   Released when the room pauses or the song ends. The system drops the
+   lock whenever the page hides, so it is re-requested every time the
+   page becomes visible again while a song is playing, and on every state
+   update. Not supported everywhere — a missing API is a silent no-op,
+   and the app works exactly as before without it. */
+let wakeLock=null,wakeWant=false;
+const wakeAcquire=async()=>{if(!('wakeLock'in navigator)||wakeLock||document.hidden||!wakeWant)return;
+ try{wakeLock=await navigator.wakeLock.request('screen');
+  wakeLock.addEventListener('release',()=>{wakeLock=null;if(wakeWant&&!document.hidden)wakeAcquire()})}catch{wakeLock=null}};
+const wakeSync=()=>{wakeWant=!!(S?.cur?.playing);if(wakeWant)wakeAcquire();else if(wakeLock){try{wakeLock.release()}catch{}wakeLock=null}};
+/* v48: RESUME SAFETY NET — when the user comes back to the app, the music
+   must restart by itself within a second, even if they do not tap
+   anything. The visibility/focus handlers already call keepPlaying(),
+   but if one is ever missed, this 1s check catches it: while the page
+   is visible and the room is playing, a paused player is resumed. The
+   localT guard (same as sync) keeps it from undoing your own intentional
+   pause — a tap you just made is left alone for 1s. */
+setInterval(()=>{if(document.hidden||!joined||!S?.cur?.playing||!P||Date.now()-localT<1000)return;
+ try{if(P.getPlayerState&&P.getPlayerState()!==1){applyVolume(P);P.playVideo?.()}}catch(e){}},1000);
 /* v45: BACKGROUND AUDIO — keep the song playing when the user switches
    to another app or locks the screen. The old keepPlaying() ran ONCE
    when the page hid, but the system pauses the YouTube player a moment
@@ -556,7 +596,7 @@ const keepPlaying=()=>{if(!S?.cur?.playing||!P)return;try{if(P.unMute)P.unMute()
    pauses it, it restarts the instant the user returns — no tap needed. */
 let keepT=null;
 const keepPlayingRetry=()=>{keepPlaying();if(keepT){clearInterval(keepT);keepT=null}/* v45: keep retrying while hidden — in a home-screen app iOS suspends JS fast and pauses the YouTube player a moment after you leave, so a few retries over 2.5s often miss it. Retry every 2s for up to 30s while hidden, so one of the retries catches the player after the system pauses it and starts it again. Stops when the page is visible again or after 30s. */keepT=setInterval(()=>{if(document.hidden)keepPlaying();else if(keepT){clearInterval(keepT);keepT=null}},2000);setTimeout(()=>{if(keepT){clearInterval(keepT);keepT=null}},30000)};
-document.addEventListener('visibilitychange',()=>{if(document.hidden)keepPlayingRetry();else resumeRoom()});
+document.addEventListener('visibilitychange',()=>{if(document.hidden)keepPlayingRetry();else{resumeRoom();wakeSync()}});
 window.addEventListener('pagehide',keepPlayingRetry);
 document.addEventListener('freeze',keepPlayingRetry);
 window.addEventListener('blur',()=>{if(document.hidden)keepPlayingRetry()});

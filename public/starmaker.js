@@ -1,6 +1,6 @@
 (()=>{const R=$('#room'),T=document.querySelectorAll('#tabs button');
 const tab=t=>{R.dataset.tab=t;T.forEach(b=>b.classList.toggle('on',b.dataset.t===t));scrollTo(0,0);window.updMini&&window.updMini()};T.forEach(b=>b.onclick=()=>tab(b.dataset.t));
-$('.ctl').prepend($('#xp'));$('#p-sing').append($('#mb'),K);
+$('#b10').after($('#xp'));/* v49: 10s buttons sit OUTSIDE prev/next — [back 10s] [prev] [play] [next] [forward 10s]. #b10 is first in the static HTML, and #xp is placed right after it. */$('#p-sing').append($('#mb'),K);
 socket.on('state',()=>{const tq=$('#tq'),n=S.queue.length;tq.textContent=n||'';tq.style.display=n?'':'none';$('#sh').textContent=S.mode==='karaoke'?'Sing along to the song — the host can sing, or pick a singer.':'Karaoke is off. The host can turn it on here.';
  $('#me').innerHTML=`<li style="--c:${esc(me.color)}"><div><b>${esc(me.name)}</b><small>${S.hostId===me.id?'Host':S.co.includes(me.id)?'Co-host':'Guest'}</small></div></li>`})})();
 
