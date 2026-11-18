@@ -25,10 +25,10 @@ if(!code){$('#home').hidden=false;
  $('#create').onclick=()=>socket.emit('create',me,r=>location.href='/room/'+r.code);
  $('#jf').onsubmit=e=>{e.preventDefault();const c=$('#jc').value.trim().toUpperCase();if(c)location.href='/room/'+c};
  const rc=JSON.parse(L.recent||'[]');$('#recent').innerHTML=rc.length?'<p class="steps">Recent rooms</p>'+rc.map(c=>`<a href="/room/${esc(c)}" style="color:var(--cy)">${esc(c)}</a>`).join(' '):''}
-else{$('#gate').hidden=false;$('#gn').value=me.name;$('#gc').value=me.color.length==7?me.color:'#ff2d87';
+else{$('#gate').hidden=false;$('#home-link').hidden=false;$('#gn').value=me.name;$('#gc').value=me.color.length==7?me.color:'#ff2d87';
  $('#new-room').onclick=()=>{const b=$('#new-room');b.disabled=true;b.textContent='Creating room…';socket.emit('create',me,r=>{if(!r?.code){b.disabled=false;b.textContent='Create a new room';$('#ge').textContent='Could not create a room. Please try again.';return}location.href='/room/'+r.code})};
  socket.on('connect',()=>{if(joined)return;socket.emit('join',{code,...me},r=>{if(joined)return;if(r.error){showJoinError(r.error);return}
-  $('#gate').classList.remove('gate-error');$('#gt').textContent='Room '+code.toUpperCase();$('#gs').textContent='Choose your name, then join the room.';$('#ge').textContent='';$('#join-fields').hidden=false;$('#go').hidden=false;$('#go').disabled=false;$('#new-room').hidden=true;$('#new-room').disabled=false;$('#new-room').textContent='Create a new room';$('#home-link').hidden=true;
+  $('#gate').classList.remove('gate-error');$('#gt').textContent='Room '+code.toUpperCase();$('#gs').textContent='Choose your name, then join the room.';$('#ge').textContent='';$('#join-fields').hidden=false;$('#go').hidden=false;$('#go').disabled=false;$('#new-room').hidden=true;$('#new-room').disabled=false;$('#new-room').textContent='Create a new room';
   L.recent=JSON.stringify([...new Set([code.toUpperCase(),...JSON.parse(L.recent||'[]')])].slice(0,5))})});
  $('#go').onclick=()=>{me.name=L.vname=$('#gn').value.trim()||me.name;me.color=L.vcolor=$('#gc').value;$('#go').disabled=true;$('#go').textContent='Joining…';socket.emit('join',{code,...me},r=>{if(r.error){showJoinError(r.error);return}
   joined=true;document.body.classList.add('in-room'); /* v14: hide the landing/gate FX once inside a room */

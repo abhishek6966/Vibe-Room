@@ -484,7 +484,12 @@ li div{min-width:0!important}
 body:not(.in-room) #mini{display:none!important}
 
 /* Animated neon smoke is isolated to the clipped player card. */
-.stage{isolation:isolate}
+.stage{
+  isolation:isolate;
+  -webkit-backface-visibility:hidden;
+  backface-visibility:hidden;
+  -webkit-mask-image:-webkit-radial-gradient(white,black)
+}
 .stage>*{position:relative;z-index:2}
 .stage>.dnote,.stage>.gloss{position:absolute}
 .stage::before{
