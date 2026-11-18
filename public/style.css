@@ -407,3 +407,13 @@ header{position:relative!important;padding:9px 0!important}
 #lock{background:linear-gradient(180deg,rgba(80,48,190,.6),rgba(40,20,120,.7))!important;box-shadow:0 6px 16px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.25),inset 0 -4px 8px rgba(0,0,0,.35)!important}
 .hdr-tip{position:absolute;z-index:20;background:rgba(30,8,60,.95);border:1px solid rgba(255,255,255,.25);backdrop-filter:blur(12px);border-radius:12px;padding:6px 12px;font-size:.8rem;font-weight:600;color:#fff;white-space:nowrap;box-shadow:0 10px 24px rgba(0,0,0,.5);cursor:pointer}
 .hdr-tip::before{content:"";position:absolute;left:50%;top:-5px;transform:translateX(-50%) rotate(45deg);width:10px;height:10px;background:rgba(30,8,60,.95);border-left:1px solid rgba(255,255,255,.25);border-top:1px solid rgba(255,255,255,.25)}
+
+/* v18: queue/history/user cards must stay inside their box — a long song title
+   (e.g. "Luis Fonsi - Despacito ft. Daddy Yankee") made the card 125px wider
+   than its container because the grid column and the card refused to shrink
+   below the title's full width. minmax(0,1fr) lets the column shrink, min-width:0
+   lets the card shrink, and the title then truncates with "…" as designed. */
+ol,ul{grid-template-columns:minmax(0,1fr)!important}
+li{min-width:0!important;overflow:hidden}
+li img,li button{flex:none!important}
+li div{min-width:0!important}
