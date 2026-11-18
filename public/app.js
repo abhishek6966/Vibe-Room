@@ -139,6 +139,24 @@ const recordSong=()=>{const c=S?.cur;if(!c||!c.videoId||c.tid===lastHistTid)retu
  const s=getSongs().filter(x=>x.id!==c.videoId);
  s.unshift({id:c.videoId,title:c.title||c.videoId,at:Date.now(),room:S.code});
  histSet('songs',s.slice(0,100))};
+/* v46: YOUR PLAYLIST — every YouTube link YOU paste is saved here, on this
+   device (localStorage), so your favourite songs are one tap away in any
+   room. It stores links only (videoId + title/channel/artwork), not the
+   video files — YouTube does not allow downloading, so the songs still
+   stream from YouTube and need the internet. Tapping a playlist song
+   queues it into the room. `myPastes` remembers the videoIds you pasted
+   (the current track has no byId in the state the server sends, so the
+   queue's byId alone cannot catch a song that became current at once). */
+const vidFromUrl=u=>{const m=String(u||'').match(/(?:youtu\.be\/|v=|shorts\/|embed\/|live\/)([\w-]{11})/);return m?m[1]:null};
+const myPastes=new Set();
+const getPlaylist=()=>histGet('playlist').filter(x=>x&&x.id);
+const savePlaylist=p=>histSet('playlist',p.slice(0,100));
+const addToPlaylist=t=>{if(!t||!t.videoId)return;const p=getPlaylist();if(p.some(x=>x.id===t.videoId))return;
+ p.unshift({id:t.videoId,title:t.title||'YouTube video',channel:t.channel||'',artwork:t.artwork||('https://i.ytimg.com/vi/'+t.videoId+'/hqdefault.jpg'),at:Date.now()});savePlaylist(p)};
+const renderPlaylist=()=>{const p=getPlaylist(),el=document.querySelector('#playlist');if(!el)return;
+ const n=document.querySelector('#playlist-n');if(n)n.textContent=p.length;
+ el.innerHTML=p.length?p.map(s=>`<li><img src="${esc(s.artwork)}" alt=""><div><b>${esc(s.title)}</b><small>${esc(s.channel||'YouTube')}</small></div><button data-plq="${esc(s.id)}" aria-label="Queue ${esc(s.title)}">Queue</button><button class="pl-x" data-plx="${esc(s.id)}" aria-label="Remove ${esc(s.title)} from playlist">✕</button></li>`).join(''):'<li class="empty"><div><small>No songs saved yet. Paste a link above and it lands here.</small></div></li>';
+ const cl=document.querySelector('#playlist-clear');if(cl)cl.hidden=!p.length};
 /* the three-dots history menu */
 const histPanel=$('#hist-panel');
 const renderHist=()=>{
@@ -154,7 +172,7 @@ histPanel.addEventListener('click',e=>{
  const cp=e.target.closest('[data-copy]');if(cp){const u='https://www.youtube.com/watch?v='+cp.dataset.copy;
   const done=()=>toast('Song link copied');
   if(navigator.clipboard?.writeText)navigator.clipboard.writeText(u).then(done,()=>fallbackCopy(u,done));else fallbackCopy(u,done);return}
- const ad=e.target.closest('[data-add]');if(ad){act({type:'add',url:'https://youtu.be/'+ad.dataset.add});histPanel.hidden=true;toast('Adding to the queue…')}});
+ const ad=e.target.closest('[data-add]');if(ad){myPastes.add(ad.dataset.add);act({type:'add',url:'https://youtu.be/'+ad.dataset.add});histPanel.hidden=true;toast('Adding to the queue…')}});
 let toastTimer,videoCheckTimer=0,videoCheckSequence=0,checkedVideoUrl='',checkedVideoStatus='';
 const toast=m=>{const box=$('#toasts');clearTimeout(toastTimer);box.textContent='';const d=document.createElement('div');d.className='toast';d.textContent=m;box.append(d);toastTimer=setTimeout(()=>{if(d.parentNode===box)d.remove()},3500);
  /* v45: swipe a notification UP to dismiss it early — the toast follows
@@ -184,7 +202,8 @@ function renderVideoCheck(result){
 const volumeOnIcon=$('#vm').innerHTML,volumeMutedIcon='<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="17" y1="9" x2="22" y2="14"/><line x1="22" y1="9" x2="17" y2="14"/></svg>';
 let volume=80,lastVolume=80,volumeMuted=false;
 function applyVolume(pl){if(!pl)return;if(volumeMuted){pl.setVolume?.(0);pl.mute?.()}else{pl.setVolume?.(volume);pl.unMute?.()}}
-function setVolume(value){volume=Math.max(0,Math.min(100,Math.round(Number(value)||0)));if(volume>0)lastVolume=volume;volumeMuted=volume===0;$('#vol').value=String(volume);[P,P2].forEach(applyVolume);$('#vm').innerHTML=volumeMuted?volumeMutedIcon:volumeOnIcon;$('#vm').setAttribute('aria-label',volumeMuted?'Unmute':'Mute');$('#vm').setAttribute('aria-pressed',String(volumeMuted))}
+function setVolume(value,immediate){volume=Math.max(0,Math.min(100,Math.round(Number(value)||0)));if(volume>0)lastVolume=volume;volumeMuted=volume===0;const vEl=$('#vol');vEl.value=String(volume);vEl.style.setProperty('--p',volume+'%');$('#vm').innerHTML=volumeMuted?volumeMutedIcon:volumeOnIcon;$('#vm').setAttribute('aria-label',volumeMuted?'Unmute':'Mute');$('#vm').setAttribute('aria-pressed',String(volumeMuted));/* v45: SMOOTH volume drag — the old code called the YouTube iframe's setVolume on EVERY input event while dragging, flooding the iframe and making the slider stutter. Now the UI (slider + icon) updates instantly on every move, but the iframe is told at most once every 60ms while dragging, and immediately on release (change) or on a button tap. */if(immediate){if(volT){clearTimeout(volT);volT=null}[P,P2].forEach(applyVolume);return}if(volT)return;volT=setTimeout(()=>{volT=null;[P,P2].forEach(applyVolume)},60)}
+let volT=null;
 /* clean line icons (Feather-style) for the header, like the mockup */
 const AIC=(p)=>'<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+p+'</svg>';
 const AIC_LOCK=AIC('<rect x="4" y="10" width="16" height="11" rx="2.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/><circle cx="12" cy="15" r="1"/><path d="M12 16v2"/>');
@@ -261,7 +280,7 @@ else{$('#gate').hidden=false;$('#home-link').hidden=false;$('#gn').value=me.name
  const s=document.createElement('script');s.src='https://www.youtube.com/iframe_api';document.head.append(s)}
 window.onYouTubeIframeAPIReady=()=>{window.ytr=1};
 function pReady(e){applyVolume(e.target);capQuality();sync()}
-function pState(e){if(e.target!==P)return;if(e.data===0&&S?.cur)act({type:'ended',v:S.cur.videoId});if(e.data===1)$('#audio-unlock').hidden=true;if(e.data===1||e.data===2)sync()}
+function pState(e){if(e.target!==P)return;if(e.data===0&&S?.cur)act({type:'ended',v:S.cur.videoId});if(e.data===1){$('#audio-unlock').hidden=true;/* v45: tell the server this controller's player is actually sounding, so the server starts the track clock NOW (from 0) instead of from when the track was queued — the song then starts from second 1 instead of a few seconds in. */if(S?.cur&&me){const cc=S.hostId===me.id||(S.co||[]).includes(me.id)||(S.ctrl||[]).includes(me.id);if(cc)act({type:'started',v:S.cur.videoId})}}if(e.data===1||e.data===2)sync()}
 function pErr(e){if(e.target===P&&S?.cur)act({type:'bad',v:S.cur.videoId,code:e.data})}
 function initPlayer(){if(P)return; /* v24: only create the player once — it is now created early (on the gate) so it exists when the user taps Join, and again after joining */
  if(!window.ytr)return setTimeout(initPlayer,200);
@@ -292,7 +311,7 @@ function preloadNext(){if(!P2||!P2.cueVideoById||!S)return;const n=S.queue&&S.qu
    to cut, and setPlaybackQualityRange('tiny','small') keeps adaptive
    streaming inside the cap. A higher quality mid-song does not cut audio;
    only a FORCED change does, so there is nothing to re-apply. */
-const est=()=>S?.cur?S.cur.pos+(S.cur.playing?(Date.now()-recv+rtt/2)/1000*(S.cur.speed||1):0):0;
+const est=()=>S?.cur?(S.cur.pending?0:S.cur.pos+(S.cur.playing?(Date.now()-recv+rtt/2)/1000*(S.cur.speed||1):0)):0;
 let bufSince=0;
 function sync(){if(!P||!P.loadVideoById||!S)return;const c=S.cur;if(!c){P.stopVideo?.();cv=null;needCatchup=false;return}
  /* v17 scheduled start: if this action is for a future server time, don't touch the player yet — wait until that instant, then apply it */
@@ -316,7 +335,14 @@ function sync(){if(!P||!P.loadVideoById||!S)return;const c=S.cur;if(!c){P.stopVi
     forced change gaps the audio. Sync is now within ~2s instead of ~1s;
     that is the price of a song that never cuts, and the user asked for
     continuous playback above tight sync. */
- let target=rate;if(ad>=.15&&ad<2)target=rate*(d>0?1.15:.85);
+ /* v45: GENTLE speed nudge — the old 1.15x/0.85x (15% faster/slower) was
+    clearly audible: the song suddenly sounded fast, then normal, then fast
+    again, as the drift crossed the 0.15s threshold. Now the deadband is
+    0.5s (drift under half a second is ignored — nobody can hear it), and
+    the correction is proportional and capped at 5%: a 0.5s drift gets
+    ~1.25%, a 2s drift gets 5%. That is barely audible, and the song no
+    longer surges. Drift past 2s is still fixed by a seek (below). */
+ let target=rate;if(ad>=0.5&&ad<2){const corr=Math.min(0.05,ad*0.025);target=rate*(d>0?1+corr:1-corr)}
  if(target!==lastRate){P.setPlaybackRate(target);lastRate=target}
  /* v21: while your own tap is still on its way to the server (~200ms), don't
     let the sync loop undo it — it still sees the old server state. The guard
@@ -328,8 +354,8 @@ function sync(){if(!P||!P.loadVideoById||!S)return;const c=S.cur;if(!c){P.stopVi
     never seek twice within 3s. Without this a drifting player could seek,
     re-buffer, drift again and seek again in a loop (cut, play, cut, play).
     The fresh-load catch-up seek is exempt (it must jump once, immediately). */
- if(needCatchup&&(st===1||st===2)){P.seekTo(t,true);needCatchup=false;lastSeek=Date.now()}
- else if(Date.now()-lastSeek>3000){if(st===1&&ad>=2){P.seekTo(t,true);lastSeek=Date.now()}else if(st===2&&ad>.5){P.seekTo(t,true);lastSeek=Date.now()}}
+ if(!seeking&&needCatchup&&(st===1||st===2)){P.seekTo(t,true);needCatchup=false;lastSeek=Date.now()}
+ else if(!seeking&&Date.now()-lastSeek>3000){if(st===1&&ad>=2){P.seekTo(t,true);lastSeek=Date.now()}else if(st===2&&ad>.5){P.seekTo(t,true);lastSeek=Date.now()}}
  const syn=$('#sync');
  if(st===3){syn.className='off';syn.textContent='● Buffering…'}
  else{const ok=ad<2;syn.className=ok?'':'off';syn.textContent=ok?'● In Sync':'● Syncing…'}}
@@ -364,11 +390,21 @@ function render(){if(!joined)return;const isH=S.hostId===me.id,M=isH||S.co.inclu
  $('#current-song').innerHTML=c?`<li class="current-song"><img src="${esc(c.artwork)}" alt=""><div><b>${esc(c.title)}</b><small>${esc(c.by)}</small></div><span class="current-state ${c.playing?'playing':'paused'}"><i></i>${c.playing?'Playing':'Paused'}</span></li>`:'';
  $('#q').innerHTML=S.queue.length?S.queue.map((t,i)=>`<li style="--c:${esc(t.color||'#ff2d87')}"><img src="${esc(t.artwork)}" alt=""><div><b>${esc(t.title)}</b><small>${esc(t.by)}</small>${kq(t,M)}</div>${C||t.byId===me.id?`<button data-rm="${i}" aria-label="Remove ${esc(t.title)}">Remove</button>`:''}</li>`).join(''):'<li class="empty"><div><small>Nothing queued. Paste a link above.</small></div></li>';
  $('#h').innerHTML=S.history.map(t=>`<li><img src="${esc(t.artwork)}" alt=""><div><b>${esc(t.title)}</b><small>${esc(t.by)}</small></div><button data-replay="${esc(t.videoId)}" aria-label="${C?'Replay':'Request'} ${esc(t.title)}">${C?'Replay':'Request'}</button></li>`).reverse().join('');
+ /* v46: save every link YOU paste into Your playlist. A track is yours if
+    you pasted it (myPastes, which catches a song that became current at
+    once) or if the queue says you added it (byId). Other people's songs
+    are never saved to your playlist. Dedupe is by videoId inside
+    addToPlaylist, so calling this on every state update is safe. */
+ if(S){const ts=[];if(S.cur)ts.push(S.cur);(S.queue||[]).forEach(t=>ts.push(t));ts.forEach(t=>{if(t&&t.videoId&&(myPastes.has(t.videoId)||t.byId===me.id))addToPlaylist(t)})}
+ renderPlaylist();
  $('#ul').innerHTML=S.users.map(u=>{const hasCtrl=S.ctrl&&S.ctrl.includes(u.id);
   return `<li style="--c:${esc(u.color)}"><div><b>${esc(u.name)}${u.id===S.hostId?' '+IC.crown:S.co.includes(u.id)?' '+IC.star:hasCtrl?' '+IC.ctrl:''}</b></div>${isH&&u.id!==me.id?`<div class="uacts">${ku(u)}<button data-h="${u.id}">Make host</button><button data-c="${u.id}">Co-host</button><button data-ctrl="${u.id}">${hasCtrl?'Take control':'Give control'}</button><button data-k="${u.id}">Remove</button></div>`:M&&u.id!==S.hostId&&u.id!==me.id?`<div class="uacts"><button data-k="${u.id}">Remove</button></div>`:''}</li>`}).join('');karRender()}
 document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const d=b.dataset;
  if(d.rm)act({type:'remove',i:+d.rm});if(d.h)act({type:'host',id:d.h});if(d.c)act({type:'cohost',id:d.c});if(d.k)act({type:'kick',id:d.k});if(d.e)act({type:'react',e:d.e});
- if(d.ap)act({type:'approve',rid:d.ap});if(d.rj)act({type:'reject',rid:d.rj});if(d.ctrl)act({type:'ctrl',id:d.ctrl});if(d.replay)act({type:'add',url:'https://youtu.be/'+d.replay})});
+ if(d.ap)act({type:'approve',rid:d.ap});if(d.rj)act({type:'reject',rid:d.rj});if(d.ctrl)act({type:'ctrl',id:d.ctrl});if(d.replay){myPastes.add(d.replay);act({type:'add',url:'https://youtu.be/'+d.replay})}
+ /* v46: playlist — Queue puts the saved song into the room, ✕ removes it from your playlist, Clear wipes the whole playlist. */
+ if(d.plq){myPastes.add(d.plq);act({type:'add',url:'https://youtu.be/'+d.plq});toast('Adding to the queue…')}
+ if(d.plx){savePlaylist(getPlaylist().filter(x=>x.id!==d.plx));renderPlaylist();toast('Removed from your playlist')}});
 $('#leave').onclick=()=>{try{delete L.lastRoom}catch{};socket.emit('leave');setTimeout(()=>{socket.disconnect();location.href='/'},300)}; /* v20: leave the room — the server hands the host on at once if you were the host */ /* v36: leaving clears the saved room, so a refresh does not rejoin it */
 $('#audio-unlock').onclick=()=>{if(!S?.cur?.playing||!P)return;applyVolume(P);P.playVideo?.();sync();$('#audio-unlock').hidden=true};
 /* v22: the browser only allows sound after the user taps the page. A joiner
@@ -411,6 +447,7 @@ $('#au').addEventListener('input',()=>{
  },650)
 });
 $('#af').onsubmit=e=>{e.preventDefault();const u=$('#au').value.trim(),submit=$('#af button');if(!u||submit.disabled)return;
+ const vid=vidFromUrl(u);if(vid)myPastes.add(vid); /* v46: remember this paste so it lands in Your playlist even if it becomes the current song at once */
  if(checkedVideoUrl===u&&['blocked','unavailable'].includes(checkedVideoStatus)){toast($('#video-check').textContent);return}
  if(!socket.connected){toast('Not connected to the room. Reconnect and try again.');return}
  clearTimeout(videoCheckTimer);videoCheckSequence++;
@@ -424,9 +461,25 @@ $('#af').onsubmit=e=>{e.preventDefault();const u=$('#au').value.trim(),submit=$(
   $('#video-check').hidden=true;$('#video-check').textContent='';$('#video-check').removeAttribute('data-status')
  })
 };
-$('#vol').oninput=e=>setVolume(e.target.value);
-$('#vm').onclick=()=>setVolume(volumeMuted?lastVolume:0);$('#vmx').onclick=()=>setVolume(100);
-$('#sc').onpointerdown=()=>seeking=true;$('#sc').onchange=e=>{seeking=false;if(P)act({type:'seek',pos:e.target.value/1000*(S?.cur?.duration||P.getDuration())})};
+$('#playlist-clear').onclick=()=>{savePlaylist([]);renderPlaylist();toast('Playlist cleared')};
+/* v46: the playlist is rendered on load too, so your saved songs are there
+   before the first state update arrives. */
+renderPlaylist();
+$('#vol').oninput=e=>setVolume(e.target.value,false);
+$('#vol').onchange=e=>setVolume(e.target.value,true);
+$('#vm').onclick=()=>setVolume(volumeMuted?lastVolume:0,true);$('#vmx').onclick=()=>setVolume(100,true);
+/* v45: SMOOTH seek drag — the old code only set `seeking` on pointerdown and only
+   sought on release, but the sync loop kept seeking the PLAYER to the live
+   position while the user dragged (its seeks were not gated on `seeking`),
+   and the 500ms interval kept overwriting the bar value whenever `seeking`
+   was not set — so the thumb fought the user and felt laggy. Now: dragging
+   updates the time label and the fill live (oninput), the sync loop never
+   seeks the player while a drag is in progress, and the server seek fires
+   once on release. */
+$('#sc').onpointerdown=()=>seeking=true;
+$('#sc').oninput=e=>{seeking=true;const d=S?.cur?.duration||P?.getDuration?.()||0;if(d)$('#t1').textContent=fmt(e.target.value/1000*d);e.target.style.setProperty('--p',(e.target.value/10)+'%')};
+$('#sc').onpointerup=()=>{seeking=false};
+$('#sc').onchange=e=>{seeking=false;if(P)act({type:'seek',pos:e.target.value/1000*(S?.cur?.duration||P.getDuration())})};
 $('#share').onclick=()=>{const u=location.origin+'/room/'+S.code;$('#lk').value=u;$('#qr').innerHTML='';
  try{if(window.QRCode)new QRCode($('#qr'),{text:u,width:200,height:200});else throw new Error('no QR lib')}
  catch(e){$('#qr').innerHTML='<small>QR code unavailable — copy the link below.</small>'}
@@ -440,7 +493,7 @@ setInterval(()=>{if(!P||!P.getDuration||!S?.cur)return;const ld=P.getDuration()|
     the server keeps it, and from then on everyone shows the same number. */
  const d=S.cur.duration||ld;
  if(ld>0&&!S.cur.duration){const key=S.cur.tid+':'+Math.round(ld);if(key!==lastDurSent){lastDurSent=key;act({type:'dur',tid:S.cur.tid,dur:ld})}}
- $('#t1').textContent=fmt(t);$('#t2').textContent=fmt(d);if(!seeking&&d)$('#sc').value=Math.min(1000,t/d*1000);updateMediaSession();
+ $('#t1').textContent=fmt(t);$('#t2').textContent=fmt(d);if(!seeking&&d){const sc=$('#sc'),v=Math.min(1000,t/d*1000);sc.value=v;sc.style.setProperty('--p',(v/10)+'%')}updateMediaSession();
  /* stuck-buffer safety net: buffering for 12s straight while the room is
     playing means the stream is wedged — reload it at the live position. */
  if(S.cur.playing&&P.getPlayerState){const st=P.getPlayerState();if(st===3){if(!bufSince)bufSince=Date.now();else if(Date.now()-bufSince>12000){bufSince=0;cv=null;sync()}}else bufSince=0}
@@ -501,11 +554,12 @@ const keepPlaying=()=>{if(!S?.cur?.playing||!P)return;try{if(P.unMute)P.unMute()
    Session (lock-screen controls), an unmuted playing player at the
    moment of hiding, and repeated resume attempts. If the system still
    pauses it, it restarts the instant the user returns — no tap needed. */
-let keepT=[];
-const keepPlayingRetry=()=>{keepT.forEach(clearTimeout);keepT=[];keepPlaying();[400,1200,2500].forEach(ms=>keepT.push(setTimeout(keepPlaying,ms)))};
+let keepT=null;
+const keepPlayingRetry=()=>{keepPlaying();if(keepT){clearInterval(keepT);keepT=null}/* v45: keep retrying while hidden — in a home-screen app iOS suspends JS fast and pauses the YouTube player a moment after you leave, so a few retries over 2.5s often miss it. Retry every 2s for up to 30s while hidden, so one of the retries catches the player after the system pauses it and starts it again. Stops when the page is visible again or after 30s. */keepT=setInterval(()=>{if(document.hidden)keepPlaying();else if(keepT){clearInterval(keepT);keepT=null}},2000);setTimeout(()=>{if(keepT){clearInterval(keepT);keepT=null}},30000)};
 document.addEventListener('visibilitychange',()=>{if(document.hidden)keepPlayingRetry();else resumeRoom()});
 window.addEventListener('pagehide',keepPlayingRetry);
 document.addEventListener('freeze',keepPlayingRetry);
+window.addEventListener('blur',()=>{if(document.hidden)keepPlayingRetry()});
 window.addEventListener('pageshow',resumeRoom);
 window.addEventListener('focus',()=>{if(!document.hidden)keepPlaying()});
 /* v29: installable app — register the service worker so the app shell loads

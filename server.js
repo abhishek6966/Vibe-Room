@@ -4,7 +4,7 @@ app.use(express.static(path.join(__dirname,'public')));
 app.get('/room/:c',(q,r)=>r.sendFile(path.join(__dirname,'public/index.html')));
 const rooms=new Map(),CH='ABCDEFGHJKMNPQRSTUVWXYZ23456789',now=()=>Date.now(),SCHED=200; /* v21: scheduled start — play/pause/seek/track-change take effect at server time now()+SCHED so every device starts together. Was 800; cut to 200 because the host heard the pause land ~1s late. The tapping device also pauses/plays its own player instantly now (localToggle in app.js), so the tap feels instant and the group still follows at once. */
 const newCode=()=>{let c;do c=Array.from({length:6},()=>CH[Math.random()*CH.length|0]).join('');while(rooms.has(c));return c};
-const pos=r=>r.cur?((r.cur.playing?now():r.cur.pausedAt)-r.cur.anchor)/1000*(r.cur.speed||1):0;
+const pos=r=>{if(!r.cur)return 0;if(r.cur.pending)return 0;return ((r.cur.playing?now():r.cur.pausedAt)-r.cur.anchor)/1000*(r.cur.speed||1)};
 const online=r=>[...r.users.values()].filter(u=>u.connected);
 const mod=(r,id)=>r.hostId===id||r.co.has(id);
 /* v20: control access — who may play/pause/seek/skip/add directly. The host and
@@ -13,10 +13,10 @@ const mod=(r,id)=>r.hostId===id||r.co.has(id);
 const ctrl=(r,id)=>mod(r,id)||r.ctrl.has(id);
 const pub=r=>({code:r.code,hostId:r.hostId,co:[...r.co],ctrl:[...r.ctrl],reqs:r.reqs,locked:r.locked,repeat:r.repeat,mode:r.mode,adders:[...r.adders],queue:r.queue,history:r.history.slice(-20),
   users:[...r.users.values()].filter(u=>u.connected).map(({id,name,color})=>({id,name,color})),
-  cur:r.cur&&{videoId:r.cur.videoId,title:r.cur.title,channel:r.cur.channel,artwork:r.cur.artwork,by:r.cur.by,tid:r.cur.tid,duration:r.cur.duration||0,reqs:r.cur.reqs,singerId:r.cur.singerId,singerName:r.cur.singerName,speed:r.cur.speed||1,live:r.cur.live,playing:r.cur.playing,playAt:r.cur.playAt||0,pos:pos(r)},now:now()});
+  cur:r.cur&&{videoId:r.cur.videoId,title:r.cur.title,channel:r.cur.channel,artwork:r.cur.artwork,by:r.cur.by,tid:r.cur.tid,duration:r.cur.duration||0,reqs:r.cur.reqs,singerId:r.cur.singerId,singerName:r.cur.singerName,speed:r.cur.speed||1,live:r.cur.live,playing:r.cur.playing,playAt:r.cur.playAt||0,pending:r.cur.pending||false,pos:pos(r)},now:now()});
 const push=r=>io.to(r.code).emit('state',pub(r));
 const say=(r,m)=>io.to(r.code).emit('say',m);
-function start(r,t,at){at=at||now();r.cur={...t,anchor:at,playing:true,pausedAt:0,live:false,speed:r.speed,playAt:at};r.bad=new Set()}
+function start(r,t,at){at=at||now();if(r.pendingT){clearTimeout(r.pendingT);r.pendingT=null}r.cur={...t,anchor:at,playing:true,pausedAt:0,live:false,speed:r.speed,playAt:at,pending:true,pendingPos:0};r.bad=new Set();/* v45: the clock does NOT start until a controller's player actually sounds (see 'started' below). Fallback: if nobody reports within 8s, start anyway so a stuck player can't freeze the room. */r.pendingT=setTimeout(()=>{if(r.cur&&r.cur.pending){r.cur.pending=false;r.cur.anchor=now();r.cur.playAt=now();r.pendingT=null;push(r)}},8000)}
 function next(r,man){const T=now()+SCHED;if(r.cur&&r.repeat==='one'&&!man)start(r,r.cur,T);else{if(r.cur){r.history.push(r.cur);if(r.repeat==='all')r.queue.push({...r.cur,reqs:[],singerId:null,singerName:null})}const t=r.queue.shift();t?start(r,t,T):r.cur=null}push(r)}
 const vid=u=>{const m=String(u).match(/(?:v=|youtu\.be\/|shorts\/|embed\/|live\/)([\w-]{11})/);return m&&m[1]};
 const embedCheckCache=new Map(),embedCheckPending=new Map(),EMBED_CHECK_TTL=15*60*1000;
@@ -76,7 +76,8 @@ io.on('connection',s=>{let r=null,me=null,lastVideoCheck=0;
       else{r.cur.anchor=T-P*1000/sp;r.cur.playing=true}
       r.cur.playAt=T}push(r);break;
     case'seek':if(!C||!r.cur)return;{const T=now()+SCHED,Q=Math.max(0,+a.pos),sp=r.cur.speed||1;
-      r.cur.anchor=T-Q*1000/sp;r.cur.pausedAt=T;r.cur.playAt=T}push(r);break;
+      r.cur.anchor=T-Q*1000/sp;r.cur.pausedAt=T;r.cur.playAt=T;if(r.cur.pending)r.cur.pendingPos=Q}push(r);break;
+    case'started':{if(!C||!r.cur||r.cur.videoId!==a.v||!r.cur.pending)break;if(r.pendingT){clearTimeout(r.pendingT);r.pendingT=null}const sp=r.cur.speed||1,pp=r.cur.pendingPos||0;r.cur.pending=false;r.cur.anchor=now()-pp*1000/sp;r.cur.playAt=now();push(r);break}
     case'skip':if(!C||!r.cur)return;next(r,1);break;
     case'add':{const fail=m=>{if(typeof cb==='function')cb({ok:false,message:m});else s.emit('say',m)};
       if(r.mode==='karaoke'&&!M&&!r.adders.has(id))return fail('Ask the host to let you add songs.');const v=vid(a.url);if(!v)return fail('That doesn\u2019t look like a YouTube link.');
