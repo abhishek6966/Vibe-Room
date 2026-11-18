@@ -28,7 +28,7 @@ else{$('#gate').hidden=false;$('#gn').value=me.name;$('#gc').value=me.color.leng
   $('#gate').hidden=true;$('#room').hidden=false;initPlayer();if(S)render()};
  const s=document.createElement('script');s.src='https://www.youtube.com/iframe_api';document.head.append(s)}
 window.onYouTubeIframeAPIReady=()=>{window.ytr=1};
-function pReady(e){const pl=e.target;if(pl.setVolume)pl.setVolume(+$('#vol').value);capQuality();sync()}
+function pReady(e){const pl=e.target;if(pl.unMute)pl.unMute();if(pl.setVolume)pl.setVolume(+$('#vol').value);capQuality();sync()}
 function pState(e){if(e.target!==P)return;if(e.data===0&&S?.cur)act({type:'ended',v:S.cur.videoId});if(e.data===1||e.data===2)sync()}
 function pErr(e){if(e.target===P&&S?.cur)act({type:'bad',v:S.cur.videoId})}
 function initPlayer(){if(!window.ytr)return setTimeout(initPlayer,200);
@@ -58,42 +58,49 @@ function sync(){if(!P||!P.loadVideoById||!S)return;const c=S.cur;if(!c){P.stopVi
   else{cv=c.videoId;P.loadVideoById(c.videoId,est());capQuality()}
   needCatchup=true /* v17: fresh load — jump straight to the live position instead of drifting there */}
  const st=P.getPlayerState(),t=est(),now=P.getCurrentTime?.()||0,d=t-now,ad=Math.abs(d),rate=c.speed||1;
- /* v13 tighter correction, still no hard jumps: ignore drift under a
-    quarter-second (YouTube's own clock jitters by about that much),
-    nudge the speed ±8% for drift up to 1.5s, and only seek past 1.5s —
-    and never seek while the player is still buffering, or the seek
-    throws the buffer away and the stall starts all over again. */
- let target=rate;if(ad>=.25&&ad<1.5)target=rate*(d>0?1.08:.92);
+ /* v20 tighter correction so every listener hears the same second: ignore drift
+    under 0.15s (YouTube's own clock jitters by about that much), nudge the speed
+    ±15% for drift up to 0.5s, and seek past 0.5s — and never seek while the
+    player is still buffering, or the seek throws the buffer away and the stall
+    starts all over again. */
+ let target=rate;if(ad>=.15&&ad<.5)target=rate*(d>0?1.15:.85);
  P.setPlaybackRate(target);
  if(c.playing&&st!==1&&st!==3)P.playVideo();if(!c.playing&&st===1)P.pauseVideo();
  /* v17 catch-up: on a fresh load, seek straight to the live position the moment the player can seek (don't wait for the drift to grow past the normal threshold) */
  if(needCatchup&&(st===1||st===2)){P.seekTo(t,true);needCatchup=false}
- else if(st===1&&ad>=1.5)P.seekTo(t,true);
+ else if(st===1&&ad>=.5)P.seekTo(t,true);
  else if(st===2&&ad>.5)P.seekTo(t,true);
  const syn=$('#sync');
  if(st===3){syn.className='off';syn.textContent='● Buffering…'}
- else{const ok=ad<1.5;syn.className=ok?'':'off';syn.textContent=ok?'● In Sync':'● Syncing…'}}
+ else{const ok=ad<.5;syn.className=ok?'':'off';syn.textContent=ok?'● In Sync':'● Syncing…'}}
 socket.on('state',s=>{S=s;recv=Date.now();
 /* v17: server clock minus this device's clock (one-way delay already removed) — used to run scheduled actions at the same instant on every device */
 clockOff=S.now+rtt/2-recv;
 render();sync();preloadNext()});socket.on('say',toast);
 socket.on('react',r=>{const d=document.createElement('div');d.className='fl';d.textContent=r.e;d.style.left=(10+Math.random()*80)+'%';$('#fl').append(d);setTimeout(()=>d.remove(),2400)});
-function render(){if(!joined)return;const isH=S.hostId===me.id,M=isH||S.co.includes(me.id),can=M||!S.locked,c=S.cur;
+function render(){if(!joined)return;const isH=S.hostId===me.id,M=isH||S.co.includes(me.id),C=M||(S.ctrl&&S.ctrl.includes(me.id)),can=C,c=S.cur;
  $('#rn').textContent='Room '+S.code;
  $('#who').innerHTML='<span class="pill-who">'+S.users.slice(0,8).map(u=>`<span class="av" style="background:${esc(u.color)}" title="${esc(u.name)}">${esc(u[0]=u.name[0]||'?')}</span>`).join('')+`<small>${AIC_USERS} ${S.users.length} listening</small></span>`;
- const lk=$('#lock');lk.hidden=!isH;lk.innerHTML=S.locked?'<span class="ic" aria-hidden="true">'+AIC_UNLOCK+'</span> <span class="tx">Unlock Playback</span>':'<span class="ic" aria-hidden="true">'+AIC_LOCK+'</span> <span class="tx">Lock Playback</span>';
+ const lk=$('#lock');lk.hidden=!isH;lk.innerHTML=S.locked?'<span class="ic" aria-hidden="true">'+AIC_UNLOCK+'</span> <span class="tx">Open requests</span>':'<span class="ic" aria-hidden="true">'+AIC_LOCK+'</span> <span class="tx">Close requests</span>';
  $('#disc').classList.toggle('on',!!c&&c.playing);
  let h=0;if(c)for(const ch of c.videoId)h=(h*31+ch.charCodeAt(0))%360;document.documentElement.style.setProperty('--h',h);
  $('#tt').textContent=c?c.title:'Queue is empty';$('#ch').textContent=c?c.channel:'Paste a YouTube link to start the room.';$('#by').textContent=c?'Added by '+c.by:'';
- $('#pp').innerHTML=c&&c.playing?IC_PAUSE:IC_PLAY;$('#pp').disabled=!can;$('#sk').innerHTML=IC_NEXT;$('#sk').setAttribute('aria-label',M?'Skip':'Vote to skip');$('#sc').disabled=!can||!c;
- $('#q').innerHTML=S.queue.length?S.queue.map((t,i)=>`<li style="--c:${esc(t.color||'#ff2d87')}"><img src="${esc(t.artwork)}" alt=""><div><b>${esc(t.title)}</b><small>${esc(t.by)}</small>${kq(t,M)}</div>${M||t.byId===me.id?`<button data-rm="${i}" aria-label="Remove ${esc(t.title)}">Remove</button>`:''}</li>`).join(''):'<li><div><small>Nothing queued. Paste a link above.</small></div></li>';
+ $('#pp').innerHTML=c&&c.playing?IC_PAUSE:IC_PLAY;$('#pp').disabled=!can;$('#sk').innerHTML=IC_NEXT;$('#sk').setAttribute('aria-label',C?'Skip':'Vote to skip');$('#sc').disabled=!can||!c;
+ $('#au').placeholder=C?'Paste a YouTube link…':'Paste a YouTube link to request it';$('#af button').textContent=C?'Add':'Request';
+ /* v20: song requests — a guest's link waits here until the host approves it (into the queue) or rejects it (gone) */
+ const rq=S.reqs||[];$('#rqw').hidden=!rq.length;
+ $('#rq').innerHTML=rq.map(q=>`<li style="--c:${esc(q.color||'#ff2d87')}"><img src="${esc(q.artwork)}" alt=""><div><b>${esc(q.title)}</b><small>Requested by ${esc(q.by)}${q.byId===me.id?' • Waiting for host approval':''}</small></div>${isH?`<button class="ap" data-ap="${esc(q.rid)}">Approve</button><button class="rj" data-rj="${esc(q.rid)}">Reject</button>`:''}</li>`).join('');
+ $('#q').innerHTML=S.queue.length?S.queue.map((t,i)=>`<li style="--c:${esc(t.color||'#ff2d87')}"><img src="${esc(t.artwork)}" alt=""><div><b>${esc(t.title)}</b><small>${esc(t.by)}</small>${kq(t,M)}</div>${C||t.byId===me.id?`<button data-rm="${i}" aria-label="Remove ${esc(t.title)}">Remove</button>`:''}</li>`).join(''):'<li><div><small>Nothing queued. Paste a link above.</small></div></li>';
  $('#h').innerHTML=S.history.map(t=>`<li><img src="${esc(t.artwork)}" alt=""><div><b>${esc(t.title)}</b><small>${esc(t.by)}</small></div></li>`).reverse().join('');
- $('#ul').innerHTML=S.users.map(u=>`<li style="--c:${esc(u.color)}"><div><b>${esc(u.name)}${u.id===S.hostId?' 👑':S.co.includes(u.id)?' ★':''}</b></div>${isH&&u.id!==me.id?`${ku(u)}<button data-h="${u.id}">Make host</button><button data-c="${u.id}">Co-host</button><button data-k="${u.id}">Remove</button>`:M&&u.id!==S.hostId&&u.id!==me.id?`<button data-k="${u.id}">Remove</button>`:''}</li>`).join('');karRender()}
+ $('#ul').innerHTML=S.users.map(u=>{const hasCtrl=S.ctrl&&S.ctrl.includes(u.id);
+  return `<li style="--c:${esc(u.color)}"><div><b>${esc(u.name)}${u.id===S.hostId?' 👑':S.co.includes(u.id)?' ★':hasCtrl?' 🎛':''}</b></div>${isH&&u.id!==me.id?`<div class="uacts">${ku(u)}<button data-h="${u.id}">Make host</button><button data-c="${u.id}">Co-host</button><button data-ctrl="${u.id}">${hasCtrl?'Take control':'Give control'}</button><button data-k="${u.id}">Remove</button></div>`:M&&u.id!==S.hostId&&u.id!==me.id?`<div class="uacts"><button data-k="${u.id}">Remove</button></div>`:''}</li>`}).join('');karRender()}
 document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const d=b.dataset;
- if(d.rm)act({type:'remove',i:+d.rm});if(d.h)act({type:'host',id:d.h});if(d.c)act({type:'cohost',id:d.c});if(d.k)act({type:'kick',id:d.k});if(d.e)act({type:'react',e:d.e})});
-$('#pp').onclick=()=>{if(!S?.cur){toast('Paste a YouTube link to start the room.');return}act({type:'play'})};$('#sk').onclick=()=>act({type:'skip'});$('#lock').onclick=()=>act({type:'lock'});
+ if(d.rm)act({type:'remove',i:+d.rm});if(d.h)act({type:'host',id:d.h});if(d.c)act({type:'cohost',id:d.c});if(d.k)act({type:'kick',id:d.k});if(d.e)act({type:'react',e:d.e});
+ if(d.ap)act({type:'approve',rid:d.ap});if(d.rj)act({type:'reject',rid:d.rj});if(d.ctrl)act({type:'ctrl',id:d.ctrl})});
+$('#leave').onclick=()=>{socket.emit('leave');setTimeout(()=>{socket.disconnect();location.href='/'},300)}; /* v20: leave the room — the server hands the host on at once if you were the host */
+$('#pp').onclick=()=>{if(!S?.cur){toast('Paste a YouTube link to start the room.');return}[P,P2].forEach(pl=>pl&&pl.unMute&&pl.unMute());act({type:'play'})};$('#sk').onclick=()=>act({type:'skip'});$('#lock').onclick=()=>act({type:'lock'});
 $('#af').onsubmit=e=>{e.preventDefault();const u=$('#au').value.trim();if(u){act({type:'add',url:u});$('#au').value=''}};
-$('#vol').oninput=e=>{[P,P2].forEach(pl=>pl&&pl.setVolume&&pl.setVolume(+e.target.value))};
+$('#vol').oninput=e=>{[P,P2].forEach(pl=>{if(pl){if(pl.unMute)pl.unMute();if(pl.setVolume)pl.setVolume(+e.target.value)}})};
 $('#sc').onpointerdown=()=>seeking=true;$('#sc').onchange=e=>{seeking=false;if(P)act({type:'seek',pos:e.target.value/1000*P.getDuration()})};
 $('#share').onclick=()=>{const u=location.origin+'/room/'+S.code;$('#lk').value=u;$('#qr').innerHTML='';
  try{if(window.QRCode)new QRCode($('#qr'),{text:u,width:200,height:200});else throw new Error('no QR lib')}

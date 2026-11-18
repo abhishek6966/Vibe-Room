@@ -417,3 +417,17 @@ ol,ul{grid-template-columns:minmax(0,1fr)!important}
 li{min-width:0!important;overflow:hidden}
 li img,li button{flex:none!important}
 li div{min-width:0!important}
+
+/* v20: host control + requests + leave + yellow glass toasts + tighter sync.
+   (1) Notifications: every toast is now a compact yellow glass pill — warm
+   yellow-to-amber gradient, frosted blur, soft glow, dark text. (2) The
+   Requests list and the Leave button. (3) Approve (green) / Reject (red). */
+.toast{background:linear-gradient(135deg,rgba(255,214,64,.94),rgba(255,176,32,.9))!important;border:1px solid rgba(255,255,255,.6)!important;border-radius:16px!important;padding:.5em .9em!important;color:#3a2500!important;font-size:.82rem!important;font-weight:600!important;line-height:1.35!important;text-align:center!important;box-shadow:0 10px 26px rgba(255,170,0,.4),inset 0 1px 0 rgba(255,255,255,.65)!important;backdrop-filter:blur(14px) saturate(1.3)!important;-webkit-backdrop-filter:blur(14px) saturate(1.3)!important}
+.leave{width:100%!important;margin-top:16px!important;padding:.85em 1em!important;border-radius:16px!important;border:1px solid rgba(255,255,255,.28)!important;background:linear-gradient(135deg,rgba(255,61,113,.9),rgba(176,38,255,.9))!important;color:#fff!important;font-weight:700!important;font-size:.95rem!important;box-shadow:0 10px 24px rgba(255,45,135,.35),inset 0 1px 0 rgba(255,255,255,.35)!important;cursor:pointer!important}
+#rq .ap{background:linear-gradient(135deg,#22c55e,#16a34a)!important;border-color:rgba(255,255,255,.4)!important;color:#fff!important}
+#rq .rj{background:linear-gradient(135deg,#ef4444,#dc2626)!important;border-color:rgba(255,255,255,.4)!important;color:#fff!important}
+/* v20 (fix): the Room user row now has four host buttons, so the actions wrap
+   onto their own row(s) below the name instead of squeezing the name out. */
+#ul li{flex-wrap:wrap!important}
+#ul .uacts{display:flex!important;flex-wrap:wrap!important;gap:6px!important;flex:1 1 100%!important;min-width:0!important}
+#ul .uacts button{flex:1 1 45%!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}

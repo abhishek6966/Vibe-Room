@@ -28,11 +28,11 @@ new IntersectionObserver(([e])=>{vis=e.isIntersecting;updMini()}).observe(deck);
 /* pink fill on the seek + volume sliders */
 const setFill=el=>{if(el)el.style.setProperty('--p',((el.value-el.min)/(el.max-el.min)*100)+'%')};
 setInterval(()=>{setFill($('#sc'));setFill($('#vol'))},300);
-const likes=()=>JSON.parse(L.likes||'[]'),showLikes=()=>$('#lk2').innerHTML=likes().map(x=>`<li><div><b>${esc(x.t)}</b></div><button data-like="${x.id}">Add to queue</button></li>`).join('')||'<li><div><small>Tap Like on a song to save it here.</small></div></li>';
-function paint(){const c=S?.cur,M=S&&(S.hostId===me.id||S.co.includes(me.id)),can=M||(S&&!S.locked);stage.classList.toggle('on',!!c&&c.playing);deck.classList.toggle('on',!!c&&c.playing);
+const likes=()=>JSON.parse(L.likes||'[]'),showLikes=()=>{const C=S&&(S.hostId===me.id||S.co.includes(me.id)||(S.ctrl&&S.ctrl.includes(me.id)));$('#lk2').innerHTML=likes().map(x=>`<li><div><b>${esc(x.t)}</b></div><button data-like="${x.id}">${C?'Add to queue':'Request'}</button></li>`).join('')||'<li><div><small>Tap Like on a song to save it here.</small></div></li>'};
+function paint(){const c=S?.cur,M=S&&(S.hostId===me.id||S.co.includes(me.id)),C=M||(S&&S.ctrl&&S.ctrl.includes(me.id)),can=C;stage.classList.toggle('on',!!c&&c.playing);deck.classList.toggle('on',!!c&&c.playing);
  dp.textContent=c&&c.playing?'❚❚':'▶';dp.disabled=!can;
  const rp=S?.repeat||'off';$('#xr').classList.toggle('on',rp!=='off');const xrb=$('#xrb');xrb.hidden=rp==='off';xrb.textContent=rp==='one'?'1':'ALL';
- $('#xp').disabled=!can;['#xs','#xr','#xv'].forEach(i=>$(i).disabled=!M);$('#xv').closest('.pill').classList.toggle('off',!M);if(c)$('#xv').value=String(c.speed||1);
+ $('#xp').disabled=!can;['#xs','#xr','#xv'].forEach(i=>$(i).disabled=!C);$('#xv').closest('.pill').classList.toggle('off',!C);if(c)$('#xv').value=String(c.speed||1);
  $('#xl').innerHTML=(c&&likes().some(x=>x.id===c.videoId)?X_HEART('#ff5c8a'):X_HEART_O)+'<span>Like</span>';
  if(c){$('#mi').src=c.artwork;$('#mt').textContent=c.title;$('#mp').textContent=c.playing?'Pause':'Play'}updMini();showLikes()}
 socket.on('state',paint);
