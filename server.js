@@ -83,7 +83,7 @@ io.on('connection',s=>{let r=null,me=null;
     case'repeat':if(!C)return;r.repeat={off:'all',all:'one',one:'off'}[r.repeat];push(r);break;
     case'speed':{if(!C)return;const p=pos(r),sp=Math.min(1.25,Math.max(.75,+a.v||1)),T=now()+SCHED;r.speed=sp;if(r.cur){r.cur.speed=sp;r.cur.anchor=T-p*1000/sp;if(!r.cur.playing)r.cur.pausedAt=T;r.cur.playAt=T}say(r,'Speed '+sp+'×');push(r);break}
     case'ended':if(r.cur&&r.cur.videoId===a.v&&now()-r.cur.anchor>3000)next(r);break;
-    case'bad':if(r.cur&&r.cur.videoId===a.v){r.bad.add(id);if(r.bad.size>=Math.ceil(online(r).length/2)){say(r,'That track can\u2019t be played here. Skipped to the next one.');next(r)}}break}});
+    case'bad':if(r.cur&&r.cur.videoId===a.v){r.bad.add(id);if(r.bad.size>=Math.ceil(online(r).length/2)){say(r,a.code===101||a.code===150?'YouTube blocked embedded playback for "'+r.cur.title+'". Try a video that allows embedding.':'That track can\u2019t be played here. Skipped to the next one.');next(r)}}break}});
   s.on('leave',()=>{if(!r||!me)return;const u=r.users.get(me.id);if(!u||u.sid!==s.id)return;u.connected=false;if(r.cur&&r.cur.singerId===me.id)r.cur.live=false;clearTimeout(r.gone);push(r);const rr=r;
     if(rr.hostId===me.id)succeed(rr);rr.last=now()}); /* v20: explicit Leave — host passes on at once instead of the 30s disconnect grace */
   s.on('rtc',m=>{const u=r&&me&&r.users.get(m.to);if(u&&u.connected)io.to(u.sid).emit('rtc',{from:me.id,data:m.data})});

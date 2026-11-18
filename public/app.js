@@ -24,7 +24,7 @@ const showJoinError=message=>{$('#gate').classList.add('gate-error');$('#gt').te
 if(!code){$('#home').hidden=false;
  $('#create').onclick=()=>socket.emit('create',me,r=>location.href='/room/'+r.code);
  $('#jf').onsubmit=e=>{e.preventDefault();const c=$('#jc').value.trim().toUpperCase();if(c)location.href='/room/'+c};
- const rc=JSON.parse(L.recent||'[]');$('#recent').innerHTML=rc.length?'<p class="steps">Recent rooms</p>'+rc.map(c=>`<a href="/room/${esc(c)}" style="color:var(--cy)">${esc(c)}</a>`).join(' '):''}
+ const rc=JSON.parse(L.recent||'[]').slice(0,5);$('#recent').innerHTML=rc.length?'<p class="recent-title">Recent rooms</p><div class="recent-list">'+rc.map(c=>`<a href="/room/${esc(c)}">${esc(c)}</a>`).join('')+'</div>':''}
 else{$('#gate').hidden=false;$('#home-link').hidden=false;$('#gn').value=me.name;$('#gc').value=me.color.length==7?me.color:'#ff2d87';
  $('#new-room').onclick=()=>{const b=$('#new-room');b.disabled=true;b.textContent='Creating room…';socket.emit('create',me,r=>{if(!r?.code){b.disabled=false;b.textContent='Create a new room';$('#ge').textContent='Could not create a room. Please try again.';return}location.href='/room/'+r.code})};
  socket.on('connect',()=>{if(joined)return;socket.emit('join',{code,...me},r=>{if(joined)return;if(r.error){showJoinError(r.error);return}
@@ -37,7 +37,7 @@ else{$('#gate').hidden=false;$('#home-link').hidden=false;$('#gn').value=me.name
 window.onYouTubeIframeAPIReady=()=>{window.ytr=1};
 function pReady(e){applyVolume(e.target);capQuality();sync()}
 function pState(e){if(e.target!==P)return;if(e.data===0&&S?.cur)act({type:'ended',v:S.cur.videoId});if(e.data===1||e.data===2)sync()}
-function pErr(e){if(e.target===P&&S?.cur)act({type:'bad',v:S.cur.videoId})}
+function pErr(e){if(e.target===P&&S?.cur)act({type:'bad',v:S.cur.videoId,code:e.data})}
 function initPlayer(){if(!window.ytr)return setTimeout(initPlayer,200);
  P=new YT.Player('pl',{width:427,height:240,playerVars:{controls:0,disablekb:1,playsinline:1,modestbranding:1,rel:0,vq:'small'},
  events:{onReady:pReady,onStateChange:pState,onError:pErr}});
@@ -104,12 +104,12 @@ function render(){if(!joined)return;const isH=S.hostId===me.id,M=isH||S.co.inclu
  $('#current-track').hidden=!c;
  $('#current-song').innerHTML=c?`<li class="current-song"><img src="${esc(c.artwork)}" alt=""><div><b>${esc(c.title)}</b><small>${esc(c.by)}</small></div><span class="current-state ${c.playing?'playing':'paused'}">${c.playing?'Playing':'Paused'}</span></li>`:'';
  $('#q').innerHTML=S.queue.length?S.queue.map((t,i)=>`<li style="--c:${esc(t.color||'#ff2d87')}"><img src="${esc(t.artwork)}" alt=""><div><b>${esc(t.title)}</b><small>${esc(t.by)}</small>${kq(t,M)}</div>${C||t.byId===me.id?`<button data-rm="${i}" aria-label="Remove ${esc(t.title)}">Remove</button>`:''}</li>`).join(''):'<li><div><small>Nothing queued. Paste a link above.</small></div></li>';
- $('#h').innerHTML=S.history.map(t=>`<li><img src="${esc(t.artwork)}" alt=""><div><b>${esc(t.title)}</b><small>${esc(t.by)}</small></div></li>`).reverse().join('');
+ $('#h').innerHTML=S.history.map(t=>`<li><img src="${esc(t.artwork)}" alt=""><div><b>${esc(t.title)}</b><small>${esc(t.by)}</small></div><button data-replay="${esc(t.videoId)}" aria-label="${C?'Replay':'Request'} ${esc(t.title)}">${C?'Replay':'Request'}</button></li>`).reverse().join('');
  $('#ul').innerHTML=S.users.map(u=>{const hasCtrl=S.ctrl&&S.ctrl.includes(u.id);
   return `<li style="--c:${esc(u.color)}"><div><b>${esc(u.name)}${u.id===S.hostId?' 👑':S.co.includes(u.id)?' ★':hasCtrl?' 🎛':''}</b></div>${isH&&u.id!==me.id?`<div class="uacts">${ku(u)}<button data-h="${u.id}">Make host</button><button data-c="${u.id}">Co-host</button><button data-ctrl="${u.id}">${hasCtrl?'Take control':'Give control'}</button><button data-k="${u.id}">Remove</button></div>`:M&&u.id!==S.hostId&&u.id!==me.id?`<div class="uacts"><button data-k="${u.id}">Remove</button></div>`:''}</li>`}).join('');karRender()}
 document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const d=b.dataset;
  if(d.rm)act({type:'remove',i:+d.rm});if(d.h)act({type:'host',id:d.h});if(d.c)act({type:'cohost',id:d.c});if(d.k)act({type:'kick',id:d.k});if(d.e)act({type:'react',e:d.e});
- if(d.ap)act({type:'approve',rid:d.ap});if(d.rj)act({type:'reject',rid:d.rj});if(d.ctrl)act({type:'ctrl',id:d.ctrl})});
+ if(d.ap)act({type:'approve',rid:d.ap});if(d.rj)act({type:'reject',rid:d.rj});if(d.ctrl)act({type:'ctrl',id:d.ctrl});if(d.replay)act({type:'add',url:'https://youtu.be/'+d.replay})});
 $('#leave').onclick=()=>{socket.emit('leave');setTimeout(()=>{socket.disconnect();location.href='/'},300)}; /* v20: leave the room — the server hands the host on at once if you were the host */
 /* v21: pause/play acts instantly on the device you tap. The server still
    schedules the action for the group (SCHED 200ms), so the sound used to keep
