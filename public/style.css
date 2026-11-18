@@ -1207,3 +1207,31 @@ body:not(.playing) .cosmic *,body:not(.playing) .orb,body:not(.playing) .note,bo
 .up-audio:active{transform:scale(.98)}
 .up-audio svg{flex:none;color:#ffd166}
 .up-note{margin:8px 2px 0;font-size:.8rem;font-weight:600;color:#c8f7d4;text-align:center}
+
+/* v54: LANDING — COLORFUL BUT ORGANIZED. Same gradients, rainbow equalizer
+   and purple background, but the page is now structured: one centered
+   column with a clear rhythm (logo → title → tagline → equalizer → chips
+   → Create → or-divider → Join by code → QR → footer), every button the
+   same full width, the join row properly aligned, and the chips equal
+   width so they line up. Nothing was de-coloured — only organised. */
+#home{max-width:420px;gap:0;padding:calc(4vh + env(safe-area-inset-top)) 20px calc(16px + env(safe-area-inset-bottom))}
+#home .hero3d{width:clamp(110px,min(46vw,20svh),168px);margin:0 auto 10px}
+#home .hero-title{margin:0 0 6px}
+#home .lead{margin:0 auto 10px}
+#home .eq{margin:0 auto 12px}
+#home .chips{gap:8px;margin:0 auto 16px;width:100%}
+#home .chip{flex:1;justify-content:center;padding:6px 6px;font-size:.64rem;white-space:nowrap}
+#home .big{width:100%;margin:0 0 14px}
+#home .or{display:flex;align-items:center;gap:12px;margin:0 0 14px;color:var(--mu);font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+#home .or::before,#home .or::after{content:"";flex:1;height:1px;background:rgba(255,255,255,.2)}
+#home #jf{display:block;margin:0 0 12px}
+#home #jf label{display:block;text-align:left;margin:0 0 6px;font-size:.78rem;font-weight:600}
+#home #jf .row{display:flex;gap:8px}
+#home #jf .row input{flex:1;min-width:0;min-height:48px;text-align:center;font-weight:600;letter-spacing:.08em}
+#home #jf .row button{flex:none;min-height:48px;padding:.4em 1.2em}
+#home .scan-btn{width:100%;min-height:48px;margin:0 0 14px}
+#home .steps{margin:0 auto;font-size:.78rem;line-height:1.45}
+/* v54: COOLER PHONE — the stage backdrop blur drops from 12px to 8px.
+   Still glassy, but the GPU does less work on every frame while a song
+   plays. The main heat fix is the 144p video cap in app.js (capQuality). */
+.stage{backdrop-filter:blur(8px)!important;-webkit-backdrop-filter:blur(8px)!important}

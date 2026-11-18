@@ -336,18 +336,21 @@ function makeAudioPlayer(){
 function initPlayer(){if(PYT)return; /* v24: only create the player once — it is now created early (on the gate) so it exists when the user taps Join, and again after joining */
  if(!PAU)PAU=makeAudioPlayer();
  if(!window.ytr)return setTimeout(initPlayer,200);
- PYT=new YT.Player('pl',{width:427,height:240,playerVars:{controls:0,disablekb:1,playsinline:1,modestbranding:1,rel:0,vq:'small'},
+ PYT=new YT.Player('pl',{width:427,height:240,playerVars:{controls:0,disablekb:1,playsinline:1,modestbranding:1,rel:0,vq:'tiny'},
  events:{onReady:pReady,onStateChange:pState,onError:pErr,onAutoplayBlocked:()=>{/* v43: never ask again here — the only audio ask is the mandatory popup right after joining/creating a room */}}});
  /* v52: P is the CURRENT player — the audio adapter when the current track is an uploaded file, the YouTube player otherwise. */
  P=(S?.cur?.kind==='audio'&&PAU)?PAU:PYT;
  /* v17: a 2nd hidden player that pre-buffers the next track so a song change starts instantly instead of re-buffering */
- try{P2=new YT.Player('pl2',{width:320,height:180,playerVars:{controls:0,disablekb:1,playsinline:1,modestbranding:1,rel:0,vq:'small'},
+ try{P2=new YT.Player('pl2',{width:320,height:180,playerVars:{controls:0,disablekb:1,playsinline:1,modestbranding:1,rel:0,vq:'tiny'},
  events:{onReady:pReady,onStateChange:pState,onError:pErr}})}catch(e){P2=null} /* if the 2nd player can't start, the room still works on the single player */}
-/* audio-only room: the video is hidden behind the hub, so cap it at 240p.
+/* audio-only room: the video is hidden behind the hub, so cap it at 144p.
    The sound is identical at every quality — only the hidden picture gets
-   smaller — and a 240p stream needs a fraction of the bandwidth, so it
-   stops re-buffering on ordinary connections. */
-function capQuality(){[P,P2].forEach(pl=>{if(!pl||!pl.setPlaybackQuality)return;try{/* v43: only touch the quality when it actually crept up — calling setPlaybackQuality every 2s forced the player to re-evaluate its stream each time, which cut the audio for a moment, over and over. If it is already small/tiny, do nothing. */const q=pl.getPlaybackQuality&&pl.getPlaybackQuality();if(q==='small'||q==='tiny')return;pl.setPlaybackQuality('small');if(pl.setPlaybackQualityRange)pl.setPlaybackQualityRange('tiny','small')}catch(e){}})}
+   smaller — and a 144p stream needs a fraction of the bandwidth, so it
+   stops re-buffering on ordinary connections. v54: was 240p ('small') —
+   240p decode is the #1 reason the phone heats up while a song plays
+   (v50 fixed the CSS blur, but not the decode). 144p cuts the decoded
+   pixels by ~60% and the audio is untouched. */
+function capQuality(){[P,P2].forEach(pl=>{if(!pl||!pl.setPlaybackQuality)return;try{/* v54: cap to 144p ('tiny'). Only touch the quality when it actually crept up, so a forced change never cuts the audio. */const q=pl.getPlaybackQuality&&pl.getPlaybackQuality();if(q==='tiny')return;pl.setPlaybackQuality('tiny');if(pl.setPlaybackQualityRange)pl.setPlaybackQualityRange('tiny','tiny')}catch(e){}})}
 /* v17: keep the next track buffered in the hidden 2nd player while the current one plays */
 function preloadNext(){if(!P2||!P2.cueVideoById||!S)return;const n=S.queue&&S.queue[0];
  if(!n)return; /* no next track — leave cv2 alone so a just-preloaded track can still be swapped in when it becomes current */
@@ -363,8 +366,9 @@ function preloadNext(){if(!P2||!P2.cueVideoById||!S)return;const n=S.queue&&S.qu
    forced it back down to small — and each forced quality change gaps the
    audio for a moment, over and over. The cap is now applied only at track
    load (pReady / sync load / preload swap), where no audio is playing yet
-   to cut, and setPlaybackQualityRange('tiny','small') keeps adaptive
-   streaming inside the cap. A higher quality mid-song does not cut audio;
+   to cut, and setPlaybackQualityRange('tiny','tiny') keeps adaptive
+   streaming inside the cap (v54: 144p, was 240p, to keep the phone cool).
+   A higher quality mid-song does not cut audio;
    only a FORCED change does, so there is nothing to re-apply. */
 const est=()=>S?.cur?(S.cur.pending?0:S.cur.pos+(S.cur.playing?(Date.now()-recv+rtt/2)/1000*(S.cur.speed||1):0)):0;
 let bufSince=0;
