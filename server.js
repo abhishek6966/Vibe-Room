@@ -19,9 +19,33 @@ const say=(r,m)=>io.to(r.code).emit('say',m);
 function start(r,t,at){at=at||now();r.cur={...t,anchor:at,playing:true,pausedAt:0,live:false,speed:r.speed,playAt:at};r.bad=new Set()}
 function next(r,man){r.votes.clear();const T=now()+SCHED;if(r.cur&&r.repeat==='one'&&!man)start(r,r.cur,T);else{if(r.cur){r.history.push(r.cur);if(r.repeat==='all')r.queue.push({...r.cur,reqs:[],singerId:null,singerName:null})}const t=r.queue.shift();t?start(r,t,T):r.cur=null}push(r)}
 const vid=u=>{const m=String(u).match(/(?:v=|youtu\.be\/|shorts\/|embed\/|live\/)([\w-]{11})/);return m&&m[1]};
+const embedCheckCache=new Map(),embedCheckPending=new Map(),EMBED_CHECK_TTL=15*60*1000;
+async function youtubeEmbedStatus(id){
+  if(!process.env.YOUTUBE_API_KEY)return{status:'unconfigured'};
+  const cached=embedCheckCache.get(id);if(cached&&cached.expires>now())return cached.result;
+  if(cached)embedCheckCache.delete(id);
+  if(embedCheckPending.has(id))return embedCheckPending.get(id);
+  const request=(async()=>{try{
+    const url=new URL('https://www.googleapis.com/youtube/v3/videos');
+    url.searchParams.set('part','status');url.searchParams.set('id',id);url.searchParams.set('key',process.env.YOUTUBE_API_KEY);
+    const response=await fetch(url,{signal:AbortSignal.timeout(8000)});
+    if(!response.ok)return{status:'error',httpStatus:response.status};
+    const data=await response.json(),video=data.items?.[0];
+    if(!video)return{status:'unavailable'};
+    if(typeof video.status?.embeddable!=='boolean')return{status:'error'};
+    return{status:video.status.embeddable?'embeddable':'blocked'};
+  }catch{return{status:'error'}}})();
+  embedCheckPending.set(id,request);
+  const result=await request;embedCheckPending.delete(id);
+  if(result.status!=='error'){
+    if(embedCheckCache.size>=1000)embedCheckCache.delete(embedCheckCache.keys().next().value);
+    embedCheckCache.set(id,{result,expires:now()+EMBED_CHECK_TTL});
+  }
+  return result;
+}
 function succeed(r){const c=online(r).filter(u=>u.id!==r.hostId);if(!c.length)return;
   const n=c.find(u=>r.co.has(u.id))||c.sort((a,b)=>a.at-b.at)[0];r.co.delete(n.id);r.hostId=n.id;say(r,n.name+' is now the host');push(r)}
-io.on('connection',s=>{let r=null,me=null;
+io.on('connection',s=>{let r=null,me=null,lastVideoCheck=0;
   s.on('ping',t=>s.emit('pong',t)); /* v13: round-trip measurement for sync */
   s.on('create',(u,cb)=>{const c=newCode();rooms.set(c,{code:c,hostId:u.id,co:new Set(),ctrl:new Set(),reqs:[],locked:false,queue:[],history:[],cur:null,votes:new Set(),bans:new Set(),bad:new Set(),users:new Map(),speed:1,repeat:'off',mode:'music',adders:new Set(),last:now()});cb({code:c})});
   s.on('join',(u,cb)=>{const x=rooms.get(String(u.code||'').toUpperCase());if(!x)return cb({error:'That room doesn\u2019t exist or has ended.'});
@@ -30,6 +54,9 @@ io.on('connection',s=>{let r=null,me=null;
     me={id:u.id,name:String(u.name).slice(0,20)||'Guest',color:String(u.color).slice(0,30),connected:true,at:old?old.at:now(),sid:s.id};
     r.users.set(me.id,me);clearTimeout(r.t);if(!old)say(r,me.name+' joined');
     if(r.hostId===me.id){clearTimeout(r.gone)}push(r);cb({ok:1})});
+  s.on('check-video',async(url,cb)=>{if(typeof cb!=='function')return;if(!r||!me)return cb({status:'error'});
+    if(now()-lastVideoCheck<600)return cb({status:'rate-limited'});lastVideoCheck=now();
+    const v=vid(url);if(!v)return cb({status:'invalid'});cb(await youtubeEmbedStatus(v))});
   s.on('act',async a=>{if(!r||!me)return;const id=me.id,M=mod(r,id),C=ctrl(r,id),host=r.hostId===id;
     switch(a.type){
     case'play':if(!C||!r.cur)return;{const T=now()+SCHED,P=pos(r),sp=r.cur.speed||1;
@@ -41,6 +68,8 @@ io.on('connection',s=>{let r=null,me=null;
     case'skip':if(!r.cur)return;if(C)return next(r,1);r.votes.add(id);const need=Math.ceil(online(r).length/2);
       if(r.votes.size>=need){say(r,'Vote passed. Skipping.');next(r,1)}else{say(r,me.name+' voted to skip ('+r.votes.size+'/'+need+')')}break;
     case'add':{if(r.mode==='karaoke'&&!M&&!r.adders.has(id))return s.emit('say','Ask the host to let you add songs.');const v=vid(a.url);if(!v)return s.emit('say','That doesn\u2019t look like a YouTube link.');
+      const check=await youtubeEmbedStatus(v);if(check.status==='blocked')return s.emit('say','YouTube marks this video as not embeddable, so it cannot play in this room.');
+      if(check.status==='unavailable')return s.emit('say','YouTube could not find a public video for that link.');
       let title='YouTube track',channel='';try{const j=await(await fetch('https://www.youtube.com/oembed?format=json&url=https://www.youtube.com/watch?v='+v)).json();title=j.title;channel=j.author_name}catch{return s.emit('say','That video can\u2019t be played here. Try another link.')}
       const t={videoId:v,title,channel,artwork:'https://i.ytimg.com/vi/'+v+'/hqdefault.jpg',by:me.name,byId:id,color:me.color,tid:Math.random().toString(36).slice(2,9),reqs:[],singerId:null,singerName:null};
       if(C){ /* host, co-host or a person the host gave control to: straight into the queue */

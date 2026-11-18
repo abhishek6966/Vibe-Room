@@ -152,7 +152,7 @@ input[type=range]::-moz-range-thumb{width:24px;height:24px;border:0;border-radiu
 aside .pane{display:none}#room[data-tab=queue] #p-queue,#room[data-tab=sing] #p-sing,#room[data-tab=room] #p-room,#room[data-tab=me] #p-me{display:block}
 #room:not([data-tab=play]) .stage{display:none}#room[data-tab=play] aside{display:none}
 .pane h3{margin:18px 0 8px;font-size:1rem;color:var(--cy)}.pane h3:first-child{margin-top:0}
-#af{display:flex;gap:8px}.hero{text-align:center;padding:6px 0 12px}
+#af{display:flex;gap:8px}#video-check{margin:6px 6px 10px;color:var(--mu);font-size:.76rem;line-height:1.35}#video-check[data-status=checking]{color:#e5d7ff}#video-check[data-status=embeddable]{color:var(--li)}#video-check[data-status=blocked],#video-check[data-status=unavailable],#video-check[data-status=error]{color:#ffb5c5}.hero{text-align:center;padding:6px 0 12px}
 ol,ul{list-style:none;padding:0;margin:0;display:grid;gap:10px}
 li{display:flex;gap:12px;align-items:center;padding:8px;border-radius:18px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);border-left:4px solid var(--c,var(--pink))}
 li img{width:56px;height:56px;border-radius:14px;object-fit:cover}li div{flex:1;min-width:0}li b,li small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}li small{color:var(--mu)}

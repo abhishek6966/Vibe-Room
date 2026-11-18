@@ -9,8 +9,21 @@ setInterval(()=>{if(socket.connected)socket.emit('ping',Date.now())},5000);
 socket.on('pong',t=>{const d=Date.now()-t;rtt=rtt?rtt*.7+d*.3:d});
 const code=(location.pathname.match(/^\/room\/(\w+)/)||[])[1];
 const act=a=>socket.emit('act',a),fmt=t=>{t=Math.max(0,t|0);return(t/60|0)+':'+String(t%60).padStart(2,'0')};
-let toastTimer;
+let toastTimer,videoCheckTimer=0,videoCheckSequence=0,checkedVideoUrl='',checkedVideoStatus='';
 const toast=m=>{const box=$('#toasts');clearTimeout(toastTimer);box.textContent='';const d=document.createElement('div');d.className='toast';d.textContent=m;box.append(d);toastTimer=setTimeout(()=>{if(d.parentNode===box)d.remove()},3500)};
+function renderVideoCheck(result){
+ const status=result?.status||'error',messages={
+  checking:'Checking YouTube embed restrictions…',
+  embeddable:'YouTube marks this video as embeddable. Availability may still vary by account or region.',
+  blocked:'YouTube marks this video as not embeddable; it will not play in Vibe Room.',
+  unavailable:'YouTube could not find a public video for this link. It may be private, removed, or unavailable.',
+  unconfigured:'Playback restrictions cannot be checked yet. You can still try adding this video.',
+  invalid:'Paste a valid YouTube video link to check it.',
+  'rate-limited':'Wait a moment before checking another video.',
+  error:'Could not check YouTube restrictions'+(result?.httpStatus?' (HTTP '+result.httpStatus+')':'')+'. You can still try adding it.'
+ };
+ const statusBox=$('#video-check');statusBox.dataset.status=status;statusBox.textContent=messages[status]||messages.error;statusBox.hidden=false
+}
 const volumeOnIcon=$('#vm').innerHTML,volumeMutedIcon='<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="17" y1="9" x2="22" y2="14"/><line x1="22" y1="9" x2="17" y2="14"/></svg>';
 let volume=80,lastVolume=80,volumeMuted=false;
 function applyVolume(pl){if(!pl)return;if(volumeMuted){pl.setVolume?.(0);pl.mute?.()}else{pl.setVolume?.(volume);pl.unMute?.()}}
@@ -127,7 +140,25 @@ $('#audio-unlock').onclick=()=>{if(!S?.cur?.playing||!P)return;applyVolume(P);P.
 let localT=0,localWas=null;
 const localToggle=()=>{if(!S?.cur||!P)return;localT=Date.now();localWas=S.cur.playing;if(P.unMute)P.unMute();if(S.cur.playing)P.pauseVideo?.();else P.playVideo?.()};
 $('#pp').onclick=()=>{if(!S?.cur){toast('Paste a YouTube link to start the room.');return}[P,P2].forEach(pl=>pl&&pl.unMute&&pl.unMute());localToggle();act({type:'play'})};$('#sk').onclick=()=>act({type:'skip'});$('#lock').onclick=()=>act({type:'lock'});
-$('#af').onsubmit=e=>{e.preventDefault();const u=$('#au').value.trim();if(u){act({type:'add',url:u});$('#au').value=''}};
+$('#au').addEventListener('input',()=>{
+ clearTimeout(videoCheckTimer);const url=$('#au').value.trim(),sequence=++videoCheckSequence;
+ checkedVideoUrl='';checkedVideoStatus='';
+ const statusBox=$('#video-check');
+ if(!url){statusBox.hidden=true;statusBox.textContent='';statusBox.removeAttribute('data-status');return}
+ renderVideoCheck({status:'checking'});
+ videoCheckTimer=setTimeout(()=>{
+  if(!socket.connected){if(sequence===videoCheckSequence)renderVideoCheck({status:'error'});return}
+  socket.timeout(9000).emit('check-video',url,(err,result)=>{
+   if(sequence!==videoCheckSequence||url!==$('#au').value.trim())return;
+   const check=err?{status:'error'}:result;checkedVideoUrl=url;checkedVideoStatus=check.status;renderVideoCheck(check)
+  })
+ },650)
+});
+$('#af').onsubmit=e=>{e.preventDefault();const u=$('#au').value.trim();if(!u)return;
+ if(checkedVideoUrl===u&&['blocked','unavailable'].includes(checkedVideoStatus)){toast($('#video-check').textContent);return}
+ clearTimeout(videoCheckTimer);videoCheckSequence++;checkedVideoUrl='';checkedVideoStatus='';
+ $('#video-check').hidden=true;$('#video-check').textContent='';$('#video-check').removeAttribute('data-status');
+ act({type:'add',url:u});$('#au').value=''};
 $('#vol').oninput=e=>setVolume(e.target.value);
 $('#vm').onclick=()=>setVolume(volumeMuted?lastVolume:0);$('#vmx').onclick=()=>setVolume(100);
 $('#sc').onpointerdown=()=>seeking=true;$('#sc').onchange=e=>{seeking=false;if(P)act({type:'seek',pos:e.target.value/1000*P.getDuration()})};

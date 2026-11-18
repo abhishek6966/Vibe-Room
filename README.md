@@ -55,6 +55,25 @@ npm start
 PORT=3001 npm start
 ```
 
+### Optional YouTube embed pre-check
+
+To check a pasted link's public embed setting before it is added, enable the YouTube Data API v3 for a Google Cloud project and configure a server-side API key. Keep the key out of client code and source control.
+
+PowerShell:
+
+```powershell
+$env:YOUTUBE_API_KEY = "your-server-side-key"
+npm start
+```
+
+For Docker, pass the key through the server environment:
+
+```powershell
+docker run --rm -p 3000:3000 --env YOUTUBE_API_KEY=$env:YOUTUBE_API_KEY vibe-room
+```
+
+Without the key, Vibe Room still accepts links but cannot pre-check their embed status. A positive check only means YouTube marks the video as embeddable; playback may still depend on region, account, browser, or video availability.
+
 ### Run with Docker
 
 ```sh
@@ -116,7 +135,7 @@ docs/screenshots/         iPhone page screenshots for this README
 ## Troubleshooting
 
 - **Room unavailable:** check the code/link. Rooms are temporary and disappear after being empty for 24 hours; create a new room if it has expired.
-- **A YouTube link will not play:** confirm the video is available to embed and try another link.
+- **A YouTube link will not play:** check the Queue tab's embed-status message. Configure `YOUTUBE_API_KEY` for pre-checks; YouTube may still restrict a video by region, account, or availability.
 - **No microphone access:** use HTTPS (or `localhost`) and allow microphone permission in the browser.
 - **Karaoke audio does not reach someone:** restrictive NAT or firewall settings may require a TURN server.
 
