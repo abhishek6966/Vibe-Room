@@ -1,7 +1,6 @@
 (()=>{const R=$('#room'),T=document.querySelectorAll('#tabs button');
 const tab=t=>{R.dataset.tab=t;T.forEach(b=>b.classList.toggle('on',b.dataset.t===t));scrollTo(0,0);window.updMini&&window.updMini()};T.forEach(b=>b.onclick=()=>tab(b.dataset.t));
 $('.ctl').prepend($('#xp'));$('#p-sing').append($('#mb'),K);
-const d=$('aside details');d.open=true;$('#p-me').append(d);
 socket.on('state',()=>{const tq=$('#tq'),n=S.queue.length;tq.textContent=n||'';tq.style.display=n?'':'none';$('#sh').textContent=S.mode==='karaoke'?'Sing along to the song — the host can sing, or pick a singer.':'Karaoke is off. The host can turn it on here.';
  $('#me').innerHTML=`<li style="--c:${esc(me.color)}"><div><b>${esc(me.name)}</b><small>${S.hostId===me.id?'Host':S.co.includes(me.id)?'Co-host':'Guest'}</small></div></li>`})})();
 

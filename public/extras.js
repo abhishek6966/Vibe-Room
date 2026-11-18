@@ -17,7 +17,6 @@ const viz=$$('div','viz');viz.setAttribute('aria-hidden','true');
 const vcols=['#ff3d71','#ff3d71','#ff5c8a','#e14eca','#c026d3','#9b5cff','#7a5cff','#22e1ff'];
 for(let i=0;i<28;i++){const b=$$('i');b.style.animationDuration=rnd(.35,1)+'s';b.style.animationDelay=-rnd(0,1)+'s';b.style.background=vcols[Math.min(vcols.length-1,i*8/28|0)];b.style.height=rnd(8,34)+'px';viz.append(b)}deck.after(viz);
 const X=$$('div','xtra',`<div class="xrow"><button class="pill" id="xs" aria-label="Shuffle">${X_SHUF}</button><button class="pill" id="xr" aria-label="Repeat">${X_REP}<b id="xrb" hidden></b></button><label class="pill sel" aria-label="Playback speed"><select id="xv"><option value="0.75">0.75×</option><option value="1" selected>1×</option><option value="1.25">1.25×</option></select>${X_CHEV}</label><button class="pill" id="xl" aria-label="Like">${X_HEART_O}<span>Like</span></button><button class="pill" id="xp" aria-label="Previous">⏮</button><button class="pill" id="xd" aria-label="Show video">${X_VIDEO}<span>Show Video</span></button></div>`);$('.ctl').after(X);
-$('aside').append($$('details','',`<summary>Liked songs</summary><ol id="lk2"></ol>`));
 /* Compact transport bar for non-Play tabs. */
 const miniIcon=p=>`<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true">${p}</svg>`;
 const miniPlay=miniIcon('<path d="M7 4.5v15L19.5 12z"/>'),miniPause=miniIcon('<rect x="6" y="5" width="4.5" height="14" rx="1"/><rect x="13.5" y="5" width="4.5" height="14" rx="1"/>');
@@ -26,7 +25,15 @@ const updMini=()=>mini.classList.toggle('show',document.body.classList.contains(
 /* pink fill on the seek + volume sliders */
 const setFill=el=>{if(el)el.style.setProperty('--p',((el.value-el.min)/(el.max-el.min)*100)+'%')};
 setInterval(()=>{setFill($('#sc'));setFill($('#vol'))},300);
-const likes=()=>JSON.parse(L.likes||'[]'),showLikes=()=>{const C=S&&(S.hostId===me.id||S.co.includes(me.id)||(S.ctrl&&S.ctrl.includes(me.id)));$('#lk2').innerHTML=likes().map(x=>`<li><div><b>${esc(x.t)}</b></div><button data-like="${x.id}">${C?'Add to queue':'Request'}</button></li>`).join('')||'<li><div><small>Tap Like on a song to save it here.</small></div></li>'};
+const likes=()=>JSON.parse(L.likes||'[]'),showLikes=()=>{const C=S&&(S.hostId===me.id||S.co.includes(me.id)||(S.ctrl&&S.ctrl.includes(me.id)));const el=$('#likes-list');if(!el)return;el.innerHTML=likes().map(x=>`<li><img src="https://i.ytimg.com/vi/${x.id}/mqdefault.jpg" alt="" loading="lazy" onerror="this.style.display='none'"><div><b>${esc(x.t)}</b></div><button data-like="${x.id}">${C?'Add to queue':'Request'}</button><button class="unlike" data-unlike="${x.id}" aria-label="Remove from liked songs">✕</button></li>`).join('')||'<li class="empty"><div><small>Tap Like on a song to save it here.</small></div></li>'};
+/* v43: liked songs slide-in panel — heart icon in the header opens it,
+   ✕ / backdrop / Escape closes it. Songs are saved forever on the device. */
+const likesPanel=$('#likes-panel'),likesBackdrop=$('#likes-backdrop');
+const openLikes=()=>{showLikes();likesPanel.hidden=false;likesBackdrop.hidden=false;requestAnimationFrame(()=>{likesPanel.classList.add('open');likesBackdrop.classList.add('open')})};
+const closeLikes=()=>{likesPanel.classList.remove('open');likesBackdrop.classList.remove('open');setTimeout(()=>{likesPanel.hidden=true;likesBackdrop.hidden=true},320)};
+$('#likes-btn').onclick=openLikes;$('#likes-x').onclick=closeLikes;likesBackdrop.onclick=closeLikes;
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!likesPanel.hidden)closeLikes()});
+document.addEventListener('click',e=>{const u=e.target.closest('[data-unlike]');if(u){L.likes=JSON.stringify(likes().filter(x=>x.id!==u.dataset.unlike));paint()}});
 function paint(){const c=S?.cur,M=S&&(S.hostId===me.id||S.co.includes(me.id)),C=M||(S&&S.ctrl&&S.ctrl.includes(me.id)),can=C;stage.classList.toggle('on',!!c&&c.playing);deck.classList.toggle('on',!!c&&c.playing);
  dp.innerHTML=c&&c.playing?IC.pause:IC.play;dp.disabled=!can;
  const rp=S?.repeat||'off';$('#xr').classList.toggle('on',rp!=='off');const xrb=$('#xrb');xrb.hidden=rp==='off';xrb.textContent=rp==='one'?'1':'ALL';

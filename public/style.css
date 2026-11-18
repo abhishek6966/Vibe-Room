@@ -941,3 +941,74 @@ main{padding-top:calc(7vh + env(safe-area-inset-top,0px))!important}
 #addlink{display:inline-flex;align-items:center;gap:6px;margin:4px auto 0;padding:7px 13px;border-radius:999px;border:1px solid rgba(255,255,255,.35);background:linear-gradient(135deg,#ff3d71,#b026ff);color:#fff;font:600 .8rem/1 "Poppins",system-ui,sans-serif;cursor:pointer;box-shadow:0 6px 18px rgba(255,61,113,.4),inset 0 1px 0 rgba(255,255,255,.3)}
 #addlink svg{width:14px;height:14px;flex:none}
 #addlink[hidden]{display:none}
+
+/* v41: (1) Toasts respect the iPhone top safe area — the yellow toast was
+   pinned at top:12px, so on a notched / Dynamic Island iPhone the notch
+   covered its top edge. Now it sits below the notch, like the v39 header.
+   On devices without a notch the inset is 0, so nothing moves.
+   (2) Sound-popup close button is a perfect circle — the general button
+   rule sets min-height:44px, which overrode .snd-x's height:30px and
+   stretched it into a tall oval. min-height + padding are now reset and
+   the X is flex-centred. */
+#toasts{top:calc(12px + env(safe-area-inset-top,0px))!important}
+.snd-x{width:30px!important;height:30px!important;min-height:30px!important;padding:0!important;line-height:1!important;display:flex!important;align-items:center!important;justify-content:center!important}
+
+/* v42: SAFE-AREA AUTO-DETECT + NO-ZOOM.
+   (1) Every element that must clear the notch / Dynamic Island / home
+   indicator now reads the JS-measured variables --sat/--sab (set by
+   safeArea() in app.js, which probes the real env() values and falls back
+   to 59/34 on a tall notched iPhone when env() reads 0). env() is the
+   fallback, so it still works before JS runs. One system, all elements:
+   header, toast, tab bar, mini player, audio-unlock button.
+   (2) PLAY-TAB CLEARANCE: the raised Sing mic overlaps the orb row on a
+   real iPhone because the home-indicator inset lifts the tab bar's top
+   edge by 2x the inset (once via bottom:, once via padding-bottom) while
+   the content padding only grew by 1x. The Play-tab bottom padding now
+   grows by 2x the bottom inset, so the orb row always clears the mic.
+   (3) NO ZOOM: the paste box was 0.92rem (~14.7px), so iOS auto-zoomed
+   the whole page the moment it was tapped — and it stayed zoomed. All
+   text inputs are now 16px (iOS never auto-zooms at 16px), the viewport
+   locks scaling off, and double-tap zoom is disabled. */
+#room{padding-top:var(--sat,env(safe-area-inset-top,0px))!important}
+main{padding-top:calc(7vh + var(--sat,env(safe-area-inset-top,0px)))!important}
+#toasts{top:calc(12px + var(--sat,env(safe-area-inset-top,0px)))!important}
+#tabs{bottom:calc(12px + var(--sab,env(safe-area-inset-bottom,0px)))!important;padding-bottom:calc(8px + var(--sab,env(safe-area-inset-bottom,0px)))!important}
+#mini{bottom:calc(133px + var(--sab,env(safe-area-inset-bottom,0px)) + var(--sab,env(safe-area-inset-bottom,0px)))!important}
+#audio-unlock{bottom:calc(193px + var(--sab,env(safe-area-inset-bottom,0px)) + var(--sab,env(safe-area-inset-bottom,0px)))!important}
+#room[data-tab=play]{padding-bottom:calc(92px + var(--sab,env(safe-area-inset-bottom,0px)) + var(--sab,env(safe-area-inset-bottom,0px)))!important}
+#room:not([data-tab=play]){padding-bottom:calc(192px + var(--sab,env(safe-area-inset-bottom,0px)) + var(--sab,env(safe-area-inset-bottom,0px)))!important}
+html,body{touch-action:manipulation}
+input,select,textarea{font-size:16px!important}
+#p-queue #au{font-size:16px!important}
+
+/* v43: (1) LIKED SONGS slide-in panel + (2) BOTTOM NAV docked at the very
+   bottom + (3) beat-reactive smoke is JS-driven (see app.js), no CSS here.
+   (1) Heart icon in the header (top right) opens a drawer that slides in
+   from the right with every liked song (saved forever on this device).
+   The old "Liked songs" card in the More tab is gone — this is its home.
+   (2) The bottom navigation now sits at the VERY bottom of the screen
+   (no 12px gap below it) — flush with the usable edge above the home
+   indicator. Top corners stay rounded, bottom corners are square so it
+   reads as a docked bar. Docking it also gives the mic 12px more room,
+   so the orb row / player bar clearances grow. */
+#likes-btn{flex:none;width:34px;height:34px;border:1px solid rgba(255,255,255,.2);border-radius:50%;background:rgba(255,255,255,.1);color:#ff5c8a;cursor:pointer;display:flex;align-items:center;justify-content:center}
+#likes-btn:active{transform:scale(.94)}
+.likes-backdrop{position:fixed;inset:0;background:rgba(5,0,20,.55);backdrop-filter:blur(3px);opacity:0;transition:opacity .3s ease;z-index:65}
+.likes-backdrop.open{opacity:1}
+.likes-panel{position:fixed;top:0;right:0;height:100%;height:100dvh;width:min(340px,88vw);z-index:70;background:linear-gradient(170deg,#2c1160,#18083a 70%);border-left:1px solid rgba(255,255,255,.18);box-shadow:-18px 0 50px rgba(0,0,0,.55);transform:translateX(105%);transition:transform .32s cubic-bezier(.2,.9,.3,1);display:flex;flex-direction:column;padding:calc(14px + var(--sat,env(safe-area-inset-top,0px))) 14px calc(14px + var(--sab,env(safe-area-inset-bottom,0px)));overflow-y:auto}
+.likes-panel.open{transform:translateX(0)}
+.likes-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:2px}
+.likes-head h3{margin:0;font-size:1.05rem;font-weight:800;color:#fff;display:flex;align-items:center;gap:8px}
+.likes-head h3 svg{flex:none}
+#likes-x{width:30px;height:30px;min-height:30px;padding:0;border:0;border-radius:50%;background:rgba(255,255,255,.1);color:#fff;font-size:.85rem;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.likes-sub{margin:0 0 12px;font-size:.78rem;color:#b9a8e8}
+.likes-list{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.likes-list li{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:14px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);min-width:0}
+.likes-list li img{width:44px;height:44px;flex:none;border-radius:10px;object-fit:cover;background:rgba(255,255,255,.08)}
+.likes-list li div{flex:1;min-width:0}
+.likes-list li b{display:block;font-size:.88rem;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.likes-list li button{flex:none;min-height:30px;padding:.3em .8em;font-size:.76rem;font-weight:700;border-radius:999px;border:1px solid rgba(255,255,255,.25);background:linear-gradient(135deg,#673de6,#b026ff);color:#fff;cursor:pointer;white-space:nowrap}
+.likes-list li button.unlike{min-width:28px;width:28px;height:28px;padding:0;border-radius:50%;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);color:#d8c8ff;font-size:.7rem;line-height:1;display:flex;align-items:center;justify-content:center}
+.likes-list li.empty{justify-content:center;color:#b9a8e8}
+#tabs{bottom:var(--sab,env(safe-area-inset-bottom,0px))!important;border-radius:26px 26px 0 0!important}
+.stage .viz{display:none!important} /* v43: equalizer bars removed from the player card */

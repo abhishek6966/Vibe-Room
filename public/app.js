@@ -1,10 +1,82 @@
 const $=s=>document.querySelector(s),esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const L=localStorage,T=sessionStorage,hex=()=>'#'+[0,1,2].map(()=>(100+Math.random()*155|0).toString(16)).join('');
+/* v42: SAFE-AREA AUTO-DETECT — the app measures the device's real screen
+   cutout (notch / Dynamic Island / home indicator) and adjusts every
+   element automatically. CSS env() is the source of truth, but it can read
+   0 in some webviews / cached shells, so we measure it with a probe and
+   write it into --sat/--sab variables the layout uses. If the probe reads
+   0 on a tall notched iPhone, we fall back to the island values (59/34)
+   so nothing ever hides behind the camera. Re-runs on resize/rotate. */
+const safeArea=()=>{
+  try{
+    let pr=document.querySelector('#sa-probe');
+    if(!pr){pr=document.createElement('div');pr.id='sa-probe';
+      pr.style.cssText='position:fixed;top:0;left:0;width:0;height:0;overflow:hidden;visibility:hidden;pointer-events:none;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)';
+      document.body.appendChild(pr);}
+    const cs=getComputedStyle(pr);
+    let t=parseFloat(cs.paddingTop)||0,b=parseFloat(cs.paddingBottom)||0,
+        l=parseFloat(cs.paddingLeft)||0,r=parseFloat(cs.paddingRight)||0;
+    /* Fallback: a tall iPhone (X and later, 812px+) always has a notch or
+       Dynamic Island. If env() reported 0 here, the browser didn't expose
+       it — use the island values rather than letting content hide. */
+    if(!t&&/iPhone/.test(navigator.userAgent)&&Math.max(screen.width,screen.height)>=812){t=59;b=b||34}
+    const root=document.documentElement.style;
+    root.setProperty('--sat',t+'px');root.setProperty('--sab',b+'px');
+    root.setProperty('--sal',l+'px');root.setProperty('--sar',r+'px');
+    document.documentElement.classList.toggle('has-notch',t>0);
+  }catch(e){}
+};
+safeArea();
+addEventListener('resize',()=>setTimeout(safeArea,120));
+addEventListener('orientationchange',()=>setTimeout(safeArea,250));
+/* v43: BEAT-REACTIVE SMOKE — the clouds used to drift at one fixed rate.
+   Honest limit: the smoke CANNOT read the real YouTube audio (it plays
+   inside YouTube's own frame, which the page cannot analyse), so there is
+   no live frequency data. Instead the smoke dances to a musical beat
+   driven by playback: on every beat each cloud jumps to a new RANDOM
+   direction, distance and size at a random speed, the glow thumps, and
+   particles burst — so it moves randomly in every direction with the
+   song's rhythm instead of one steady drift. While paused the beat stops
+   and the slow CSS drift takes over again. Skipped when the user asked
+   for reduced motion. */
+let smokeT=null,smokeBeat=0;
+const smokeStart=()=>{
+  if(smokeT)return;
+  if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+  const beat=()=>{
+    smokeBeat++;
+    const strong=smokeBeat%4===1; /* downbeat every 4th beat hits harder */
+    document.querySelectorAll('.cosmic .cb').forEach(b=>{
+      const ang=Math.random()*Math.PI*2,dist=24+Math.random()*56;
+      const dx=Math.cos(ang)*dist,dy=Math.sin(ang)*dist;
+      const s=0.9+Math.random()*0.35;
+      b.animate({transform:`translate(${dx}px,${dy}px) scale(${s})`},
+        {duration:380+Math.random()*700,easing:'ease-in-out',fill:'forwards'});
+    });
+    const pulse=document.querySelector('.cosmic .cpulse');
+    if(pulse)pulse.animate([
+      {transform:'translate(-50%,-50%) scale(1.14)',opacity:.95},
+      {transform:'translate(-50%,-50%) scale(.86)',opacity:.5}
+    ],{duration:strong?520:340,easing:'ease-out',fill:'forwards'});
+    document.querySelectorAll('.cosmic .cp').forEach(p=>{
+      if(Math.random()<0.5)p.animate(
+        {transform:`translateY(-${20+Math.random()*44}px)`},
+        {duration:480+Math.random()*520,easing:'ease-out',fill:'forwards'});
+    });
+    smokeT=setTimeout(beat,420+Math.random()*180); /* ~120 BPM with jitter */
+  };
+  beat();
+};
+const smokeStop=()=>{
+  if(smokeT){clearTimeout(smokeT);smokeT=null}
+  document.querySelectorAll('.cosmic .cb,.cosmic .cpulse,.cosmic .cp')
+    .forEach(el=>el.getAnimations().forEach(a=>a.cancel()));
+};
 const newId=()=>crypto.randomUUID?crypto.randomUUID():Array.from(crypto.getRandomValues(new Uint8Array(16)),b=>b.toString(16).padStart(2,'0')).join('');
 /* Migrate the old shared ID once, then keep each tab's identity in sessionStorage. */
 const getId=()=>{if(T.vid)return T.vid;const old=L.vid;if(old){L.removeItem('vid');return T.vid=old}return T.vid=newId()};
 const me={id:getId(),name:L.vname||'Guest'+(10+Math.random()*89|0),color:L.vcolor||(L.vcolor=hex())};
-const socket=io();let S=null,P=null,P2=null,joined=false,cv=null,cv2=null,recv=0,seeking=false,rtt=0,clockOff=0,pendT=null,needCatchup=false;
+const socket=io();let S=null,P=null,P2=null,joined=false,cv=null,cv2=null,recv=0,seeking=false,rtt=0,clockOff=0,pendT=null,needCatchup=false,lastSeek=0;
 /* v13: measure the round-trip to this device so the position estimate can
    subtract half of it (the one-way delay) — otherwise every listener lags
    by their own network delay. Smoothed so one slow packet can't jerk it. */
@@ -43,7 +115,7 @@ async function unlockAudio(){try{__ac=__ac||new (window.AudioContext||window.web
    someone creates or joins a room (not a big button on the home screen).
    It shows once per page load, and only if sound is not already enabled. */
 let sndAsked=false;
-function showSndModal(){if(sndAsked||sndOn)return;try{if(L.snd==='1')return}catch{};sndAsked=true;const m=$('#snd-modal');if(m)m.hidden=false}
+function showSndModal(){if(sndAsked||sndOn)return;sndAsked=true;const m=$('#snd-modal');if(m)m.hidden=false}
 function hideSndModal(){const m=$('#snd-modal');if(m)m.hidden=true}
 $('#snd-go').onclick=async()=>{await unlockAudio();hideSndModal()};
 $('#snd-x').onclick=hideSndModal;$('#snd-later').onclick=hideSndModal;
@@ -146,7 +218,7 @@ function pErr(e){if(e.target===P&&S?.cur)act({type:'bad',v:S.cur.videoId,code:e.
 function initPlayer(){if(P)return; /* v24: only create the player once — it is now created early (on the gate) so it exists when the user taps Join, and again after joining */
  if(!window.ytr)return setTimeout(initPlayer,200);
  P=new YT.Player('pl',{width:427,height:240,playerVars:{controls:0,disablekb:1,playsinline:1,modestbranding:1,rel:0,vq:'small'},
- events:{onReady:pReady,onStateChange:pState,onError:pErr,onAutoplayBlocked:()=>{if(S?.cur?.playing&&!volumeMuted)$('#audio-unlock').hidden=false}}});
+ events:{onReady:pReady,onStateChange:pState,onError:pErr,onAutoplayBlocked:()=>{/* v43: never ask again here — the only audio ask is the mandatory popup right after joining/creating a room */}}});
  /* v17: a 2nd hidden player that pre-buffers the next track so a song change starts instantly instead of re-buffering */
  try{P2=new YT.Player('pl2',{width:320,height:180,playerVars:{controls:0,disablekb:1,playsinline:1,modestbranding:1,rel:0,vq:'small'},
  events:{onReady:pReady,onStateChange:pState,onError:pErr}})}catch(e){P2=null} /* if the 2nd player can't start, the room still works on the single player */}
@@ -154,7 +226,7 @@ function initPlayer(){if(P)return; /* v24: only create the player once — it is
    The sound is identical at every quality — only the hidden picture gets
    smaller — and a 240p stream needs a fraction of the bandwidth, so it
    stops re-buffering on ordinary connections. */
-function capQuality(){[P,P2].forEach(pl=>{if(!pl||!pl.setPlaybackQuality)return;try{pl.setPlaybackQuality('small');if(pl.setPlaybackQualityRange)pl.setPlaybackQualityRange('tiny','small')}catch(e){}})}
+function capQuality(){[P,P2].forEach(pl=>{if(!pl||!pl.setPlaybackQuality)return;try{/* v43: only touch the quality when it actually crept up — calling setPlaybackQuality every 2s forced the player to re-evaluate its stream each time, which cut the audio for a moment, over and over. If it is already small/tiny, do nothing. */const q=pl.getPlaybackQuality&&pl.getPlaybackQuality();if(q==='small'||q==='tiny')return;pl.setPlaybackQuality('small');if(pl.setPlaybackQualityRange)pl.setPlaybackQualityRange('tiny','small')}catch(e){}})}
 /* v17: keep the next track buffered in the hidden 2nd player while the current one plays */
 function preloadNext(){if(!P2||!P2.cueVideoById||!S)return;const n=S.queue&&S.queue[0];
  if(!n)return; /* no next track — leave cv2 alone so a just-preloaded track can still be swapped in when it becomes current */
@@ -190,9 +262,12 @@ function sync(){if(!P||!P.loadVideoById||!S)return;const c=S.cur;if(!c){P.stopVi
  const localPending=localT&&Date.now()-localT<1000&&S.cur.playing===localWas;
  if(!localPending){if(c.playing&&st!==1&&st!==3)P.playVideo();if(!c.playing&&st===1)P.pauseVideo()}
  /* v17 catch-up: on a fresh load, seek straight to the live position the moment the player can seek (don't wait for the drift to grow past the normal threshold) */
- if(needCatchup&&(st===1||st===2)){P.seekTo(t,true);needCatchup=false}
- else if(st===1&&ad>=1)P.seekTo(t,true);
- else if(st===2&&ad>.5)P.seekTo(t,true);
+ /* v43: seek cooldown — a seek itself briefly interrupts the audio, so
+    never seek twice within 3s. Without this a drifting player could seek,
+    re-buffer, drift again and seek again in a loop (cut, play, cut, play).
+    The fresh-load catch-up seek is exempt (it must jump once, immediately). */
+ if(needCatchup&&(st===1||st===2)){P.seekTo(t,true);needCatchup=false;lastSeek=Date.now()}
+ else if(Date.now()-lastSeek>3000){if(st===1&&ad>=1){P.seekTo(t,true);lastSeek=Date.now()}else if(st===2&&ad>.5){P.seekTo(t,true);lastSeek=Date.now()}}
  const syn=$('#sync');
  if(st===3){syn.className='off';syn.textContent='● Buffering…'}
  else{const ok=ad<1;syn.className=ok?'':'off';syn.textContent=ok?'● In Sync':'● Syncing…'}}
@@ -209,6 +284,7 @@ function render(){if(!joined)return;const isH=S.hostId===me.id,M=isH||S.co.inclu
  const lk=$('#lock');lk.hidden=!isH;lk.innerHTML=S.locked?'<span class="ic" aria-hidden="true">'+AIC_UNLOCK+'</span> <span class="tx">Open requests</span>':'<span class="ic" aria-hidden="true">'+AIC_LOCK+'</span> <span class="tx">Close requests</span>';
  $('#disc').classList.toggle('on',!!c&&c.playing);
  document.querySelector('.stage')?.classList.toggle('playing',!!c&&c.playing); /* v37: the cosmic smoke breathes harder while the music plays, calms when paused */
+ if(c&&c.playing)smokeStart();else smokeStop(); /* v43: beat-reactive smoke */
  let h=0;if(c)for(const ch of c.videoId)h=(h*31+ch.charCodeAt(0))%360;document.documentElement.style.setProperty('--h',h);
  $('#tt').textContent=c?c.title:'Queue is empty';$('#ch').textContent=c?c.channel:'Paste a YouTube link to start the room.';$('#by').textContent=c?'Added by '+c.by:'';$('#addlink').hidden=!!c; /* v40: the empty-state button shows only while the queue is empty */
  $('#pp').innerHTML=c&&c.playing?IC_PAUSE:IC_PLAY;$('#pp').disabled=!can;$('#sk').innerHTML=IC_NEXT;$('#sk').disabled=!can||!c;$('#sk').setAttribute('aria-label',C?'Skip':'Skip (host control only)');$('#sk').title=C?'Skip to next track':'Only the host, co-hosts, or authorized controllers can skip';$('#sc').disabled=!can||!c;
@@ -306,15 +382,10 @@ setInterval(()=>{if(!P||!P.getDuration||!S?.cur)return;const ld=P.getDuration()|
  /* stuck-buffer safety net: buffering for 12s straight while the room is
     playing means the stream is wedged — reload it at the live position. */
  if(S.cur.playing&&P.getPlayerState){const st=P.getPlayerState();if(st===3){if(!bufSince)bufSince=Date.now();else if(Date.now()-bufSince>12000){bufSince=0;cv=null;sync()}}else bufSince=0}
- /* v22: autoplay-blocked safety net. Browsers block sound until the user taps
-    the page, so a joiner can sit on a "playing" room in silence. That shows
-    up two ways: the player's video is paused (state 2) while the room says
-    playing, OR it is playing but muted (the browser let the video run and
-    silenced it — the common case). The YouTube onAutoplayBlocked event does
-    not fire in every browser, so this check covers both. The localT guard
-    keeps your own intentional pause (which takes ~200ms for the server to
-    confirm) from flashing the button. */
- if(S.cur.playing&&P.getPlayerState&&!volumeMuted&&Date.now()-localT>1500){const st=P.getPlayerState();if(st===2||P.isMuted?.())$('#audio-unlock').hidden=false}},500);
+ /* v43: the v22 autoplay-blocked button is REMOVED — the only audio ask is
+    the mandatory popup right after joining/creating a room, never again.
+    Sound still turns on from any tap (unlockOnTap) or the Play button. */
+},500);
 let mediaMetadataKey=null,mediaPlaybackState='';
 function updateMediaSession(){
  if(!navigator.mediaSession)return;const ms=navigator.mediaSession,c=S?.cur;
@@ -343,4 +414,4 @@ document.addEventListener('visibilitychange',resumeRoom);window.addEventListener
 /* v29: installable app — register the service worker so the app shell loads
    fast and the app can be added to the home screen. It never caches rooms or
    live data, so a room is never stale. */
-if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('/sw.js').catch(error=>console.warn('Vibe Room service worker registration failed:',error))})}
+if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('/sw.js').catch(()=>{})})}
