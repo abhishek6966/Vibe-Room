@@ -65,7 +65,11 @@ function sync(){if(!P||!P.loadVideoById||!S)return;const c=S.cur;if(!c){P.stopVi
     starts all over again. */
  let target=rate;if(ad>=.15&&ad<.5)target=rate*(d>0?1.15:.85);
  P.setPlaybackRate(target);
- if(c.playing&&st!==1&&st!==3)P.playVideo();if(!c.playing&&st===1)P.pauseVideo();
+ /* v21: while your own tap is still on its way to the server (~200ms), don't
+    let the sync loop undo it — it still sees the old server state. The guard
+    expires after 1s, so if the broadcast is ever lost, sync resumes normally. */
+ const localPending=localT&&Date.now()-localT<1000&&S.cur.playing===localWas;
+ if(!localPending){if(c.playing&&st!==1&&st!==3)P.playVideo();if(!c.playing&&st===1)P.pauseVideo()}
  /* v17 catch-up: on a fresh load, seek straight to the live position the moment the player can seek (don't wait for the drift to grow past the normal threshold) */
  if(needCatchup&&(st===1||st===2)){P.seekTo(t,true);needCatchup=false}
  else if(st===1&&ad>=.5)P.seekTo(t,true);
@@ -98,7 +102,20 @@ document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)r
  if(d.rm)act({type:'remove',i:+d.rm});if(d.h)act({type:'host',id:d.h});if(d.c)act({type:'cohost',id:d.c});if(d.k)act({type:'kick',id:d.k});if(d.e)act({type:'react',e:d.e});
  if(d.ap)act({type:'approve',rid:d.ap});if(d.rj)act({type:'reject',rid:d.rj});if(d.ctrl)act({type:'ctrl',id:d.ctrl})});
 $('#leave').onclick=()=>{socket.emit('leave');setTimeout(()=>{socket.disconnect();location.href='/'},300)}; /* v20: leave the room — the server hands the host on at once if you were the host */
-$('#pp').onclick=()=>{if(!S?.cur){toast('Paste a YouTube link to start the room.');return}[P,P2].forEach(pl=>pl&&pl.unMute&&pl.unMute());act({type:'play'})};$('#sk').onclick=()=>act({type:'skip'});$('#lock').onclick=()=>act({type:'lock'});
+/* v21: pause/play acts instantly on the device you tap. The server still
+   schedules the action for the group (SCHED 200ms), so the sound used to keep
+   playing ~1s after you tapped pause. localToggle pauses/plays THIS player's
+   video right now, so you hear it stop the instant you tap; the broadcast
+   then lands on the same position, so nothing jumps. Used by the Play button,
+   the deck hub, the bottom bar, and the lock-screen controls.
+   localT/localWas guard the sync loop: when you tap, the server still says
+   the OLD state for ~200ms, and sync() would otherwise "correct" your tap
+   away (it sees the player paused while the server still says playing, and
+   hits play again). While the broadcast is still on its way, sync() leaves
+   the play/pause alone and only fixes the position/rate. */
+let localT=0,localWas=null;
+const localToggle=()=>{if(!S?.cur||!P)return;localT=Date.now();localWas=S.cur.playing;if(P.unMute)P.unMute();if(S.cur.playing)P.pauseVideo?.();else P.playVideo?.()};
+$('#pp').onclick=()=>{if(!S?.cur){toast('Paste a YouTube link to start the room.');return}[P,P2].forEach(pl=>pl&&pl.unMute&&pl.unMute());localToggle();act({type:'play'})};$('#sk').onclick=()=>act({type:'skip'});$('#lock').onclick=()=>act({type:'lock'});
 $('#af').onsubmit=e=>{e.preventDefault();const u=$('#au').value.trim();if(u){act({type:'add',url:u});$('#au').value=''}};
 $('#vol').oninput=e=>{[P,P2].forEach(pl=>{if(pl){if(pl.unMute)pl.unMute();if(pl.setVolume)pl.setVolume(+e.target.value)}})};
 $('#sc').onpointerdown=()=>seeking=true;$('#sc').onchange=e=>{seeking=false;if(P)act({type:'seek',pos:e.target.value/1000*P.getDuration()})};
@@ -111,5 +128,5 @@ setInterval(()=>{if(!P||!P.getDuration||!S?.cur)return;const d=P.getDuration()||
  /* stuck-buffer safety net: buffering for 12s straight while the room is
     playing means the stream is wedged — reload it at the live position. */
  if(S.cur.playing&&P.getPlayerState){const st=P.getPlayerState();if(st===3){if(!bufSince)bufSince=Date.now();else if(Date.now()-bufSince>12000){bufSince=0;cv=null;sync()}}else bufSince=0}},500);
-if('mediaSession'in navigator){navigator.mediaSession.setActionHandler('play',()=>act({type:'play'}));navigator.mediaSession.setActionHandler('pause',()=>act({type:'play'}));navigator.mediaSession.setActionHandler('nexttrack',()=>act({type:'skip'}))}
+if('mediaSession'in navigator){navigator.mediaSession.setActionHandler('play',()=>{localToggle();act({type:'play'})});navigator.mediaSession.setActionHandler('pause',()=>{localToggle();act({type:'play'})});navigator.mediaSession.setActionHandler('nexttrack',()=>act({type:'skip'}))}
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)sync()});

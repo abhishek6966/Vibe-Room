@@ -2,7 +2,7 @@ const express=require('express'),http=require('http'),path=require('path'),{Serv
 const app=express(),srv=http.createServer(app),io=new Server(srv);
 app.use(express.static(path.join(__dirname,'public')));
 app.get('/room/:c',(q,r)=>r.sendFile(path.join(__dirname,'public/index.html')));
-const rooms=new Map(),CH='ABCDEFGHJKMNPQRSTUVWXYZ23456789',now=()=>Date.now(),SCHED=800; /* v17: scheduled start — play/pause/seek/track-change take effect at server time now()+SCHED so every device starts together instead of at its own network delay */
+const rooms=new Map(),CH='ABCDEFGHJKMNPQRSTUVWXYZ23456789',now=()=>Date.now(),SCHED=200; /* v21: scheduled start — play/pause/seek/track-change take effect at server time now()+SCHED so every device starts together. Was 800; cut to 200 because the host heard the pause land ~1s late. The tapping device also pauses/plays its own player instantly now (localToggle in app.js), so the tap feels instant and the group still follows at once. */
 const newCode=()=>{let c;do c=Array.from({length:6},()=>CH[Math.random()*CH.length|0]).join('');while(rooms.has(c));return c};
 const pos=r=>r.cur?((r.cur.playing?now():r.cur.pausedAt)-r.cur.anchor)/1000*(r.cur.speed||1):0;
 const online=r=>[...r.users.values()].filter(u=>u.connected);

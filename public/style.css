@@ -431,3 +431,24 @@ li div{min-width:0!important}
 #ul li{flex-wrap:wrap!important}
 #ul .uacts{display:flex!important;flex-wrap:wrap!important;gap:6px!important;flex:1 1 100%!important;min-width:0!important}
 #ul .uacts button{flex:1 1 45%!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+/* v21: (1) keep the music playing when you change tabs. The stage used to be
+   display:none on Queue/Sing/Room/More — and a YouTube player inside a
+   display:none box can pause, so the music stopped the moment you left the
+   Play page. Now the stage is a 1px invisible box instead: still rendered, so
+   the player keeps playing, but it takes no space and shows nothing. */
+#room:not([data-tab=play]) .stage{display:block!important;position:absolute!important;left:0!important;top:0!important;width:1px!important;height:1px!important;overflow:hidden!important;visibility:hidden!important;pointer-events:none!important;opacity:0!important}
+/* v21: (2) the bottom player bar. It used to be a top bar that only showed on
+   the Play page when the deck scrolled out of view. Now it sits just above the
+   floating tab bar on EVERY page, whenever a song is playing or paused, so you
+   can pause/skip/see the song from anywhere. Compact: artwork + title + prev /
+   play-pause / next. Slides down out of sight when there is no song. */
+#mini{top:auto!important;bottom:133px!important;left:50%!important;right:auto!important;width:min(calc(100% - 24px),520px)!important;transform:translateX(-50%) translateY(160%)!important;border-radius:16px!important;border:1px solid rgba(255,255,255,.16)!important;box-shadow:0 10px 26px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.14)!important;padding:7px 10px!important;gap:8px!important}
+#mini.show{transform:translateX(-50%) translateY(0)!important}
+#mini button{width:34px!important;height:34px!important;border-radius:50%!important;flex:none!important;display:grid!important;place-items:center!important;background:rgba(255,255,255,.12)!important;border:1px solid rgba(255,255,255,.2)!important;color:#fff!important;font-size:.85rem!important;padding:0!important}
+#mini #mp{width:42px!important;height:42px!important;background:linear-gradient(135deg,#ff3d71,#b026ff)!important;border-color:rgba(255,255,255,.35)!important;font-size:.8rem!important;box-shadow:0 4px 14px rgba(255,61,113,.45)!important}
+#mini button:disabled{opacity:.35!important}
+#mini img{border-radius:6px!important;flex:none!important}
+/* v21: on the list pages the bottom bar floats over the list, so give those
+   pages extra bottom room — the last item no longer hides behind the bar.
+   The Play page is untouched, so its one-screen fit is unchanged. */
+#room:not([data-tab=play]){padding-bottom:212px!important}
