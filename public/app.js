@@ -430,6 +430,32 @@ clockOff=S.now+rtt/2-recv;
 if(!S.cur||!S.cur.playing)$('#audio-unlock').hidden=true;
 render();sync();updateMediaSession();preloadNext()});socket.on('say',toast);
 socket.on('react',r=>{const d=document.createElement('div');d.className='fl';d.textContent=r.e;d.style.left=(10+Math.random()*80)+'%';$('#fl').append(d);setTimeout(()=>d.remove(),2400)});
+/* v55: COOL MODE + AUTO-DIM. Two ways to keep the phone cool while a song
+   plays. (1) Cool mode — a manual toggle (More tab) that dims the whole
+   page to near-black and freezes the decorative animations; the music
+   keeps playing, only the visuals rest. It is saved on the device, so it
+   survives a refresh. (2) Auto-dim — if Cool mode is off and nobody
+   touches the page for 30s while a song plays, the page goes still
+   (v56: STATIC, not black — all decorative animations freeze but the
+   colours stay, because the blackout looked bad); any tap, scroll, key
+   or slider move wakes it and restarts the 30s countdown. Pausing the
+   song also wakes it. Cool mode is the 'cool' body class (black);
+   auto-dim is the 'idle' body class (static, colourful). */
+let coolMode=false;try{coolMode=L.getItem('cool')==='1'}catch(e){}
+let autoDimmed=false,idleT=null;
+function applyDim(){document.body.classList.toggle('cool',coolMode);document.body.classList.toggle('idle',autoDimmed&&!coolMode);const sw=document.querySelector('#cool-toggle');if(sw){sw.setAttribute('aria-checked',String(coolMode));sw.classList.toggle('on',coolMode)}}
+function setCool(on){coolMode=!!on;try{L.setItem('cool',coolMode?'1':'0')}catch(e){}applyDim();armIdle()}
+function armIdle(){const should=S&&S.cur&&S.cur.playing&&!coolMode;if(!should){if(idleT){clearTimeout(idleT);idleT=null}return}if(idleT)return;idleT=setTimeout(()=>{idleT=null;autoDimmed=true;applyDim()},30000)}
+function wakeCool(){if(autoDimmed){autoDimmed=false;applyDim()}if(idleT){clearTimeout(idleT);idleT=null}armIdle()}
+document.addEventListener('pointerdown',wakeCool);
+document.addEventListener('touchstart',wakeCool,{passive:true});
+document.addEventListener('click',wakeCool);
+document.addEventListener('keydown',wakeCool);
+document.addEventListener('input',wakeCool);
+document.addEventListener('wheel',wakeCool,{passive:true});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)wakeCool()});
+const coolBtn=document.querySelector('#cool-toggle');if(coolBtn)coolBtn.addEventListener('click',()=>setCool(!coolMode));
+applyDim();
 function render(){if(!joined)return;const isH=S.hostId===me.id,M=isH||S.co.includes(me.id),C=M||(S.ctrl&&S.ctrl.includes(me.id)),can=C,c=S.cur;
  recordSong(); /* v36: every song that becomes the current track is saved to history */
  $('#rn').textContent=S.code;
@@ -440,7 +466,7 @@ function render(){if(!joined)return;const isH=S.hostId===me.id,M=isH||S.co.inclu
  if(c&&c.playing)smokeStart();else smokeStop(); /* v43: beat-reactive smoke */
  let h=0;if(c)for(const ch of c.videoId)h=(h*31+ch.charCodeAt(0))%360;document.documentElement.style.setProperty('--h',h);
  $('#tt-in').textContent=c?c.title:'Queue is empty';fitTitle();$('#ch').textContent=c?c.channel:'Paste a YouTube link to start the room.';$('#by').textContent=c?'Added by '+c.by:'';$('#addlink').hidden=!!c; /* v40: the empty-state button shows only while the queue is empty */
- $('#pp').innerHTML=c&&c.playing?IC_PAUSE:IC_PLAY;$('#pp').disabled=!can;/* v50: tell the page whether a song is playing, so the decorative motion (smoke, orbs, notes) freezes when nothing plays instead of burning battery and heating the phone for nothing. */document.body.classList.toggle('playing',!!(c&&c.playing));$('#sk').innerHTML=IC_NEXT;$('#sk').disabled=!can||!c;$('#sk').setAttribute('aria-label',C?'Skip':'Skip (host control only)');$('#sk').title=C?'Skip to next track':'Only the host, co-hosts, or authorized controllers can skip';$('#sc').disabled=!can||!c;/* v49: 10s skip buttons follow the same rule as the seek bar — only controllers can move the room. */const b10=$('#b10'),f10=$('#f10');if(b10)b10.disabled=!can||!c;if(f10)f10.disabled=!can||!c;
+ $('#pp').innerHTML=c&&c.playing?IC_PAUSE:IC_PLAY;$('#pp').disabled=!can;/* v50: tell the page whether a song is playing, so the decorative motion (smoke, orbs, notes) freezes when nothing plays instead of burning battery and heating the phone for nothing. */document.body.classList.toggle('playing',!!(c&&c.playing));/* v55: COOL MODE + AUTO-DIM — if the song stopped, wake the page (no need to stay dimmed when paused); (re)arm the 30s idle timer when playing. armIdle() never resets a running timer, so this is safe even though render() runs often. */if(!(c&&c.playing)&&autoDimmed){autoDimmed=false;applyDim()}armIdle();$('#sk').innerHTML=IC_NEXT;$('#sk').disabled=!can||!c;$('#sk').setAttribute('aria-label',C?'Skip':'Skip (host control only)');$('#sk').title=C?'Skip to next track':'Only the host, co-hosts, or authorized controllers can skip';$('#sc').disabled=!can||!c;/* v49: 10s skip buttons follow the same rule as the seek bar — only controllers can move the room. */const b10=$('#b10'),f10=$('#f10');if(b10)b10.disabled=!can||!c;if(f10)f10.disabled=!can||!c;
  $('#au').placeholder=C?'Paste a YouTube link…':'Paste a YouTube link to request it';$('#af button').textContent=C?'Add':'Request';
  /* v20: song requests — a guest's link waits here until the host approves it (into the queue) or rejects it (gone) */
  const rq=S.reqs||[];$('#rqw').hidden=!rq.length;

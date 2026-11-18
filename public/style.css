@@ -1235,3 +1235,40 @@ body:not(.playing) .cosmic *,body:not(.playing) .orb,body:not(.playing) .note,bo
    Still glassy, but the GPU does less work on every frame while a song
    plays. The main heat fix is the 144p video cap in app.js (capQuality). */
 .stage{backdrop-filter:blur(8px)!important;-webkit-backdrop-filter:blur(8px)!important}
+
+/* v55: COOL MODE + AUTO-DIM. When the body has .cool (Cool mode on, or
+   auto-dim after 30s idle while playing), the page goes near-black so an
+   OLED screen rests and the phone cools down. The music keeps playing —
+   only the visuals rest. The smoke and floating notes are hidden, the
+   stage goes flat black with no backdrop blur, and every decorative
+   animation freezes. The song title and controls stay readable. */
+body.cool{background:#000!important}
+body.cool #fx{opacity:0!important;visibility:hidden!important}
+body.cool .cosmic,body.cool .dnote{display:none!important}
+body.cool .hero3d::before{opacity:0!important}
+body.cool .hero-img{box-shadow:none!important}
+body.cool .hero3d,body.cool .eq i{animation-play-state:paused!important}
+body.cool .stage{background:#0a0a10!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;box-shadow:none!important;border-color:rgba(255,255,255,.07)!important}
+body.cool .stage::before,body.cool .stage::after,body.cool .stage>.gloss,body.cool .stage .ring{display:none!important}
+body.cool .stage *{animation-play-state:paused!important}
+body.cool .stage .disc{box-shadow:none!important}
+body.cool header,body.cool #tabs,body.cool #mini,body.cool .pane{background:rgba(0,0,0,.65)!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;box-shadow:none!important}
+body.cool #tt{color:#f0f0f5!important}
+body.cool #ch{color:#b9b9c9!important}
+body.cool .cool-card{background:rgba(255,255,255,.07)!important;border-color:rgba(255,255,255,.14)!important}
+/* v55: the Cool mode card in the More tab */
+.cool-card{display:flex;align-items:center;gap:12px;margin:12px 0;padding:14px;border:1px solid rgba(255,255,255,.16);border-radius:18px;background:rgba(255,255,255,.06)}
+.cool-ic{flex:none;width:38px;height:38px;display:flex;align-items:center;justify-content:center;border-radius:12px;background:linear-gradient(135deg,#3b2a6b,#1c0f3d);color:#b9a7ff}
+.cool-txt{flex:1;min-width:0}
+.cool-txt h4{margin:0 0 3px;font-size:.92rem}
+.cool-txt p{margin:0;font-size:.78rem;line-height:1.4;color:var(--mu)}
+.cool-switch{flex:none;width:52px;height:30px;border:none;border-radius:999px;background:rgba(255,255,255,.22);position:relative;cursor:pointer;padding:0;transition:background .2s}
+.cool-switch .cool-knob{position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;transition:left .2s;box-shadow:0 1px 4px rgba(0,0,0,.4)}
+.cool-switch.on{background:linear-gradient(135deg,#7b5cff,#c026d3)}
+.cool-switch.on .cool-knob{left:25px}
+
+/* v56: AUTO-DIM IS NOW STATIC, NOT BLACK. After 30s idle while playing,
+   the page freezes in place (all decorative animations paused) but keeps
+   its colours — no blackout. The GPU rests (that is the cooling), and the
+   page still looks like Vibe Room. Cool mode (manual) still goes black. */
+body.idle .stage *,body.idle .hero3d,body.idle .eq i,body.idle #fx *{animation-play-state:paused!important}
