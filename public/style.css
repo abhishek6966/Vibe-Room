@@ -794,3 +794,150 @@ dialog{max-height:90dvh;overflow-y:auto}
 .kar-voice{font-size:.78rem;margin-top:3px;color:#b9a8e8}
 .kar-voice.ok{color:#b6ff3b}
 .kar-voice.warn{color:#ffd166}
+
+/* v34: the logo is the neon headphone emblem (logo.png). The header logo is
+   now the emblem image instead of the gradient play button, and the landing
+   page hero is the emblem instead of the vinyl photo. The hero keeps its
+   spinning glow ring; the emblem is already circular so it fits. */
+.logo{background:none!important;clip-path:none!important;filter:none!important;border-radius:50%!important;display:block!important;box-shadow:0 0 0 1px rgba(255,255,255,.2),0 2px 10px rgba(0,0,0,.5)!important;overflow:hidden}
+.logo img{width:100%;height:100%;object-fit:cover;display:block}
+.logo.lg{width:56px;height:56px}
+
+/* v35: (1) the sound prompt is a small premium popup that appears the moment
+   someone creates or joins a room. (2) On a computer the app is no longer a
+   narrow phone-width strip — the landing page and the room widen so the
+   layout fills the screen and sits straight. The phone layout is unchanged. */
+.snd-modal{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(10,2,30,.62);backdrop-filter:blur(6px);animation:sndFade .22s ease-out}
+.snd-modal[hidden]{display:none}
+@keyframes sndFade{from{opacity:0}to{opacity:1}}
+.snd-card{position:relative;width:min(320px,calc(100vw - 48px));text-align:center;padding:26px 22px 20px;border-radius:24px;background:linear-gradient(160deg,rgba(64,22,120,.96),rgba(28,8,64,.96));border:1px solid rgba(255,255,255,.22);box-shadow:0 24px 60px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.18);animation:sndPop .28s cubic-bezier(.2,1.4,.4,1)}
+@keyframes sndPop{from{transform:scale(.88) translateY(10px);opacity:0}to{transform:scale(1) translateY(0);opacity:1}}
+.snd-x{position:absolute;top:10px;right:12px;width:30px;height:30px;border:0;border-radius:50%;background:rgba(255,255,255,.1);color:#fff;font-size:.85rem;cursor:pointer}
+.snd-ic{width:64px;height:64px;margin:0 auto 12px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 32% 28%,#ffd166 0%,#ff3d71 48%,#b026ff 100%);box-shadow:0 0 0 3px rgba(255,255,255,.18),0 8px 24px rgba(255,61,113,.55),0 0 34px rgba(176,38,255,.5)}
+.snd-ic svg{width:30px;height:30px;color:#fff}
+.snd-card h3{margin:0 0 6px;font-size:1.25rem;font-weight:800;color:#fff}
+.snd-card p{margin:0 0 16px;font-size:.9rem;line-height:1.5;color:#d8c8ff}
+.snd-go{display:block;width:100%;min-height:48px;border:0;border-radius:999px;background:linear-gradient(90deg,#ffb020,#ff3d71 55%,#b026ff);color:#fff;font-size:1rem;font-weight:800;cursor:pointer;box-shadow:0 8px 22px rgba(255,61,113,.5)}
+.snd-later{display:block;width:100%;margin-top:10px;padding:6px;border:0;background:none;color:#b9a8e8;font-size:.85rem;font-weight:600;cursor:pointer}
+/* desktop: wider, straight layout (phones unchanged) */
+@media(min-width:768px){
+ main{max-width:640px;padding-top:6vh}
+ #room{max-width:640px}
+ #tabs{width:min(calc(100% - 24px),640px)}
+ .hero3d{width:min(48vw,260px)}
+}
+
+/* v36: (1) the small music notes around the vinyl are now actually small
+   (they were 2–2.6rem — far too big for a decoration). (2) History menu:
+   the three-dots button in the header opens a panel with the rooms you
+   visited and the songs played, saved on this device. */
+.dnote{font-size:1rem!important}
+.dnote.n1{font-size:1.15rem!important}
+.dnote.n2{font-size:.85rem!important}
+.dnote.n3{font-size:1rem!important}
+#hist{flex:none;width:34px;height:34px;border:1px solid rgba(255,255,255,.2);border-radius:50%;background:rgba(255,255,255,.1);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center}
+#hist svg{display:block}
+.hist-panel{position:fixed;top:64px;right:12px;z-index:40;width:min(340px,calc(100vw - 24px));max-height:min(64vh,560px);overflow-y:auto;padding:16px 14px 14px;border-radius:20px;background:linear-gradient(160deg,rgba(52,18,100,.97),rgba(22,6,52,.97));border:1px solid rgba(255,255,255,.22);box-shadow:0 20px 50px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.15)}
+.hist-panel[hidden]{display:none}
+.hist-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.hist-head h3{margin:0;font-size:1.05rem;font-weight:800;color:#fff}
+#hist-x{width:28px;height:28px;border:0;border-radius:50%;background:rgba(255,255,255,.12);color:#fff;font-size:.8rem;cursor:pointer}
+.hist-panel h4{margin:14px 0 6px;font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.14em;color:#b9a8e8}
+.hist-list{display:grid;gap:6px}
+.hist-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:12px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1)}
+.hist-item .ht{flex:1;min-width:0}
+.hist-item .ht b{display:block;font-size:.86rem;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hist-item .ht small{display:block;font-size:.72rem;color:#b9a8e8}
+.hist-item button{flex:none;min-height:30px;padding:4px 10px;border:1px solid rgba(255,255,255,.22);border-radius:999px;background:rgba(255,255,255,.1);color:#fff;font-size:.74rem;font-weight:700;cursor:pointer}
+.hist-item button.go{background:linear-gradient(90deg,#ffb020,#ff3d71 55%,#b026ff);border:0}
+.hist-empty{padding:10px;font-size:.85rem;color:#b9a8e8;text-align:center}
+#hist-clear{display:block;width:100%;margin-top:14px;padding:8px;border:0;background:none;color:#b9a8e8;font-size:.8rem;font-weight:600;cursor:pointer}
+
+/* v37: Neon Cosmic Smoke — ONLY inside the main player card (.stage), behind
+   the vinyl, tonearm, equalizer, song info and controls. Layered blurred
+   radial-gradient clouds in the neon palette drift and morph continuously;
+   a soft pulse and floating particles breathe with the music (faster and
+   brighter while playing, calm while paused). Pure CSS — no audio analysis
+   (YouTube audio cannot be read by the page), no second playback system,
+   no layout or control changes. pointer-events:none, clipped by the card's
+   overflow:hidden + border-radius. */
+.cosmic{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden;border-radius:inherit}
+.cosmic .cb{position:absolute;border-radius:50%;filter:blur(22px);mix-blend-mode:screen;opacity:.8;will-change:transform}
+.cosmic .c1{width:88%;aspect-ratio:1;left:-24%;top:-18%;background:radial-gradient(circle,#761bff 0%,transparent 66%);animation:drift1 26s ease-in-out infinite}
+.cosmic .c2{width:80%;aspect-ratio:1;right:-22%;top:-10%;background:radial-gradient(circle,#ff26b8 0%,transparent 66%);animation:drift2 22s ease-in-out infinite}
+.cosmic .c3{width:84%;aspect-ratio:1;left:-20%;bottom:-26%;background:radial-gradient(circle,#00d9ff 0%,transparent 66%);animation:drift3 30s ease-in-out infinite}
+.cosmic .c4{width:62%;aspect-ratio:1;right:-14%;bottom:-16%;background:radial-gradient(circle,#ff8a24 0%,transparent 66%);animation:drift1 34s ease-in-out infinite reverse}
+.cosmic .c5{width:72%;aspect-ratio:1;left:16%;top:20%;background:radial-gradient(circle,#ff397f 0%,transparent 66%);animation:drift2 28s ease-in-out infinite reverse}
+.cosmic .c6{width:76%;aspect-ratio:1;left:4%;top:34%;background:radial-gradient(circle,#153bff 0%,transparent 66%);animation:drift3 24s ease-in-out infinite reverse}
+.cosmic .c7{width:64%;aspect-ratio:1;left:28%;bottom:-22%;background:radial-gradient(circle,#ff8a24 0%,transparent 66%);animation:drift2 26s ease-in-out infinite}
+.cosmic .c8{width:58%;aspect-ratio:1;left:34%;top:-16%;background:radial-gradient(circle,#ff26b8 0%,transparent 66%);animation:drift3 32s ease-in-out infinite reverse}
+@keyframes drift1{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(34px,-22px) scale(1.16)}66%{transform:translate(-22px,18px) scale(.94)}}
+@keyframes drift2{0%,100%{transform:translate(0,0) scale(1.08)}33%{transform:translate(-38px,26px) scale(.9)}66%{transform:translate(26px,-16px) scale(1.2)}}
+@keyframes drift3{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(20px,30px) scale(1.14)}66%{transform:translate(-30px,-24px) scale(.92)}}
+.cosmic .cpulse{position:absolute;left:50%;top:38%;width:88%;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle,rgba(255,38,184,.28) 0%,rgba(118,27,255,.16) 45%,transparent 70%);filter:blur(18px);mix-blend-mode:screen;animation:cpulse 3.4s ease-in-out infinite}
+@keyframes cpulse{0%,100%{transform:translate(-50%,-50%) scale(.86);opacity:.5}50%{transform:translate(-50%,-50%) scale(1.1);opacity:.95}}
+.cosmic .cp{position:absolute;bottom:8%;border-radius:50%;background:#fff;box-shadow:0 0 8px 2px rgba(255,255,255,.7),0 0 18px 6px rgba(0,217,255,.45);opacity:0;animation:floatUp 11s linear infinite}
+.cosmic .cp.p1{left:12%;width:5px;height:5px;animation-duration:9s}
+.cosmic .cp.p2{left:28%;width:4px;height:4px;animation-duration:12s;animation-delay:-4s}
+.cosmic .cp.p3{left:44%;width:6px;height:6px;animation-duration:10s;animation-delay:-7s}
+.cosmic .cp.p4{left:58%;width:4px;height:4px;animation-duration:13s;animation-delay:-2s}
+.cosmic .cp.p5{left:72%;width:5px;height:5px;animation-duration:8s;animation-delay:-6s}
+.cosmic .cp.p6{left:86%;width:4px;height:4px;animation-duration:11s;animation-delay:-9s}
+.cosmic .cp.p7{left:20%;width:3px;height:3px;animation-duration:14s;animation-delay:-5s}
+.cosmic .cp.p8{left:64%;width:3px;height:3px;animation-duration:9.5s;animation-delay:-3s}
+@keyframes floatUp{0%{transform:translateY(0);opacity:0}12%{opacity:.9}80%{opacity:.55}100%{transform:translateY(-150px);opacity:0}}
+/* playing: the smoke breathes harder — brighter clouds, faster drift and
+   pulse, livelier particles. Paused: it settles back to a calm glow. */
+.stage.playing .cosmic .cb{opacity:.95}
+.stage.playing .cosmic .c1{animation-duration:15s}
+.stage.playing .cosmic .c2{animation-duration:13s}
+.stage.playing .cosmic .c3{animation-duration:17s}
+.stage.playing .cosmic .c4{animation-duration:19s}
+.stage.playing .cosmic .c5{animation-duration:16s}
+.stage.playing .cosmic .c6{animation-duration:14s}
+.stage.playing .cosmic .c7{animation-duration:15s}
+.stage.playing .cosmic .c8{animation-duration:18s}
+.stage.playing .cosmic .cpulse{animation-duration:1.7s}
+.stage.playing .cosmic .cp{animation-duration:6s}
+@media (prefers-reduced-motion: reduce){.cosmic .cb,.cosmic .cpulse,.cosmic .cp{animation:none}.cosmic .cb{opacity:.35}}
+
+/* v38 (photo texture): the real cosmic-smoke photo layered over the
+   gradient clouds, so the smoke has the wispy, billowing texture of the
+   reference instead of smooth colour only. It drifts slowly (pan + zoom);
+   while playing it brightens and moves faster. */
+.cosmic .csmoke{position:absolute;inset:-12%;background:url(/smoke.jpg) center/cover no-repeat;mix-blend-mode:screen;opacity:.6;will-change:transform;animation:smokePan 46s ease-in-out infinite alternate}
+@keyframes smokePan{0%{transform:scale(1.06) translate(-2%,-1%)}50%{transform:scale(1.16) translate(2%,2%)}100%{transform:scale(1.08) translate(-1%,1%)}}
+.stage.playing .cosmic .csmoke{opacity:.85;animation-duration:26s}
+@media (prefers-reduced-motion: reduce){.cosmic .csmoke{animation:none}}
+
+/* v39: iPhone safe area — iPhone 13/14 have a notch, iPhone 14 Pro and later
+   (15/16/17/18) have a Dynamic Island, both at the top center, and every
+   iPhone without a home button has a home-indicator bar at the bottom. The
+   page already uses viewport-fit=cover, so the app draws under the camera —
+   push the content clear with the safe-area insets so the room header (and
+   the landing/gate tops) are never hidden behind the notch or the island,
+   and the tab bar never sits on the home indicator. On phones and computers
+   without a notch these insets are 0, so nothing moves there. (The mini
+   bar and the unlock button already add the bottom inset; only the tab bar
+   and the tops were missing it.) */
+#room{padding-top:env(safe-area-inset-top,0px)!important}
+main{padding-top:calc(7vh + env(safe-area-inset-top,0px))!important}
+#tabs{bottom:calc(12px + env(safe-area-inset-bottom,0px))!important;padding-bottom:calc(8px + env(safe-area-inset-bottom,0px))!important}
+
+/* v39 (legibility): the smoke is bright and busy, so the words must stay
+   readable wherever it drifts. A soft dark scrim sits between the smoke and
+   the content (smoke still shows through, the text area is deepened), and
+   every text line in the player gets a strong shadow so it pops off the
+   moving background. Controls already have their own solid/glass
+   backgrounds, so they need no change. */
+.cosmic .cscrim{position:absolute;inset:0;background:radial-gradient(120% 90% at 50% 55%,rgba(8,0,28,.34),rgba(8,0,28,.14) 62%,transparent 88%);mix-blend-mode:multiply}
+.stage #tt,.stage #ch,.stage #by,.stage .time span{text-shadow:0 2px 10px rgba(0,0,0,.8),0 0 22px rgba(0,0,0,.55)}
+.stage #tt{text-shadow:0 2px 14px rgba(0,0,0,.85),0 0 26px rgba(0,0,0,.6)}
+
+/* v40: empty-state "Add a YouTube link" button — very compact, shown only
+   while the queue is empty, so a first-time user can see where the link
+   goes. A small gradient pill with a plus icon, centered under the
+   "Paste a YouTube link" line. */
+#addlink{display:inline-flex;align-items:center;gap:6px;margin:4px auto 0;padding:7px 13px;border-radius:999px;border:1px solid rgba(255,255,255,.35);background:linear-gradient(135deg,#ff3d71,#b026ff);color:#fff;font:600 .8rem/1 "Poppins",system-ui,sans-serif;cursor:pointer;box-shadow:0 6px 18px rgba(255,61,113,.4),inset 0 1px 0 rgba(255,255,255,.3)}
+#addlink svg{width:14px;height:14px;flex:none}
+#addlink[hidden]{display:none}

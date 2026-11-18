@@ -27,11 +27,9 @@ Built on v22. The song used to stall in the middle. Three causes, three fixes.
    quality up mid-song, it is pushed back down to 240p. The sound is
    identical at every quality — only the hidden picture gets smaller — and
    240p needs a fraction of the bandwidth, so it almost never stalls.
-3. **One player per listener.** The hidden second-player preloader has been
-   removed. Swapping between hidden and visible YouTube players could behave
-   differently across browsers and devices, so each listener now uses one
-   player for the entire room session. Track changes may take a little longer
-   to buffer, but playback and autoplay recovery stay on the same player.
+3. **No preload while the current song is buffering.** If the live player is
+   in the buffering state, the 2nd player does not start loading the next
+   song. It resumes once the current song is playing again.
 
 ## The tradeoff, stated plainly
 Sync is now within about 1 second instead of about half a second. That is
@@ -49,8 +47,8 @@ tighter sync and accept the occasional stall, that is a one-line change back.
   rule are intact.
 
 ## Honest limits
-- This reduces stalls caused by frequent seeks and unnecessary video quality.
-  It cannot fix a listener's own internet — if someone's
+- This removes the stalls the app itself was causing (seeks, high quality,
+  preload competing). It cannot fix a listener's own internet — if someone's
   connection drops entirely, their player will still buffer until it comes
   back. The 12s watchdog still reloads a stream that is wedged for 12s.
 - Real YouTube audio cannot be heard in the sandbox, so this is verified

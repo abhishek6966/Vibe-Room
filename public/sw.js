@@ -1,9 +1,9 @@
-/* Vibe Room service worker (v29). Makes the app installable and fast to load.
+/* Vibe Room service worker (v40). Makes the app installable and fast to load.
    It caches ONLY the static app shell (HTML, CSS, JS, images, icons). It never
    caches Socket.io, the room, or any live data — those are always network-only,
    so a room is never stale. Bump CACHE when the app shell changes. */
-const CACHE = 'vibe-room-v29';
-const SHELL = ['/', '/index.html', '/style.css', '/app.js', '/karaoke.js', '/extras.js', '/starmaker.js', '/qrcode.min.js', '/manifest.json', '/apple-touch-icon.png', '/icon-192.png', '/icon-512.png', '/vinyl.jpg', '/hero-vinyl.jpg', '/gate-vibe.jpg'];
+const CACHE = 'vibe-room-v40';
+const SHELL = ['/', '/index.html', '/style.css', '/app.js', '/karaoke.js', '/extras.js', '/starmaker.js', '/qrcode.min.js', '/manifest.json', '/apple-touch-icon.png', '/icon-192.png', '/icon-512.png', '/vinyl.jpg', '/hero-vinyl.jpg', '/gate-vibe.jpg', '/logo.png', '/smoke.jpg'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
 });

@@ -49,7 +49,7 @@ socket.on('react',()=>{const x=innerWidth/2,y=innerHeight*.6;for(let i=0;i<12;i+
    s.style.cssText=`left:${rnd(0,100)}%;top:${rnd(0,100)}%;width:${rnd(1,3.5)}px;height:${rnd(1,3.5)}px;background:${sc[i%5]};animation-duration:${rnd(1.8,4.5)}s;animation-delay:${-rnd(0,4)}s;box-shadow:0 0 ${rnd(4,10)}px ${sc[i%5]}`;
    stars.append(s)}}
  if(notes){const nc=['#ff8ac2','#7fe8ff','#ffd166','#c9ff55','#ff5c9a'];
-  for(let i=0;i<12;i++){const n=document.createElement('span');n.innerHTML='<svg viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>';
+  for(let i=0;i<12;i++){const n=document.createElement('span');n.innerHTML=X_MUSIC;
    n.style.cssText=`left:${rnd(2,96)}%;font-size:${rnd(1.1,2.2)}rem;color:${nc[i%5]};animation-duration:${rnd(14,26)}s;animation-delay:${-rnd(0,24)}s`;
    notes.append(n)}}
  const hero=document.querySelector('.hero3d');
