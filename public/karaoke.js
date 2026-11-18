@@ -18,6 +18,7 @@ const K=document.createElement('section');K.id='kar';K.hidden=true;
 K.innerHTML=`<div class="kar-stage"><div class="kar-stage-top"><div class="kar-avatar" id="kav">${IC.mic}</div><div class="kar-stage-info"><div class="kar-stage-label" id="ksl">NO SINGER YET</div><div class="kar-stage-name" id="ksn">—</div><div class="kar-stage-song" id="kss">—</div><div class="kar-voice" id="kvoi" hidden></div></div><div class="kar-live" id="klv" hidden>LIVE</div></div><div class="kar-viz" id="kvis" aria-hidden="true">${'<i></i>'.repeat(24)}</div></div>
 <div class="kar-action" id="ks"></div>
 <div class="kar-mic" id="kc" hidden><p class="kar-tip">Wear headphones so the song doesn’t leak into your microphone.</p><div class="kar-row"><button id="kl" class="kar-big">Start singing</button><label class="kar-hear"><input type="checkbox" id="km"> Hear myself</label></div><div class="kar-row"><button id="kr">Record my vocals</button><a id="kd" hidden download="my-take.webm">Save take</a></div></div>
+<div class="kar-mix"><h4>Sound mix</h4><label class="sl">Music<input type="range" id="kmix-m" min="0" max="100" value="80"><b id="kmix-mv">80</b></label><label class="sl">Voice<input type="range" id="kmix-v" min="0" max="100" value="90"><b id="kmix-vv">90</b></label><p class="kar-mix-tip">Music is the song. Voice is the singer — your own voice if you are singing, the singer's voice if you are listening. Both are remembered on this device.</p></div>
 <div class="kar-fx"><h4>Voice effects</h4><div id="kf">${Object.entries(FX).map(([k,v])=>`<button data-fx="${k}" aria-label="Effect ${v[0]}">${v[0]}</button>`).join('')}</div>
 <details><summary>Custom voice</summary>${[['rev','Reverb',0,1,.01],['size','Room size',.3,6,.1],['low','Bass',-12,12,1],['mid','Mids',-12,12,1],['high','Treble',-12,12,1],['dn','Denoise',0,1,.01]].map(([k,n,a,b,s])=>`<label class="sl">${n}<input type="range" data-k="${k}" min="${a}" max="${b}" step="${s}"></label>`).join('')}</details></div>`;
 document.querySelector('.ctl').after(K);
@@ -38,6 +39,21 @@ function apply(){K.querySelectorAll('[data-fx]').forEach(b=>b.classList.toggle('
  G.lo.gain.value=cfg.low;G.mi.gain.value=cfg.mid;G.hi.gain.value=cfg.high;G.lp.frequency.value=cfg.lp;G.cr.gain.value=cfg.cr;if(ksz!==cfg.size){G.rv.buffer=ir(cfg.size);ksz=cfg.size}}
 function setFx(k){cfg={...FX[k][1],dn:cfg.dn,fx:k};apply()}
 K.oninput=e=>{const k=e.target.dataset.k;if(k){cfg[k]=+e.target.value;cfg.fx='custom';apply()}};
+/* v47: SOUND MIX — music vs voice, separately. `voiceVol` (0-100, remembered
+   on this device) is YOUR mix: if you are the singer it is your monitor
+   ("Hear myself") level, if you are listening it is the singer's voice
+   level on your phone (the #kv element). The music level is the same
+   YouTube volume as the main slider, and the two stay in sync. */
+let voiceVol=90;try{voiceVol=Math.max(0,Math.min(100,parseInt(L.vvol||'90',10)||90))}catch{voiceVol=90}
+function applyVoiceVol(){const v=voiceVol/100;const kv=document.querySelector('#kv');if(kv)kv.volume=v;
+ if(AC&&G.mon)G.mon.gain.setTargetAtTime(document.querySelector('#km')?.checked?v:0,AC.currentTime,.05);
+ const s=document.querySelector('#kmix-v');if(s){s.value=String(voiceVol);s.style.setProperty('--p',voiceVol+'%')}
+ const sv=document.querySelector('#kmix-vv');if(sv)sv.textContent=String(voiceVol);
+ const m=document.querySelector('#kmix-m');if(m){m.value=String(volume);m.style.setProperty('--p',volume+'%')}
+ const mv=document.querySelector('#kmix-mv');if(mv)mv.textContent=String(volume)}
+K.addEventListener('input',e=>{const t=e.target;
+ if(t.id==='kmix-v'){voiceVol=Math.max(0,Math.min(100,Math.round(+t.value||0)));try{L.vvol=String(voiceVol)}catch{}applyVoiceVol()}
+ if(t.id==='kmix-m'){setVolume(t.value,false)}});
 const bq=(t,f,g)=>{const n=AC.createBiquadFilter();n.type=t;n.frequency.value=f;if(g)n.Q.value=g;return n},gn=v=>{const n=AC.createGain();n.gain.value=v;return n};
 async function micStart(){
  /* v45: the singer's voice sounded to NOBODY — not to the singer (even
@@ -73,7 +89,7 @@ async function micStart(){
     "Start singing", the old code lost the setting (the mic did not exist
     when they ticked it, so the monitor was created silent). Apply the box's
     current state right here, so the singer hears themselves either way. */
- g.mon.gain.value=document.querySelector('#km')?.checked?.9:0;
+ g.mon.gain.value=document.querySelector('#km')?.checked?voiceVol/100:0; /* v47: the monitor level is the Voice mix slider, not a fixed 0.9 */
  /* v33: keep offering the voice to EVERYONE while live (every 3s) — the
     host, every listener, and anyone who joins late. The old code only
     offered when a state update arrived, so a late joiner or a dropped
@@ -90,7 +106,7 @@ function micStop(){clearInterval(G.timer);clearInterval(G.offerT);G.st?.getTrack
    arrives), and play() is retried on the next user tap if it was blocked,
    so one tap anywhere starts the voice. */
 let kvTries=0;
-function ensureKv(){let a=document.querySelector('#kv');if(!a){a=new Audio();a.id='kv';a.autoplay=true;a.playsInline=true;a.preload='auto';a.volume=1;a.muted=false;document.body.append(a)}return a}
+function ensureKv(){let a=document.querySelector('#kv');if(!a){a=new Audio();a.id='kv';a.autoplay=true;a.playsInline=true;a.preload='auto';a.volume=voiceVol/100;a.muted=false;document.body.append(a)}return a}
 function kvPlay(){const a=document.querySelector('#kv');if(!a||!a.srcObject)return;kvTries++;
  a.play().then(()=>{kvTries=0;voiceStatus('connected')}).catch(()=>{voiceStatus('blocked');
   const retry=()=>{const b=document.querySelector('#kv');if(b&&b.srcObject)b.play().then(()=>{kvTries=0;voiceStatus('connected')}).catch(()=>{})};
@@ -128,7 +144,7 @@ document.addEventListener('click',async e=>{const b=e.target.closest('button');i
  if(b.id==='kl'){if(AC){micStop();act({type:'live',on:false})}else{try{await micStart();b.textContent='Stop singing';act({type:'live',on:true})}catch{toast('Allow microphone access to sing. Microphones need https or localhost.')}}}
  if(b.id==='kr'&&AC){if(rec&&rec.state==='recording'){rec.stop();b.textContent='Record my vocals'}else{chunks=[];rec=new MediaRecorder(G.dest.stream);rec.ondataavailable=x=>chunks.push(x.data);
   rec.onstop=()=>{const a=$('#kd');a.href=URL.createObjectURL(new Blob(chunks,{type:'audio/webm'}));a.hidden=false};rec.start();b.textContent='Stop recording'}}});
-$('#km').onchange=e=>AC&&G.mon.gain.setTargetAtTime(e.target.checked?.9:0,AC.currentTime,.05);
+$('#km').onchange=e=>AC&&G.mon.gain.setTargetAtTime(e.target.checked?voiceVol/100:0,AC.currentTime,.05); /* v47: Hear myself level = the Voice mix slider */
 function karRender(){const k=S.mode==='karaoke',isH=S.hostId===me.id,M=isH||S.co.includes(me.id),c=S.cur;mb.hidden=!isH;mb.textContent=k?'Karaoke: on':'Karaoke: off';K.hidden=!k;
  /* v32: create the voice audio element early (before any voice arrives) so
     it exists when the singer's stream comes in — and so a user tap can
@@ -159,4 +175,4 @@ function karRender(){const k=S.mode==='karaoke',isH=S.hostId===me.id,M=isH||S.co
   const el=document.querySelector('#kvoi');if(el){el.hidden=false;el.textContent=tot>0?`Voice live — ${n} of ${tot} listener${tot===1?'':'s'} connected`:'Voice live — waiting for listeners';el.classList.toggle('ok',n>0&&n===tot);el.classList.toggle('warn',n<tot)}}
  if(mine)Object.keys(peers).forEach(id=>{if(!S.users.some(u=>u.id===id)){peers[id].close();delete peers[id]}});
  if(!(c&&c.live&&!mine)&&lpc){lpc.close();lpc=null;const a=$('#kv');if(a)a.srcObject=null;vizStop()}}
-apply();
+apply();applyVoiceVol(); /* v47: keep the mix sliders in sync + apply the Voice level to the monitor / listener voice element */

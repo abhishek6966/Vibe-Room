@@ -1142,3 +1142,13 @@ header #who{margin-left:auto!important}
    so Queue stays the obvious action. Clear playlist is a subtle pill. */
 #playlist .pl-x{background:rgba(255,255,255,.08)!important;border:1px solid rgba(255,255,255,.18)!important;color:#cfc4ef!important;width:30px;height:30px;min-height:30px!important;padding:0!important;border-radius:50%!important;font-size:.8rem;line-height:1;display:flex;align-items:center;justify-content:center}
 .pl-clear{display:block;margin:8px auto 4px;min-height:32px;padding:4px 16px;border-radius:999px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.07);color:#cfc4ef;font-size:.78rem;font-weight:700;cursor:pointer}
+
+/* v47: SOUND MIX — music vs voice, separately, in the Sing tab. Same card
+   language as Voice effects. Each row is label + slider + a live number,
+   so the mix is readable at a glance. The sliders reuse the range styling
+   (pink fill follows the thumb via --p). */
+.kar-mix{background:#ffffff0a;border:1px solid #ffffff14;border-radius:16px;padding:14px;margin-top:10px}
+.kar-mix h4{margin:0 0 10px;font-size:.8rem;letter-spacing:.08em;text-transform:uppercase;color:#c9a7ff}
+.kar-mix .sl{display:grid!important;grid-template-columns:64px 1fr 34px!important;gap:8px;align-items:center;margin:6px 0!important}
+.kar-mix .sl b{font-size:.82rem;font-weight:700;color:#fff;text-align:right}
+.kar-mix-tip{margin:10px 0 0;font-size:.74rem;line-height:1.45;color:#b9a8e8}
