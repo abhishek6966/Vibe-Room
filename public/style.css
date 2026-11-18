@@ -452,3 +452,9 @@ li div{min-width:0!important}
    pages extra bottom room — the last item no longer hides behind the bar.
    The Play page is untouched, so its one-screen fit is unchanged. */
 #room:not([data-tab=play]){padding-bottom:212px!important}
+
+#q li>div>b,#h li>div>b,#rq li>div>b{
+  white-space:normal;
+  overflow-wrap:anywhere;
+  text-overflow:clip;
+}

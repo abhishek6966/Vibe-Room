@@ -55,7 +55,7 @@ function sync(){if(!P||!P.loadVideoById||!S)return;const c=S.cur;if(!c){P.stopVi
  if(cv!==c.videoId){
   /* v17 preload swap: if the 2nd player already has this track buffered, make it the live player so it starts instantly */
   if(P2&&cv2===c.videoId&&P2.getPlayerState){const tmp=P;P=P2;P2=tmp;cv2=cv;cv=c.videoId;P2.stopVideo?.();capQuality()}
-  else{cv=c.videoId;P.loadVideoById(c.videoId,est());capQuality()}
+  else{cv=c.videoId;if(c.playing)P.loadVideoById(c.videoId,est());else P.cueVideoById(c.videoId,est());capQuality()}
   needCatchup=true /* v17: fresh load — jump straight to the live position instead of drifting there */}
  const st=P.getPlayerState(),t=est(),now=P.getCurrentTime?.()||0,d=t-now,ad=Math.abs(d),rate=c.speed||1;
  /* v20 tighter correction so every listener hears the same second: ignore drift
