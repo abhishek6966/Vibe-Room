@@ -23,7 +23,7 @@ Screenshots show the app in an iPhone-style portrait layout. The compact mini-pl
 - **Host controls:** the host and co-hosts can control playback and the queue. The host can also grant or revoke playback control for individual guests.
 - **Song requests:** guests can request YouTube tracks for host approval. Each guest can have up to 3 pending requests; a room can have up to 20. The host can close requests.
 - **Queue safeguards:** the Queue tab shows the current song separately from upcoming tracks. Queue limit of 100 tracks, duplicate prevention, and a fair-add limit of 3 tracks among the next 10 per person.
-- **Group skip:** guests can vote to skip a track; a majority can skip a track that cannot be played.
+- **Skip and playback-error handling:** only the host, co-hosts, and authorized controllers can skip. A track is auto-skipped only when a strict majority of listeners report a playback error.
 - **Karaoke:** request a singer, let the host assign the mic, and send processed microphone audio to the room over WebRTC.
 - **Mobile controls:** the Play page has the full vinyl player; secondary tabs have a compact, icon-based mini-player when a track is loaded.
 - **Room moderation:** host transfer, co-hosts, remove/ban controls, and automatic host succession after disconnect.
@@ -109,7 +109,9 @@ Microphone access requires HTTPS, except on `localhost`, and the singer must gra
 
 - The server is authoritative for the room clock and playback state. Clients use YouTube's embedded player and correct drift while playing.
 - The volume slider and speaker buttons control local playback volume; the low-volume button mutes/restores the previous level, and the high-volume button sets it to 100%.
-- Host and co-host controls are available by default. The host may grant control to a guest. Other guests can request tracks and vote to skip.
+- Host and co-host controls are available by default. The host may grant control to a guest. Other guests can request tracks; the host must approve a request before it enters the queue.
+- On browsers that support the Media Session API, Vibe Room publishes track metadata and lock-screen play, pause, skip, previous, and seek actions. Returning from a suspended page triggers a room reconnect and state resync.
+- Background playback is controlled by the browser and operating system. In particular, iOS Safari and Home Screen web apps may suspend YouTube embeds or block audio while locked; a web app cannot guarantee Spotify-like uninterrupted playback or controls in every locked-screen condition.
 - If the host leaves explicitly, host duties transfer immediately; after an unexpected disconnect, succession waits 30 seconds.
 - Rooms are held in memory and are not persisted to a database. They are removed 24 hours after becoming empty.
 - A single server instance is expected. Multi-instance deployment needs shared room state and a Socket.IO adapter.

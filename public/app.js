@@ -1,6 +1,9 @@
 const $=s=>document.querySelector(s),esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const L=localStorage,hex=()=>'#'+[0,1,2].map(()=>(100+Math.random()*155|0).toString(16)).join('');
-const me={id:L.vid||(L.vid=crypto.randomUUID()),name:L.vname||'Guest'+(10+Math.random()*89|0),color:L.vcolor||(L.vcolor=hex())};
+const L=localStorage,T=sessionStorage,hex=()=>'#'+[0,1,2].map(()=>(100+Math.random()*155|0).toString(16)).join('');
+const newId=()=>crypto.randomUUID?crypto.randomUUID():Array.from(crypto.getRandomValues(new Uint8Array(16)),b=>b.toString(16).padStart(2,'0')).join('');
+/* Migrate the old shared ID once, then keep each tab's identity in sessionStorage. */
+const getId=()=>{if(T.vid)return T.vid;const old=L.vid;if(old){L.removeItem('vid');return T.vid=old}return T.vid=newId()};
+const me={id:getId(),name:L.vname||'Guest'+(10+Math.random()*89|0),color:L.vcolor||(L.vcolor=hex())};
 const socket=io();let S=null,P=null,P2=null,joined=false,cv=null,cv2=null,recv=0,seeking=false,rtt=0,clockOff=0,pendT=null,needCatchup=false;
 /* v13: measure the round-trip to this device so the position estimate can
    subtract half of it (the one-way delay) — otherwise every listener lags
@@ -8,7 +11,8 @@ const socket=io();let S=null,P=null,P2=null,joined=false,cv=null,cv2=null,recv=0
 setInterval(()=>{if(socket.connected)socket.emit('ping',Date.now())},5000);
 socket.on('pong',t=>{const d=Date.now()-t;rtt=rtt?rtt*.7+d*.3:d});
 const code=(location.pathname.match(/^\/room\/(\w+)/)||[])[1];
-const act=a=>socket.emit('act',a),fmt=t=>{t=Math.max(0,t|0);return(t/60|0)+':'+String(t%60).padStart(2,'0')};
+let rejoinRoom=()=>{};
+const act=(a,cb)=>cb?socket.emit('act',a,cb):socket.emit('act',a),fmt=t=>{t=Math.max(0,t|0);return(t/60|0)+':'+String(t%60).padStart(2,'0')};
 let toastTimer,videoCheckTimer=0,videoCheckSequence=0,checkedVideoUrl='',checkedVideoStatus='';
 const toast=m=>{const box=$('#toasts');clearTimeout(toastTimer);box.textContent='';const d=document.createElement('div');d.className='toast';d.textContent=m;box.append(d);toastTimer=setTimeout(()=>{if(d.parentNode===box)d.remove()},3500)};
 function renderVideoCheck(result){
@@ -40,10 +44,12 @@ if(!code){$('#home').hidden=false;
  const rc=JSON.parse(L.recent||'[]').slice(0,5);$('#recent').innerHTML=rc.length?'<p class="recent-title">Recent rooms</p><div class="recent-list">'+rc.map(c=>`<a href="/room/${esc(c)}">${esc(c)}</a>`).join('')+'</div>':''}
 else{$('#gate').hidden=false;$('#home-link').hidden=false;$('#gn').value=me.name;$('#gc').value=me.color.length==7?me.color:'#ff2d87';
  $('#new-room').onclick=()=>{const b=$('#new-room');b.disabled=true;b.textContent='Creating room…';socket.emit('create',me,r=>{if(!r?.code){b.disabled=false;b.textContent='Create a new room';$('#ge').textContent='Could not create a room. Please try again.';return}location.href='/room/'+r.code})};
- socket.on('connect',()=>{if(joined)return;socket.emit('join',{code,...me},r=>{if(joined)return;if(r.error){showJoinError(r.error);return}
+ const joinRoom=()=>socket.emit('join',{code,...me},r=>{if(r.error){if(joined){joined=false;document.body.classList.remove('in-room');$('#room').hidden=true;$('#gate').hidden=false}showJoinError(r.error);return}if(r.id)me.id=T.vid=r.id;
+  if(joined){if(S)render();return}
   $('#gate').classList.remove('gate-error');$('#gt').textContent='Room '+code.toUpperCase();$('#gs').textContent='Choose your name, then join the room.';$('#ge').textContent='';$('#join-fields').hidden=false;$('#go').hidden=false;$('#go').disabled=false;$('#new-room').hidden=true;$('#new-room').disabled=false;$('#new-room').textContent='Create a new room';
-  L.recent=JSON.stringify([...new Set([code.toUpperCase(),...JSON.parse(L.recent||'[]')])].slice(0,5))})});
- $('#go').onclick=()=>{me.name=L.vname=$('#gn').value.trim()||me.name;me.color=L.vcolor=$('#gc').value;$('#go').disabled=true;$('#go').textContent='Joining…';socket.emit('join',{code,...me},r=>{if(r.error){showJoinError(r.error);return}
+  L.recent=JSON.stringify([...new Set([code.toUpperCase(),...JSON.parse(L.recent||'[]')])].slice(0,5))});
+ rejoinRoom=joinRoom;socket.on('connect',joinRoom);
+ $('#go').onclick=()=>{me.name=L.vname=$('#gn').value.trim()||me.name;me.color=L.vcolor=$('#gc').value;$('#go').disabled=true;$('#go').textContent='Joining…';socket.emit('join',{code,...me},r=>{if(r.error){showJoinError(r.error);return}if(r.id)me.id=T.vid=r.id;
   joined=true;document.body.classList.add('in-room'); /* v14: hide the landing/gate FX once inside a room */
   $('#gate').hidden=true;$('#room').hidden=false;initPlayer();if(S)render()})};
  const s=document.createElement('script');s.src='https://www.youtube.com/iframe_api';document.head.append(s)}
@@ -101,7 +107,7 @@ socket.on('state',s=>{S=s;recv=Date.now();
 /* v17: server clock minus this device's clock (one-way delay already removed) — used to run scheduled actions at the same instant on every device */
 clockOff=S.now+rtt/2-recv;
 if(!S.cur||!S.cur.playing)$('#audio-unlock').hidden=true;
-render();sync();preloadNext()});socket.on('say',toast);
+render();sync();updateMediaSession();preloadNext()});socket.on('say',toast);
 socket.on('react',r=>{const d=document.createElement('div');d.className='fl';d.textContent=r.e;d.style.left=(10+Math.random()*80)+'%';$('#fl').append(d);setTimeout(()=>d.remove(),2400)});
 function render(){if(!joined)return;const isH=S.hostId===me.id,M=isH||S.co.includes(me.id),C=M||(S.ctrl&&S.ctrl.includes(me.id)),can=C,c=S.cur;
  $('#rn').textContent='Room '+S.code;
@@ -110,7 +116,7 @@ function render(){if(!joined)return;const isH=S.hostId===me.id,M=isH||S.co.inclu
  $('#disc').classList.toggle('on',!!c&&c.playing);
  let h=0;if(c)for(const ch of c.videoId)h=(h*31+ch.charCodeAt(0))%360;document.documentElement.style.setProperty('--h',h);
  $('#tt').textContent=c?c.title:'Queue is empty';$('#ch').textContent=c?c.channel:'Paste a YouTube link to start the room.';$('#by').textContent=c?'Added by '+c.by:'';
- $('#pp').innerHTML=c&&c.playing?IC_PAUSE:IC_PLAY;$('#pp').disabled=!can;$('#sk').innerHTML=IC_NEXT;$('#sk').setAttribute('aria-label',C?'Skip':'Vote to skip');$('#sc').disabled=!can||!c;
+ $('#pp').innerHTML=c&&c.playing?IC_PAUSE:IC_PLAY;$('#pp').disabled=!can;$('#sk').innerHTML=IC_NEXT;$('#sk').disabled=!can||!c;$('#sk').setAttribute('aria-label',C?'Skip':'Skip (host control only)');$('#sk').title=C?'Skip to next track':'Only the host, co-hosts, or authorized controllers can skip';$('#sc').disabled=!can||!c;
  $('#au').placeholder=C?'Paste a YouTube link…':'Paste a YouTube link to request it';$('#af button').textContent=C?'Add':'Request';
  /* v20: song requests — a guest's link waits here until the host approves it (into the queue) or rejects it (gone) */
  const rq=S.reqs||[];$('#rqw').hidden=!rq.length;
@@ -154,11 +160,20 @@ $('#au').addEventListener('input',()=>{
   })
  },650)
 });
-$('#af').onsubmit=e=>{e.preventDefault();const u=$('#au').value.trim();if(!u)return;
+$('#af').onsubmit=e=>{e.preventDefault();const u=$('#au').value.trim(),submit=$('#af button');if(!u||submit.disabled)return;
  if(checkedVideoUrl===u&&['blocked','unavailable'].includes(checkedVideoStatus)){toast($('#video-check').textContent);return}
- clearTimeout(videoCheckTimer);videoCheckSequence++;checkedVideoUrl='';checkedVideoStatus='';
- $('#video-check').hidden=true;$('#video-check').textContent='';$('#video-check').removeAttribute('data-status');
- act({type:'add',url:u});$('#au').value=''};
+ if(!socket.connected){toast('Not connected to the room. Reconnect and try again.');return}
+ clearTimeout(videoCheckTimer);videoCheckSequence++;
+ submit.disabled=true;
+ socket.timeout(20000).emit('act',{type:'add',url:u},(err,result)=>{
+  submit.disabled=false;
+  if(err||!result?.ok){toast(result?.message||'Could not add the video. Check your connection and try again.');return}
+  if(result.message)toast(result.message);
+  if($('#au').value.trim()!==u)return;
+  checkedVideoUrl='';checkedVideoStatus='';$('#au').value='';
+  $('#video-check').hidden=true;$('#video-check').textContent='';$('#video-check').removeAttribute('data-status')
+ })
+};
 $('#vol').oninput=e=>setVolume(e.target.value);
 $('#vm').onclick=()=>setVolume(volumeMuted?lastVolume:0);$('#vmx').onclick=()=>setVolume(100);
 $('#sc').onpointerdown=()=>seeking=true;$('#sc').onchange=e=>{seeking=false;if(P)act({type:'seek',pos:e.target.value/1000*P.getDuration()})};
@@ -167,9 +182,32 @@ $('#share').onclick=()=>{const u=location.origin+'/room/'+S.code;$('#lk').value=
  catch(e){$('#qr').innerHTML='<small>QR code unavailable — copy the link below.</small>'}
  $('#dlg').showModal()};
 $('#cl').onclick=()=>$('#dlg').close();$('#cp').onclick=()=>{navigator.clipboard.writeText($('#lk').value);$('#cp').textContent='Copied'};
-setInterval(()=>{if(!P||!P.getDuration||!S?.cur)return;const d=P.getDuration()||0,t=est();$('#t1').textContent=fmt(t);$('#t2').textContent=fmt(d);if(!seeking&&d)$('#sc').value=Math.min(1000,t/d*1000);
+setInterval(()=>{if(!P||!P.getDuration||!S?.cur)return;const d=P.getDuration()||0,t=est();$('#t1').textContent=fmt(t);$('#t2').textContent=fmt(d);if(!seeking&&d)$('#sc').value=Math.min(1000,t/d*1000);updateMediaSession();
  /* stuck-buffer safety net: buffering for 12s straight while the room is
     playing means the stream is wedged — reload it at the live position. */
  if(S.cur.playing&&P.getPlayerState){const st=P.getPlayerState();if(st===3){if(!bufSince)bufSince=Date.now();else if(Date.now()-bufSince>12000){bufSince=0;cv=null;sync()}}else bufSince=0}},500);
-if('mediaSession'in navigator){navigator.mediaSession.setActionHandler('play',()=>{localToggle();act({type:'play'})});navigator.mediaSession.setActionHandler('pause',()=>{localToggle();act({type:'play'})});navigator.mediaSession.setActionHandler('nexttrack',()=>act({type:'skip'}))}
-document.addEventListener('visibilitychange',()=>{if(!document.hidden)sync()});
+let mediaMetadataKey=null,mediaPlaybackState='';
+function updateMediaSession(){
+ if(!navigator.mediaSession)return;const ms=navigator.mediaSession,c=S?.cur;
+ const metadataKey=c?[c.videoId,c.title,c.channel,c.artwork].join('|'):'';
+ if(metadataKey!==mediaMetadataKey){mediaMetadataKey=metadataKey;if(typeof MediaMetadata==='function')ms.metadata=c?new MediaMetadata({title:c.title,artist:c.channel||'Vibe Room',album:'Vibe Room',artwork:c.artwork?[{src:c.artwork}]:[]}):null}
+ const playbackState=c?(c.playing?'playing':'paused'):'none';
+ if(playbackState!==mediaPlaybackState){mediaPlaybackState=playbackState;ms.playbackState=playbackState}
+ if(!c||typeof ms.setPositionState!=='function'||!P?.getDuration)return;
+ const duration=P.getDuration(),position=est();
+ if(Number.isFinite(duration)&&duration>0&&Number.isFinite(position))ms.setPositionState({duration,position:Math.max(0,Math.min(duration,position)),playbackRate:c.speed||1})
+}
+if('mediaSession'in navigator){
+ const ms=navigator.mediaSession,setAction=(name,handler)=>{try{ms.setActionHandler(name,handler)}catch(e){if(e.name!=='NotSupportedError'&&e.name!=='TypeError')throw e}};
+ const canControl=()=>!!S&&(S.hostId===me.id||S.co.includes(me.id)||(S.ctrl||[]).includes(me.id));
+ const seekTo=position=>{if(canControl()&&S?.cur&&Number.isFinite(position))act({type:'seek',pos:Math.max(0,position)})};
+ setAction('play',()=>{if(S?.cur&&!S.cur.playing){[P,P2].forEach(pl=>pl&&pl.unMute&&pl.unMute());localToggle();act({type:'play'})}});
+ setAction('pause',()=>{if(S?.cur?.playing){localToggle();act({type:'play'})}});
+ setAction('nexttrack',()=>{if(canControl())act({type:'skip'})});
+ setAction('previoustrack',()=>{if(canControl())act({type:'prev'})});
+ setAction('seekto',e=>seekTo(e.seekTime));
+ setAction('seekbackward',e=>seekTo(est()-(e.seekOffset||10)));
+ setAction('seekforward',e=>seekTo(est()+(e.seekOffset||10)))
+}
+const resumeRoom=()=>{if(document.hidden||!joined)return;if(socket.connected)rejoinRoom();else socket.connect()};
+document.addEventListener('visibilitychange',resumeRoom);window.addEventListener('pageshow',resumeRoom);
