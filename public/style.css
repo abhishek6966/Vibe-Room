@@ -1012,3 +1012,110 @@ input,select,textarea{font-size:16px!important}
 .likes-list li.empty{justify-content:center;color:#b9a8e8}
 #tabs{bottom:var(--sab,env(safe-area-inset-bottom,0px))!important;border-radius:26px 26px 0 0!important}
 .stage .viz{display:none!important} /* v43: equalizer bars removed from the player card */
+
+/* v44: bottom navigation — all four corners rounded. In v43 the bar was
+   docked at the very bottom with square bottom corners (26px 26px 0 0);
+   Abhi wants the bottom curved too, not flat/straight. It stays docked
+   at the very bottom of the screen — only the bottom corners are now
+   rounded to match the top. */
+#tabs{border-radius:26px!important}
+
+/* v45: bottom navigation corners follow the DEVICE's bottom screen shape.
+   The screen itself has rounded bottom corners on modern iPhones (plus a
+   home indicator), so the bar's bottom corners now grow with the safe-area
+   bottom inset: 26px on a flat device, ~43px on a notched iPhone
+   (26px + 34px/2), curving like the device's own rounded bottom screen
+   instead of one fixed radius. Top corners stay 26px. */
+#tabs{border-bottom-left-radius:calc(26px + var(--sab,env(safe-area-inset-bottom,0px))*0.5)!important;border-bottom-right-radius:calc(26px + var(--sab,env(safe-area-inset-bottom,0px))*0.5)!important}
+
+/* v45: HISTORY panel — rooms removed + premium close button.
+   The Rooms section (with its Rejoin buttons) is gone — the panel now
+   shows only Songs played (Copy link / Add to queue). The room history
+   itself is NOT deleted: it still powers the landing "Recent rooms" and
+   the refresh auto-rejoin; it is simply not listed here any more.
+   The ✕ close button had the same stretched-oval bug as the sound popup
+   (the general button rule min-height:44px overrode its 28px height, so
+   it rendered 28×44). It is now a perfect circle, flex-centred, with a
+   premium glass gradient + soft ring, and the whole panel is polished:
+   a richer gradient, a soft top highlight, refined song rows and a
+   proper pill Clear button. */
+#hist-x{width:30px!important;height:30px!important;min-height:30px!important;padding:0!important;line-height:1!important;display:flex!important;align-items:center!important;justify-content:center!important;border:1px solid rgba(255,255,255,.28)!important;border-radius:50%!important;background:linear-gradient(135deg,rgba(255,255,255,.22),rgba(255,255,255,.07))!important;color:#fff!important;font-size:.8rem!important;box-shadow:0 2px 10px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.35)!important}
+#hist-x:active{transform:scale(.92)}
+.hist-panel{background:linear-gradient(165deg,#3a1570,#1c0738 65%,#150330)!important;box-shadow:0 24px 60px rgba(0,0,0,.65),inset 0 1px 0 rgba(255,255,255,.18)!important}
+.hist-head h3{background:linear-gradient(90deg,#fff,#ffd7f2);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.hist-panel h4{color:#d9c8ff!important}
+.hist-item{background:linear-gradient(120deg,rgba(255,255,255,.09),rgba(255,255,255,.05))!important;border:1px solid rgba(255,255,255,.14)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.08)!important}
+#hist-clear{display:block;width:100%;margin-top:14px;padding:9px;border:1px solid rgba(255,255,255,.18)!important;border-radius:999px!important;background:rgba(255,255,255,.07)!important;color:#e6dbff!important;font-size:.8rem!important;font-weight:700!important;cursor:pointer}
+
+/* v45: SCAN QR TO JOIN — premium camera scanner on the landing page.
+   The Scan button sits under the code box (same width language as the
+   Create button, glass instead of gradient so Create stays the hero).
+   The modal is a dark glass card: live camera video, a viewfinder with
+   four glowing corner brackets + a sweeping scan line, a round ✕ (same
+   perfect-circle fix as the other close buttons) and a pill Cancel. */
+.scan-btn{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;min-height:48px;margin-top:12px;border:1px solid rgba(255,255,255,.28);border-radius:999px;background:linear-gradient(120deg,rgba(255,255,255,.16),rgba(255,255,255,.06));color:#fff;font-size:.95rem;font-weight:700;cursor:pointer;box-shadow:inset 0 1px 0 rgba(255,255,255,.25),0 6px 18px rgba(0,0,0,.3)}
+.scan-btn:active{transform:scale(.98)}
+.scan-btn svg{flex:none;color:#7ee7ff}
+.qr-modal{position:fixed;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(5,0,20,.72);backdrop-filter:blur(6px)}
+.qr-modal[hidden]{display:none}
+.qr-card{position:relative;width:min(360px,calc(100vw - 40px));padding:20px 18px 16px;border-radius:26px;background:linear-gradient(165deg,#3a1570,#1c0738 65%,#150330);border:1px solid rgba(255,255,255,.22);box-shadow:0 24px 60px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.18);text-align:center}
+#qr-x{position:absolute;top:12px;right:12px;width:30px;height:30px;min-height:30px;padding:0;line-height:1;display:flex;align-items:center;justify-content:center;border:1px solid rgba(255,255,255,.28);border-radius:50%;background:linear-gradient(135deg,rgba(255,255,255,.22),rgba(255,255,255,.07));color:#fff;font-size:.8rem;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.35)}
+#qr-x:active{transform:scale(.92)}
+.qr-card h3{margin:4px 0 4px;font-size:1.1rem;font-weight:800;color:#fff}
+.qr-card p{margin:0 0 14px;font-size:.86rem;line-height:1.45;color:#cdbcf5}
+.qr-view{position:relative;width:100%;aspect-ratio:1;border-radius:20px;overflow:hidden;background:#000;border:1px solid rgba(255,255,255,.2)}
+#qr-video{width:100%;height:100%;object-fit:cover;display:block}
+.qr-frame{position:absolute;inset:0;pointer-events:none}
+.qr-frame i{position:absolute;width:34px;height:34px;border:3px solid #7ee7ff;filter:drop-shadow(0 0 6px rgba(126,231,255,.8))}
+.qr-frame .c-tl{top:16px;left:16px;border-right:0;border-bottom:0;border-top-left-radius:14px}
+.qr-frame .c-tr{top:16px;right:16px;border-left:0;border-bottom:0;border-top-right-radius:14px}
+.qr-frame .c-bl{bottom:16px;left:16px;border-right:0;border-top:0;border-bottom-left-radius:14px}
+.qr-frame .c-br{bottom:16px;right:16px;border-left:0;border-top:0;border-bottom-right-radius:14px}
+.qr-line{position:absolute;left:10%;right:10%;height:2px;border-radius:2px;background:linear-gradient(90deg,transparent,#ff3d71,transparent);box-shadow:0 0 12px rgba(255,61,113,.9);animation:qrScan 2.2s ease-in-out infinite alternate}
+@keyframes qrScan{from{top:14%}to{top:84%}}
+.qr-msg{min-height:1.2em;margin:12px 0 8px!important;font-size:.82rem!important;color:#ffb020!important}
+.qr-cancel{width:100%;min-height:44px;border:1px solid rgba(255,255,255,.18);border-radius:999px;background:rgba(255,255,255,.07);color:#e6dbff;font-size:.9rem;font-weight:700;cursor:pointer}
+
+/* v45: notifications are swipeable — drag a toast UP to dismiss it early.
+   touch-action:none lets the swipe reach the toast instead of the browser
+   treating it as a page scroll; the grab cursor hints it can be dragged. */
+.toast{touch-action:none!important;cursor:grab!important;user-select:none!important;-webkit-user-select:none!important}
+.toast:active{cursor:grabbing!important}
+
+/* v45: SONG TITLE MARQUEE + PREMIUM FONTS.
+   The title is now Sora (a modern geometric premium font, loaded from
+   Google Fonts) instead of Poppins, with tighter tracking and a soft
+   gradient + glow so it reads as the hero of the player card. Headings
+   across the app (hero, History, QR card, panel titles) use Sora too;
+   body text stays Poppins.
+   Marquee: #tt-in is the scrolling text. When the title overflows its
+   box, #tt gets .scroll and the text slowly drifts left to --tt-dx,
+   pauses at the end, and drifts back (ping-pong, alternate). The
+   keyframes hold still at both ends so it never jumps. Short titles
+   never get .scroll and stay still. */
+#tt{font-family:"Sora","Poppins",system-ui,sans-serif!important;font-weight:700!important;letter-spacing:-.01em!important;color:#fff!important}
+#tt-in{display:inline-block;white-space:nowrap;will-change:transform}
+#tt.scroll #tt-in{animation:ttScroll var(--tt-dur,6s) ease-in-out infinite alternate}
+@keyframes ttScroll{0%,12%{transform:translateX(0)}88%,100%{transform:translateX(calc(-1*var(--tt-dx,0px)))}}
+@media (prefers-reduced-motion: reduce){#tt.scroll #tt-in{animation:none}}
+.hero-title,.hist-head h3,.qr-card h3,.snd-card h3,.gate-panel h1{font-family:"Sora","Poppins",system-ui,sans-serif!important;letter-spacing:-.01em!important}
+
+/* v45: HEADER — the full room code is always visible, even as more users
+   join. Two changes. (1) The room title now shows just the 6-letter code
+   (the "● Live Room" line below it already says it is a live room), and
+   .rt never shrinks or truncates — the code is always exactly 6 chars,
+   so it has a fixed, predictable width. (2) The listener pill used to
+   show up to 8 avatar circles, so every new user made the pill wider
+   and squeezed the room code further until it vanished entirely (measured:
+   with 20 users the code was 0px wide). It now shows at most 3 avatars;
+   the "N listening" text still gives the exact total, so no information
+   is lost. Nothing else in the header changes — same logo, same Live
+   Room line, same count, same buttons. */
+header .rt{flex:none!important;min-width:0!important}
+header #rn{white-space:nowrap!important;overflow:visible!important;text-overflow:clip!important}
+@media(max-width:430px){
+  header{gap:2px!important}
+  .who .pill-who{padding:3px 8px 3px 3px!important;gap:5px!important}
+  .who .pill-who small{font-size:.72rem!important}
+  #likes-btn,#hist,#share,#lock{width:30px!important;height:30px!important;min-height:30px!important}
+}

@@ -14,6 +14,8 @@
 
 **Open a live room right now — no sign-up, no download:**
 
+### 👉 [Join the live room — vibe-room-0isd.onrender.com/room/7AG9RD](https://vibe-room-0isd.onrender.com/room/7AG9RD)
+
 Prefer to start fresh? Open the app and create your own room:
 
 ### 👉 [vibe-room-0isd.onrender.com](https://vibe-room-0isd.onrender.com/)

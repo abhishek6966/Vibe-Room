@@ -115,7 +115,7 @@ io.on('connection',s=>{let r=null,me=null,lastVideoCheck=0;
     case'react':if(now()-(me.rl||0)<250)return;me.rl=now();io.to(r.code).emit('react',{e:String(a.e).slice(0,4),c:me.color});break;
     case'mode':if(!host)return;r.mode=a.m==='karaoke'?'karaoke':'music';say(r,r.mode==='karaoke'?'Karaoke mode is on':'Karaoke mode is off');push(r);break;
     case'adder':if(!host||!r.users.has(a.id))return;r.adders.has(a.id)?r.adders.delete(a.id):r.adders.add(a.id);push(r);break;
-    case'sing':{const t=r.cur&&r.cur.tid===a.tid?r.cur:r.queue.find(x=>x.tid===a.tid);if(!t||t.singerId)return;const i=t.reqs.findIndex(x=>x.id===id);i<0?t.reqs.push({id,name:me.name}):t.reqs.splice(i,1);push(r);break}
+    case'sing':{const t=r.cur&&r.cur.tid===a.tid?r.cur:r.queue.find(x=>x.tid===a.tid);if(!t||t.singerId)return;const i=t.reqs.findIndex(x=>x.id===id);if(i<0){t.reqs.push({id,name:me.name});say(r,me.name+' wants to sing '+t.title)}else t.reqs.splice(i,1);push(r);break}
     case'assign':{const t=r.cur&&r.cur.tid===a.tid?r.cur:r.queue.find(x=>x.tid===a.tid);if(!M||!t)return;const u=a.id&&r.users.get(a.id);t.singerId=u?u.id:null;t.singerName=u?u.name:null;t.reqs=t.reqs.filter(x=>x.id!==a.id);t.live=false;if(u)say(r,u.name+' will sing '+t.title);push(r);break}
     case'live':if(r.cur&&r.cur.singerId===id){r.cur.live=!!a.on;push(r)}break;
     /* v27: the song's total length is shared, not per-device. Whichever

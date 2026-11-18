@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-title" content="Vibe Room">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/style.css"></head><body>
 <div class="glow"></div>
 <div id="fx" aria-hidden="true"><div class="smoke s1"></div><div class="smoke s2"></div><div class="smoke s3"></div><div class="smoke s4"></div><div class="smoke s5"></div><div class="smoke s6"></div><div class="smoke s7"></div><div id="stars"></div><div id="fnotes"></div></div>
@@ -19,6 +19,7 @@
  <div class="chips"><span class="chip"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>No login</span><span class="chip"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>In sync</span><span class="chip"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>YouTube audio</span></div>
  <button id="create" class="big">Create a Vibe Room</button>
  <form id="jf"><label for="jc">Have a code?</label><div class="row"><input id="jc" maxlength="6" autocomplete="off" placeholder="VIBE99"><button>Join</button></div></form>
+ <button id="scan-qr" type="button" class="scan-btn"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><rect x="7" y="7" width="10" height="10" rx="2"/><line x1="7" y1="12" x2="17" y2="12"/></svg> Scan QR code to join</button>
  <p class="steps">Create a room, share the link, paste YouTube links, listen together.</p>
  <div id="recent"></div>
 </main>
@@ -40,13 +41,12 @@
       back to the queue. -->
  <div id="hist-panel" class="hist-panel" hidden>
   <div class="hist-head"><h3>History</h3><button id="hist-x" type="button" aria-label="Close history">✕</button></div>
-  <h4>Rooms</h4><div id="hist-rooms" class="hist-list"></div>
   <h4>Songs played</h4><div id="hist-songs" class="hist-list"></div>
   <button id="hist-clear" type="button">Clear history</button>
  </div>
  <section class="stage"><!-- v37: neon cosmic smoke, only inside this player card, behind the vinyl, tonearm, equalizer and controls. Pure CSS (no audio analysis — YouTube audio cannot be read by the page), so the pulse is a smooth rhythm tied to play/pause. --><div class="cosmic" aria-hidden="true"><i class="cb c1"></i><i class="cb c2"></i><i class="cb c3"></i><i class="cb c4"></i><i class="cb c5"></i><i class="cb c6"></i><i class="cb c7"></i><i class="cb c8"></i><i class="csmoke"></i><i class="cscrim"></i><i class="cpulse"></i><i class="cp p1"></i><i class="cp p2"></i><i class="cp p3"></i><i class="cp p4"></i><i class="cp p5"></i><i class="cp p6"></i><i class="cp p7"></i><i class="cp p8"></i></div><span class="dnote n1" aria-hidden="true"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></span><span class="dnote n2" aria-hidden="true"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></span><span class="dnote n3" aria-hidden="true"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></span><span class="dnote n4" aria-hidden="true"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></span>
   <div class="disc" id="disc"><div class="label"><div id="pl"></div></div></div>
-  <h2 id="tt">Queue is empty</h2><p id="ch">Paste a YouTube link to start the room.</p><button id="addlink" type="button" hidden><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg> Add a YouTube link</button><p class="by" id="by"></p>
+  <h2 id="tt"><span id="tt-in">Queue is empty</span></h2><p id="ch">Paste a YouTube link to start the room.</p><button id="addlink" type="button" hidden><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg> Add a YouTube link</button><p class="by" id="by"></p>
   <input type="range" id="sc" min="0" max="1000" value="0" aria-label="Seek"><div class="time"><span id="t1">0:00</span><span id="sync" title="In sync">● In Sync</span><span id="t2">0:00</span></div>
   <div class="ctl"><button id="pp" aria-label="Play or pause">Play</button><button id="sk">Skip</button><div class="vol"><button id="vm" class="spk" type="button" aria-label="Mute" aria-pressed="false"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/></svg></button><input id="vol" type="range" min="0" max="100" value="80" aria-label="Volume"><button id="vmx" class="spk" type="button" aria-label="Set volume to 100%"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button></div></div>
 </section>
@@ -84,5 +84,23 @@
   <button id="snd-later" class="snd-later" type="button">Not now</button>
  </div>
 </div><div id="toasts" aria-live="polite"></div><div id="fl"></div>
+<!-- v45: QR scanner — join a room by pointing the camera at its invite QR code.
+     Opens the camera (back camera on phones), shows a live viewfinder, and
+     decodes the QR with the local jsQR library. No photo is taken or sent. -->
+<div id="qr-modal" class="qr-modal" hidden role="dialog" aria-label="Scan QR code to join a room">
+ <div class="qr-card">
+  <button id="qr-x" type="button" aria-label="Close scanner">✕</button>
+  <h3>Scan a room QR code</h3>
+  <p>Point your camera at the QR code from a room invite.</p>
+  <div class="qr-view">
+   <video id="qr-video" playsinline muted></video>
+   <div class="qr-frame" aria-hidden="true"><i class="c-tl"></i><i class="c-tr"></i><i class="c-bl"></i><i class="c-br"></i><span class="qr-line"></span></div>
+   <canvas id="qr-canvas" hidden></canvas>
+  </div>
+  <p id="qr-msg" class="qr-msg" role="status" aria-live="polite"></p>
+  <button id="qr-cancel" type="button" class="qr-cancel">Cancel</button>
+ </div>
+</div>
 <script src="/qrcode.min.js"></script>
+<script src="/jsqr.min.js"></script>
 <script src="/socket.io/socket.io.js"></script><script src="/app.js"></script><script src="/karaoke.js"></script><script src="/extras.js"></script><script src="/starmaker.js"></script></body></html>

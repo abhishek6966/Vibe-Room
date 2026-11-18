@@ -76,7 +76,7 @@ const newId=()=>crypto.randomUUID?crypto.randomUUID():Array.from(crypto.getRando
 /* Migrate the old shared ID once, then keep each tab's identity in sessionStorage. */
 const getId=()=>{if(T.vid)return T.vid;const old=L.vid;if(old){L.removeItem('vid');return T.vid=old}return T.vid=newId()};
 const me={id:getId(),name:L.vname||'Guest'+(10+Math.random()*89|0),color:L.vcolor||(L.vcolor=hex())};
-const socket=io();let S=null,P=null,P2=null,joined=false,cv=null,cv2=null,recv=0,seeking=false,rtt=0,clockOff=0,pendT=null,needCatchup=false,lastSeek=0;
+const socket=io();let S=null,P=null,P2=null,joined=false,cv=null,cv2=null,recv=0,seeking=false,rtt=0,clockOff=0,pendT=null,needCatchup=false,lastSeek=0,lastRate=null;
 /* v13: measure the round-trip to this device so the position estimate can
    subtract half of it (the one-way delay) — otherwise every listener lags
    by their own network delay. Smoothed so one slow packet can't jerk it. */
@@ -142,13 +142,12 @@ const recordSong=()=>{const c=S?.cur;if(!c||!c.videoId||c.tid===lastHistTid)retu
 /* the three-dots history menu */
 const histPanel=$('#hist-panel');
 const renderHist=()=>{
- const rooms=getRooms(),songs=getSongs();
- $('#hist-rooms').innerHTML=rooms.length?rooms.map(r=>`<div class="hist-item"><div class="ht"><b>Room ${esc(r.code)}</b><small>${histWhen(r.at)}</small></div><button class="go" data-rejoin="${esc(r.code)}">Rejoin</button></div>`).join(''):'<div class="hist-empty">No rooms yet — create or join one.</div>';
+ const songs=getSongs();
  $('#hist-songs').innerHTML=songs.length?songs.map(s=>`<div class="hist-item"><div class="ht"><b>${esc(s.title)}</b><small>${histWhen(s.at)}${s.room?' · Room '+esc(s.room):''}</small></div><button data-copy="${esc(s.id)}">Copy link</button><button class="go" data-add="${esc(s.id)}">Add to queue</button></div>`).join(''):'<div class="hist-empty">No songs played yet.</div>'};
 $('#hist').onclick=e=>{e.stopPropagation();renderHist();histPanel.hidden=!histPanel.hidden};
 $('#hist-x').onclick=()=>{histPanel.hidden=true};
 document.addEventListener('click',e=>{if(!histPanel.hidden&&!e.target.closest('#hist-panel')&&!e.target.closest('#hist'))histPanel.hidden=true});
-$('#hist-clear').onclick=()=>{histSet('rooms',[]);histSet('songs',[]);try{delete L.recent}catch{};renderHist();toast('History cleared')};
+$('#hist-clear').onclick=()=>{histSet('songs',[]);renderHist();toast('History cleared')};
 const fallbackCopy=(text,done)=>{const ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();try{document.execCommand('copy');done()}catch{}ta.remove()};
 histPanel.addEventListener('click',e=>{
  const rj=e.target.closest('[data-rejoin]');if(rj){location.href='/room/'+rj.dataset.rejoin;return}
@@ -157,7 +156,18 @@ histPanel.addEventListener('click',e=>{
   if(navigator.clipboard?.writeText)navigator.clipboard.writeText(u).then(done,()=>fallbackCopy(u,done));else fallbackCopy(u,done);return}
  const ad=e.target.closest('[data-add]');if(ad){act({type:'add',url:'https://youtu.be/'+ad.dataset.add});histPanel.hidden=true;toast('Adding to the queue…')}});
 let toastTimer,videoCheckTimer=0,videoCheckSequence=0,checkedVideoUrl='',checkedVideoStatus='';
-const toast=m=>{const box=$('#toasts');clearTimeout(toastTimer);box.textContent='';const d=document.createElement('div');d.className='toast';d.textContent=m;box.append(d);toastTimer=setTimeout(()=>{if(d.parentNode===box)d.remove()},3500)};
+const toast=m=>{const box=$('#toasts');clearTimeout(toastTimer);box.textContent='';const d=document.createElement('div');d.className='toast';d.textContent=m;box.append(d);toastTimer=setTimeout(()=>{if(d.parentNode===box)d.remove()},3500);
+ /* v45: swipe a notification UP to dismiss it early — the toast follows
+    your finger as you drag it up and fades, and past ~50px it flies off
+    and is gone. A short drag snaps it back. Works with a finger (touch)
+    and with a mouse drag. The 3.5s auto-dismiss still applies if you
+    leave it alone. */
+ let sy=null,dragging=false;
+ const dismiss=()=>{clearTimeout(toastTimer);d.style.transition='transform .22s ease-out,opacity .22s ease-out';d.style.transform='translateY(-120%)';d.style.opacity='0';setTimeout(()=>d.remove(),220)};
+ d.addEventListener('pointerdown',e=>{sy=e.clientY;dragging=true;d.style.animation='none';try{d.setPointerCapture(e.pointerId)}catch(_){}});
+ d.addEventListener('pointermove',e=>{if(!dragging||sy===null)return;const dy=e.clientY-sy;if(dy<0){d.style.transform='translateY('+dy+'px)';d.style.opacity=String(Math.max(.25,1+dy/160))}});
+ const end=e=>{if(!dragging)return;dragging=false;const dy=sy===null?0:e.clientY-sy;sy=null;if(dy<-50){dismiss()}else{d.style.transition='transform .22s ease-out,opacity .22s ease-out';d.style.transform='';d.style.opacity='';setTimeout(()=>{d.style.transition=''},230)}};
+ d.addEventListener('pointerup',end);d.addEventListener('pointercancel',end)};
 function renderVideoCheck(result){
  const status=result?.status||'error',messages={
   checking:'Checking YouTube embed restrictions…',
@@ -184,6 +194,44 @@ const showJoinError=message=>{$('#gate').classList.add('gate-error');$('#gt').te
 if(!code){$('#home').hidden=false;
  $('#create').onclick=()=>socket.emit('create',me,r=>location.href='/room/'+r.code);
  $('#jf').onsubmit=e=>{e.preventDefault();const c=$('#jc').value.trim().toUpperCase();if(c)location.href='/room/'+c};
+ /* v45: SCAN QR TO JOIN — opens the camera (back camera on phones) in a
+    premium viewfinder and decodes the room invite QR with the local jsQR
+    library. No photo is taken, stored or sent anywhere — the camera feed
+    is read frame-by-frame in the page and stopped the moment the modal
+    closes. A scanned invite is just a room URL (/room/XXXXXX) or a bare
+    6-letter code; anything else gets a polite "not a Vibe Room invite"
+    message and keeps scanning. Camera needs https (the live site) or
+    localhost; if it is denied or unavailable, the message says so and
+    the code box stays as the fallback. */
+ let qrStream=null,qrRaf=null;
+ const qrModal=$('#qr-modal'),qrVideo=$('#qr-video'),qrMsg=$('#qr-msg');
+ const closeQrScan=()=>{if(qrRaf){cancelAnimationFrame(qrRaf);qrRaf=null}if(qrStream){qrStream.getTracks().forEach(t=>t.stop());qrStream=null}if(qrVideo)qrVideo.srcObject=null;if(qrModal)qrModal.hidden=true};
+ const handleQrCode=text=>{
+   const m=text.match(/\/room\/([A-Za-z0-9]{6})/i)||text.trim().match(/^([A-Za-z0-9]{6})$/);
+   if(m){closeQrScan();location.href='/room/'+m[1].toUpperCase();return}
+   if(qrMsg)qrMsg.textContent='That QR code is not a Vibe Room invite — try another one.'};
+ const scanLoop=()=>{
+   if(qrVideo&&qrVideo.readyState===qrVideo.HAVE_ENOUGH_DATA){
+     const cv=$('#qr-canvas'),ctx=cv.getContext('2d');
+     cv.width=qrVideo.videoWidth;cv.height=qrVideo.videoHeight;
+     ctx.drawImage(qrVideo,0,0,cv.width,cv.height);
+     try{const img=ctx.getImageData(0,0,cv.width,cv.height);
+       const code=window.jsQR&&jsQR(img.data,img.width,img.height);
+       if(code&&code.data){handleQrCode(code.data);return}}catch(e){}
+   }
+   qrRaf=requestAnimationFrame(scanLoop)};
+ const openQrScan=async()=>{
+   if(!qrModal)return;qrModal.hidden=false;if(qrMsg)qrMsg.textContent='';
+   if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){
+     if(qrMsg)qrMsg.textContent='This browser cannot open the camera — type the 6-letter code instead.';return}
+   try{
+     qrStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
+     qrVideo.srcObject=qrStream;await qrVideo.play();scanLoop();
+   }catch(e){
+     if(qrMsg)qrMsg.textContent='Camera unavailable — please allow camera access, or type the 6-letter code instead.'}};
+ $('#scan-qr').onclick=openQrScan;
+ $('#qr-x').onclick=closeQrScan;$('#qr-cancel').onclick=closeQrScan;
+ if(qrModal)qrModal.addEventListener('click',e=>{if(e.target===qrModal)closeQrScan()});
  const rc=getRooms().slice(0,5);$('#recent').innerHTML=rc.length?'<p class="recent-title">Recent rooms</p><div class="recent-list">'+rc.map(c=>`<a href="/room/${esc(c.code)}">${esc(c.code)}</a>`).join('')+'</div>':''}
 else{$('#gate').hidden=false;$('#home-link').hidden=false;$('#gn').value=me.name;$('#gc').value=me.color.length==7?me.color:'#ff2d87';
  $('#new-room').onclick=()=>{const b=$('#new-room');b.disabled=true;b.textContent='Creating room…';socket.emit('create',me,r=>{if(!r?.code){b.disabled=false;b.textContent='Create a new room';$('#ge').textContent='Could not create a room. Please try again.';return}location.href='/room/'+r.code})};
@@ -235,7 +283,15 @@ function preloadNext(){if(!P2||!P2.cueVideoById||!S)return;const n=S.queue&&S.qu
 /* v23: re-apply the 240p cap every 2s. YouTube's adaptive streaming can creep
    the hidden player's quality up mid-song (more data = more buffering on a
    slow connection), and the cap was only applied when a track loaded. */
-setInterval(()=>capQuality(),2000);
+/* v45: the 2s capQuality interval is REMOVED — it was still cutting the audio.
+   v43 made capQuality check first, but YouTube's adaptive streaming keeps
+   raising the quality back up on a good connection, so every 2s capQuality
+   forced it back down to small — and each forced quality change gaps the
+   audio for a moment, over and over. The cap is now applied only at track
+   load (pReady / sync load / preload swap), where no audio is playing yet
+   to cut, and setPlaybackQualityRange('tiny','small') keeps adaptive
+   streaming inside the cap. A higher quality mid-song does not cut audio;
+   only a FORCED change does, so there is nothing to re-apply. */
 const est=()=>S?.cur?S.cur.pos+(S.cur.playing?(Date.now()-recv+rtt/2)/1000*(S.cur.speed||1):0):0;
 let bufSince=0;
 function sync(){if(!P||!P.loadVideoById||!S)return;const c=S.cur;if(!c){P.stopVideo?.();cv=null;needCatchup=false;return}
@@ -248,14 +304,20 @@ function sync(){if(!P||!P.loadVideoById||!S)return;const c=S.cur;if(!c){P.stopVi
   else{cv=c.videoId;if(c.playing)P.loadVideoById(c.videoId,est());else P.cueVideoById(c.videoId,est());capQuality()}
   needCatchup=true /* v17: fresh load — jump straight to the live position instead of drifting there */}
  const st=P.getPlayerState(),t=est(),now=P.getCurrentTime?.()||0,d=t-now,ad=Math.abs(d),rate=c.speed||1;
- /* v23 smooth playback: a seek throws the buffer away and stalls the song,
-    so seeks are now rare — only past 1.0s while playing (was 0.5s). Drift up
-    to 1.0s is corrected gently by nudging the speed ±15%, which never
-    interrupts the audio. That keeps everyone within about a second while the
-    song plays straight through with no mid-song stall. Never seek while the
-    player is buffering, or the stall starts all over again. */
- let target=rate;if(ad>=.15&&ad<1)target=rate*(d>0?1.15:.85);
- P.setPlaybackRate(target);
+ /* v45: no cuts, completely. Three changes. (1) Seeks are now rare — only
+    past 2.0s while playing (was 1.0s). Drift up to 2.0s is corrected gently
+    by the speed nudge, which never interrupts the audio. A seek is the
+    only thing that throws the buffer away, so the threshold is the cut.
+    (2) The playback rate is only set when it actually CHANGES — sync()
+    used to call setPlaybackRate on every run even for the same value, and
+    a rate that flips around the 0.15s threshold churns the player.
+    (3) The 2s capQuality interval is gone (see above) — it was forcing a
+    quality change every 2s whenever YouTube raised the quality, and each
+    forced change gaps the audio. Sync is now within ~2s instead of ~1s;
+    that is the price of a song that never cuts, and the user asked for
+    continuous playback above tight sync. */
+ let target=rate;if(ad>=.15&&ad<2)target=rate*(d>0?1.15:.85);
+ if(target!==lastRate){P.setPlaybackRate(target);lastRate=target}
  /* v21: while your own tap is still on its way to the server (~200ms), don't
     let the sync loop undo it — it still sees the old server state. The guard
     expires after 1s, so if the broadcast is ever lost, sync resumes normally. */
@@ -267,10 +329,10 @@ function sync(){if(!P||!P.loadVideoById||!S)return;const c=S.cur;if(!c){P.stopVi
     re-buffer, drift again and seek again in a loop (cut, play, cut, play).
     The fresh-load catch-up seek is exempt (it must jump once, immediately). */
  if(needCatchup&&(st===1||st===2)){P.seekTo(t,true);needCatchup=false;lastSeek=Date.now()}
- else if(Date.now()-lastSeek>3000){if(st===1&&ad>=1){P.seekTo(t,true);lastSeek=Date.now()}else if(st===2&&ad>.5){P.seekTo(t,true);lastSeek=Date.now()}}
+ else if(Date.now()-lastSeek>3000){if(st===1&&ad>=2){P.seekTo(t,true);lastSeek=Date.now()}else if(st===2&&ad>.5){P.seekTo(t,true);lastSeek=Date.now()}}
  const syn=$('#sync');
  if(st===3){syn.className='off';syn.textContent='● Buffering…'}
- else{const ok=ad<1;syn.className=ok?'':'off';syn.textContent=ok?'● In Sync':'● Syncing…'}}
+ else{const ok=ad<2;syn.className=ok?'':'off';syn.textContent=ok?'● In Sync':'● Syncing…'}}
 socket.on('state',s=>{S=s;recv=Date.now();
 /* v17: server clock minus this device's clock (one-way delay already removed) — used to run scheduled actions at the same instant on every device */
 clockOff=S.now+rtt/2-recv;
@@ -279,14 +341,14 @@ render();sync();updateMediaSession();preloadNext()});socket.on('say',toast);
 socket.on('react',r=>{const d=document.createElement('div');d.className='fl';d.textContent=r.e;d.style.left=(10+Math.random()*80)+'%';$('#fl').append(d);setTimeout(()=>d.remove(),2400)});
 function render(){if(!joined)return;const isH=S.hostId===me.id,M=isH||S.co.includes(me.id),C=M||(S.ctrl&&S.ctrl.includes(me.id)),can=C,c=S.cur;
  recordSong(); /* v36: every song that becomes the current track is saved to history */
- $('#rn').textContent='Room '+S.code;
- $('#who').innerHTML='<span class="pill-who">'+S.users.slice(0,8).map(u=>`<span class="av" style="background:${esc(u.color)}" title="${esc(u.name)}">${esc(u[0]=u.name[0]||'?')}</span>`).join('')+`<small>${AIC_USERS} ${S.users.length} listening</small></span>`;
+ $('#rn').textContent=S.code;
+ $('#who').innerHTML='<span class="pill-who">'+S.users.slice(0,2).map(u=>`<span class="av" style="background:${esc(u.color)}" title="${esc(u.name)}">${esc(u[0]=u.name[0]||'?')}</span>`).join('')+`<small>${AIC_USERS} ${S.users.length} listening</small></span>`;
  const lk=$('#lock');lk.hidden=!isH;lk.innerHTML=S.locked?'<span class="ic" aria-hidden="true">'+AIC_UNLOCK+'</span> <span class="tx">Open requests</span>':'<span class="ic" aria-hidden="true">'+AIC_LOCK+'</span> <span class="tx">Close requests</span>';
  $('#disc').classList.toggle('on',!!c&&c.playing);
  document.querySelector('.stage')?.classList.toggle('playing',!!c&&c.playing); /* v37: the cosmic smoke breathes harder while the music plays, calms when paused */
  if(c&&c.playing)smokeStart();else smokeStop(); /* v43: beat-reactive smoke */
  let h=0;if(c)for(const ch of c.videoId)h=(h*31+ch.charCodeAt(0))%360;document.documentElement.style.setProperty('--h',h);
- $('#tt').textContent=c?c.title:'Queue is empty';$('#ch').textContent=c?c.channel:'Paste a YouTube link to start the room.';$('#by').textContent=c?'Added by '+c.by:'';$('#addlink').hidden=!!c; /* v40: the empty-state button shows only while the queue is empty */
+ $('#tt-in').textContent=c?c.title:'Queue is empty';fitTitle();$('#ch').textContent=c?c.channel:'Paste a YouTube link to start the room.';$('#by').textContent=c?'Added by '+c.by:'';$('#addlink').hidden=!!c; /* v40: the empty-state button shows only while the queue is empty */
  $('#pp').innerHTML=c&&c.playing?IC_PAUSE:IC_PLAY;$('#pp').disabled=!can;$('#sk').innerHTML=IC_NEXT;$('#sk').disabled=!can||!c;$('#sk').setAttribute('aria-label',C?'Skip':'Skip (host control only)');$('#sk').title=C?'Skip to next track':'Only the host, co-hosts, or authorized controllers can skip';$('#sc').disabled=!can||!c;
  $('#au').placeholder=C?'Paste a YouTube link…':'Paste a YouTube link to request it';$('#af button').textContent=C?'Add':'Request';
  /* v20: song requests — a guest's link waits here until the host approves it (into the queue) or rejects it (gone) */
@@ -409,8 +471,23 @@ if('mediaSession'in navigator){
  setAction('seekbackward',e=>seekTo(est()-(e.seekOffset||10)));
  setAction('seekforward',e=>seekTo(est()+(e.seekOffset||10)))
 }
-const resumeRoom=()=>{if(document.hidden||!joined)return;if(socket.connected)rejoinRoom();else socket.connect()};
-document.addEventListener('visibilitychange',resumeRoom);window.addEventListener('pageshow',resumeRoom);
+const resumeRoom=()=>{if(document.hidden||!joined)return;if(socket.connected)rejoinRoom();else socket.connect();keepPlaying()};
+/* v45: SONG TITLE MARQUEE — a long song name slowly scrolls in the player
+   card instead of being cut off with "…". fitTitle() measures the title
+   against its box; if it overflows, it sets --tt-dx (how far to scroll)
+   and --tt-dur (slow: ~30px per second) and adds .scroll, which runs a
+   ping-pong animation that drifts left, pauses at the end, and drifts
+   back. Short titles fit and stay still. Re-runs on resize, since the
+   box width changes with the screen. */
+function fitTitle(){const t=$('#tt'),inner=$('#tt-in');if(!t||!inner)return;
+ const over=inner.scrollWidth-t.clientWidth;
+ if(over>4){t.style.setProperty('--tt-dx',over+'px');t.style.setProperty('--tt-dur',(over/30).toFixed(1)+'s');t.classList.add('scroll')}
+ else{t.classList.remove('scroll');t.style.removeProperty('--tt-dx');t.style.removeProperty('--tt-dur')}}
+window.addEventListener('resize',()=>{clearTimeout(fitTitle._t);fitTitle._t=setTimeout(fitTitle,150)});
+const keepPlaying=()=>{if(!S?.cur?.playing||!P)return;try{if(P.unMute)P.unMute()}catch(e){}try{if(P.getPlayerState&&P.getPlayerState()!==1&&P.playVideo)P.playVideo()}catch(e){}try{updateMediaSession()}catch(e){}};
+document.addEventListener('visibilitychange',()=>{if(document.hidden)keepPlaying();else resumeRoom()});
+window.addEventListener('pagehide',keepPlaying);
+window.addEventListener('pageshow',resumeRoom);
 /* v29: installable app — register the service worker so the app shell loads
    fast and the app can be added to the home screen. It never caches rooms or
    live data, so a room is never stale. */

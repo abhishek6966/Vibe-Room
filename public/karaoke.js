@@ -39,8 +39,29 @@ function apply(){K.querySelectorAll('[data-fx]').forEach(b=>b.classList.toggle('
 function setFx(k){cfg={...FX[k][1],dn:cfg.dn,fx:k};apply()}
 K.oninput=e=>{const k=e.target.dataset.k;if(k){cfg[k]=+e.target.value;cfg.fx='custom';apply()}};
 const bq=(t,f,g)=>{const n=AC.createBiquadFilter();n.type=t;n.frequency.value=f;if(g)n.Q.value=g;return n},gn=v=>{const n=AC.createGain();n.gain.value=v;return n};
-async function micStart(){const st=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
- AC=new AudioContext();await AC.resume();G={st,hp:bq('highpass',90),gate:gn(1),an:AC.createAnalyser(),lo:bq('lowshelf',200),mi:bq('peaking',1500,1),hi:bq('highshelf',5000),lp:bq('lowpass',20000),comp:AC.createDynamicsCompressor(),
+async function micStart(){
+ /* v45: the singer's voice sounded to NOBODY — not to the singer (even
+    with "Hear myself"), not to any listener or the host. Root cause: the
+    AudioContext was created AFTER awaiting getUserMedia (the mic
+    permission prompt). By then the "Start singing" tap gesture was over,
+    and on iOS a context resumed outside a gesture stays "suspended" —
+    which silences the WHOLE Web Audio chain: the mic goes in, nothing
+    comes out of g.out, so the monitor is silent AND the WebRTC stream
+    carries silence. Fix: create + resume the context FIRST, synchronously
+    inside the tap, before any await. Then get the mic. */
+ AC=new AudioContext();
+ const resumeP=AC.resume();
+ let st;
+ try{st=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}})}
+ catch(e){try{await AC.close()}catch(_){}AC=null;throw e}
+ await resumeP.catch(()=>{});
+ if(AC.state!=='running'){await AC.resume().catch(()=>{})}
+ /* Safety net: if the context is STILL suspended (a strict browser),
+    the singer's next tap anywhere resumes it — same pattern as the
+    voice-playback retry. Without this, a suspended context is silent
+    forever with no way to recover. */
+ if(AC.state!=='running'){const r=()=>{AC&&AC.state!=='running'&&AC.resume().catch(()=>{})};document.addEventListener('pointerdown',r,{once:true})}
+ G={st,hp:bq('highpass',90),gate:gn(1),an:AC.createAnalyser(),lo:bq('lowshelf',200),mi:bq('peaking',1500,1),hi:bq('highshelf',5000),lp:bq('lowpass',20000),comp:AC.createDynamicsCompressor(),
  dry:gn(1),rv:AC.createConvolver(),revG:gn(0),dl:AC.createDelay(1),fb:gn(.3),ec:gn(0),out:gn(1),mon:gn(0),cr:gn(0),dest:AC.createMediaStreamDestination()};
  const g=G;g.dl.delayTime.value=.28;g.an.fftSize=512;AC.createMediaStreamSource(st).connect(g.hp);g.hp.connect(g.an);
  g.hp.connect(g.gate);g.gate.connect(g.lo);g.lo.connect(g.mi);g.mi.connect(g.hi);g.hi.connect(g.lp);g.lp.connect(g.comp);g.comp.connect(g.dry);g.dry.connect(g.out);
