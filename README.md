@@ -111,6 +111,7 @@ Microphone access requires HTTPS, except on `localhost`, and the singer must gra
 - The volume slider and speaker buttons control local playback volume; the low-volume button mutes/restores the previous level, and the high-volume button sets it to 100%.
 - Host and co-host controls are available by default. The host may grant control to a guest. Other guests can request tracks; the host must approve a request before it enters the queue.
 - On browsers that support the Media Session API, Vibe Room publishes track metadata and lock-screen play, pause, skip, previous, and seek actions. Returning from a suspended page triggers a room reconnect and state resync.
+- Each listener uses one YouTube player. If the browser blocks autoplay, Vibe Room offers a tap-to-enable retry and shows YouTube player errors locally.
 - Background playback is controlled by the browser and operating system. In particular, iOS Safari and Home Screen web apps may suspend YouTube embeds or block audio while locked; a web app cannot guarantee Spotify-like uninterrupted playback or controls in every locked-screen condition.
 - If the host leaves explicitly, host duties transfer immediately; after an unexpected disconnect, succession waits 30 seconds.
 - Rooms are held in memory and are not persisted to a database. They are removed 24 hours after becoming empty.

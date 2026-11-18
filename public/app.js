@@ -4,7 +4,7 @@ const newId=()=>crypto.randomUUID?crypto.randomUUID():Array.from(crypto.getRando
 /* Migrate the old shared ID once, then keep each tab's identity in sessionStorage. */
 const getId=()=>{if(T.vid)return T.vid;const old=L.vid;if(old){L.removeItem('vid');return T.vid=old}return T.vid=newId()};
 const me={id:getId(),name:L.vname||'Guest'+(10+Math.random()*89|0),color:L.vcolor||(L.vcolor=hex())};
-const socket=io();let S=null,P=null,P2=null,joined=false,cv=null,cv2=null,recv=0,seeking=false,rtt=0,clockOff=0,pendT=null,needCatchup=false;
+const socket=io();let S=null,P=null,joined=false,cv=null,recv=0,seeking=false,rtt=0,clockOff=0,pendT=null,needCatchup=false,playbackWaitSince=0;
 /* v13: measure the round-trip to this device so the position estimate can
    subtract half of it (the one-way delay) — otherwise every listener lags
    by their own network delay. Smoothed so one slow packet can't jerk it. */
@@ -31,7 +31,7 @@ function renderVideoCheck(result){
 const volumeOnIcon=$('#vm').innerHTML,volumeMutedIcon='<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="17" y1="9" x2="22" y2="14"/><line x1="22" y1="9" x2="17" y2="14"/></svg>';
 let volume=80,lastVolume=80,volumeMuted=false;
 function applyVolume(pl){if(!pl)return;if(volumeMuted){pl.setVolume?.(0);pl.mute?.()}else{pl.setVolume?.(volume);pl.unMute?.()}}
-function setVolume(value){volume=Math.max(0,Math.min(100,Math.round(Number(value)||0)));if(volume>0)lastVolume=volume;volumeMuted=volume===0;$('#vol').value=String(volume);[P,P2].forEach(applyVolume);$('#vm').innerHTML=volumeMuted?volumeMutedIcon:volumeOnIcon;$('#vm').setAttribute('aria-label',volumeMuted?'Unmute':'Mute');$('#vm').setAttribute('aria-pressed',String(volumeMuted))}
+function setVolume(value){volume=Math.max(0,Math.min(100,Math.round(Number(value)||0)));if(volume>0)lastVolume=volume;volumeMuted=volume===0;$('#vol').value=String(volume);applyVolume(P);$('#vm').innerHTML=volumeMuted?volumeMutedIcon:volumeOnIcon;$('#vm').setAttribute('aria-label',volumeMuted?'Unmute':'Mute');$('#vm').setAttribute('aria-pressed',String(volumeMuted))}
 /* clean line icons (Feather-style) for the header, like the mockup */
 const AIC=(p)=>'<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+p+'</svg>';
 const AIC_LOCK=AIC('<rect x="4" y="10" width="16" height="11" rx="2.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/><circle cx="12" cy="15" r="1"/><path d="M12 16v2"/>');
@@ -55,33 +55,26 @@ else{$('#gate').hidden=false;$('#home-link').hidden=false;$('#gn').value=me.name
  const s=document.createElement('script');s.src='https://www.youtube.com/iframe_api';document.head.append(s)}
 window.onYouTubeIframeAPIReady=()=>{window.ytr=1};
 function pReady(e){applyVolume(e.target);capQuality();sync()}
-function pState(e){if(e.target!==P)return;if(e.data===0&&S?.cur)act({type:'ended',v:S.cur.videoId});if(e.data===1)$('#audio-unlock').hidden=true;if(e.data===1||e.data===2)sync()}
-function pErr(e){if(e.target===P&&S?.cur)act({type:'bad',v:S.cur.videoId,code:e.data})}
+function pState(e){if(e.target!==P)return;if(e.data===0&&S?.cur)act({type:'ended',v:S.cur.videoId});if(e.data===1){playbackWaitSince=0;$('#audio-unlock').hidden=true}if(e.data===1||e.data===2)sync()}
+function pErr(e){if(e.target!==P||!S?.cur)return;const message={2:'YouTube rejected the video request on this device.',5:'YouTube could not decode this video on this device.',100:'This video is unavailable or private.',101:'This video does not allow embedded playback.',150:'This video does not allow embedded playback.',153:"YouTube could not verify this embed's referrer."};toast(message[e.data]||'YouTube could not play this track on this device.');act({type:'bad',v:S.cur.videoId,code:e.data})}
 function initPlayer(){if(!window.ytr)return setTimeout(initPlayer,200);
  P=new YT.Player('pl',{width:427,height:240,playerVars:{controls:0,disablekb:1,playsinline:1,modestbranding:1,rel:0,vq:'small'},
  events:{onReady:pReady,onStateChange:pState,onError:pErr,onAutoplayBlocked:()=>{if(S?.cur?.playing&&!volumeMuted)$('#audio-unlock').hidden=false}}});
- /* v17: a 2nd hidden player that pre-buffers the next track so a song change starts instantly instead of re-buffering */
- try{P2=new YT.Player('pl2',{width:320,height:180,playerVars:{controls:0,disablekb:1,playsinline:1,modestbranding:1,rel:0,vq:'small'},
- events:{onReady:pReady,onStateChange:pState,onError:pErr}})}catch(e){P2=null} /* if the 2nd player can't start, the room still works on the single player */}
+}
 /* audio-only room: the video is hidden behind the hub, so cap it at 240p.
    The sound is identical at every quality — only the hidden picture gets
    smaller — and a 240p stream needs a fraction of the bandwidth, so it
    stops re-buffering on ordinary connections. */
-function capQuality(){[P,P2].forEach(pl=>{if(!pl||!pl.setPlaybackQuality)return;try{pl.setPlaybackQuality('small');if(pl.setPlaybackQualityRange)pl.setPlaybackQualityRange('tiny','small')}catch(e){}})}
-/* v17: keep the next track buffered in the hidden 2nd player while the current one plays */
-function preloadNext(){if(!P2||!P2.cueVideoById||!S)return;const n=S.queue&&S.queue[0];
- if(!n)return; /* no next track — leave cv2 alone so a just-preloaded track can still be swapped in when it becomes current */
- if(cv2!==n.videoId){cv2=n.videoId;try{P2.cueVideoById(n.videoId)}catch(e){}capQuality()}}
+function capQuality(){if(!P||!P.setPlaybackQuality)return;try{P.setPlaybackQuality('small');if(P.setPlaybackQualityRange)P.setPlaybackQualityRange('tiny','small')}catch(e){}}
 const est=()=>S?.cur?S.cur.pos+(S.cur.playing?(Date.now()-recv+rtt/2)/1000*(S.cur.speed||1):0):0;
 let bufSince=0;
-function sync(){if(!P||!P.loadVideoById||!S)return;const c=S.cur;if(!c){P.stopVideo?.();cv=null;needCatchup=false;return}
+function sync(){if(!P||!P.loadVideoById||!S)return;const c=S.cur;if(!c){P.stopVideo?.();cv=null;needCatchup=false;playbackWaitSince=0;return}
  /* v17 scheduled start: if this action is for a future server time, don't touch the player yet — wait until that instant, then apply it */
  const at=c.playAt?c.playAt-clockOff:0;
  if(at>Date.now()+30){clearTimeout(pendT);pendT=setTimeout(()=>{pendT=null;sync()},at-Date.now());return}
  if(cv!==c.videoId){
-  /* v17 preload swap: if the 2nd player already has this track buffered, make it the live player so it starts instantly */
-  if(P2&&cv2===c.videoId&&P2.getPlayerState){const tmp=P;P=P2;P2=tmp;cv2=cv;cv=c.videoId;P2.stopVideo?.();capQuality()}
-  else{cv=c.videoId;if(c.playing)P.loadVideoById(c.videoId,est());else P.cueVideoById(c.videoId,est());capQuality()}
+  cv=c.videoId;playbackWaitSince=c.playing?Date.now():0;
+  if(c.playing)P.loadVideoById(c.videoId,est());else P.cueVideoById(c.videoId,est());capQuality();
   needCatchup=true /* v17: fresh load — jump straight to the live position instead of drifting there */}
  const st=P.getPlayerState(),t=est(),now=P.getCurrentTime?.()||0,d=t-now,ad=Math.abs(d),rate=c.speed||1;
  /* v20 tighter correction so every listener hears the same second: ignore drift
@@ -103,11 +96,12 @@ function sync(){if(!P||!P.loadVideoById||!S)return;const c=S.cur;if(!c){P.stopVi
  const syn=$('#sync');
  if(st===3){syn.className='off';syn.textContent='● Buffering…'}
  else{const ok=ad<.5;syn.className=ok?'':'off';syn.textContent=ok?'● In Sync':'● Syncing…'}}
-socket.on('state',s=>{S=s;recv=Date.now();
+socket.on('state',s=>{const previousVideo=S?.cur?.videoId;S=s;recv=Date.now();
 /* v17: server clock minus this device's clock (one-way delay already removed) — used to run scheduled actions at the same instant on every device */
 clockOff=S.now+rtt/2-recv;
-if(!S.cur||!S.cur.playing)$('#audio-unlock').hidden=true;
-render();sync();updateMediaSession();preloadNext()});socket.on('say',toast);
+if(!S.cur||!S.cur.playing){$('#audio-unlock').hidden=true;playbackWaitSince=0}
+else if(previousVideo!==S.cur.videoId||!playbackWaitSince)playbackWaitSince=Date.now();
+render();sync();updateMediaSession()});socket.on('say',toast);
 socket.on('react',r=>{const d=document.createElement('div');d.className='fl';d.textContent=r.e;d.style.left=(10+Math.random()*80)+'%';$('#fl').append(d);setTimeout(()=>d.remove(),2400)});
 function render(){if(!joined)return;const isH=S.hostId===me.id,M=isH||S.co.includes(me.id),C=M||(S.ctrl&&S.ctrl.includes(me.id)),can=C,c=S.cur;
  $('#rn').textContent='Room '+S.code;
@@ -131,7 +125,7 @@ document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)r
  if(d.rm)act({type:'remove',i:+d.rm});if(d.h)act({type:'host',id:d.h});if(d.c)act({type:'cohost',id:d.c});if(d.k)act({type:'kick',id:d.k});if(d.e)act({type:'react',e:d.e});
  if(d.ap)act({type:'approve',rid:d.ap});if(d.rj)act({type:'reject',rid:d.rj});if(d.ctrl)act({type:'ctrl',id:d.ctrl});if(d.replay)act({type:'add',url:'https://youtu.be/'+d.replay})});
 $('#leave').onclick=()=>{socket.emit('leave');setTimeout(()=>{socket.disconnect();location.href='/'},300)}; /* v20: leave the room — the server hands the host on at once if you were the host */
-$('#audio-unlock').onclick=()=>{if(!S?.cur?.playing||!P)return;applyVolume(P);P.playVideo?.();sync();$('#audio-unlock').hidden=true};
+$('#audio-unlock').onclick=()=>{if(!S?.cur?.playing||!P)return;applyVolume(P);P.playVideo?.();sync()};
 /* v21: pause/play acts instantly on the device you tap. The server still
    schedules the action for the group (SCHED 200ms), so the sound used to keep
    playing ~1s after you tapped pause. localToggle pauses/plays THIS player's
@@ -145,7 +139,7 @@ $('#audio-unlock').onclick=()=>{if(!S?.cur?.playing||!P)return;applyVolume(P);P.
    the play/pause alone and only fixes the position/rate. */
 let localT=0,localWas=null;
 const localToggle=()=>{if(!S?.cur||!P)return;localT=Date.now();localWas=S.cur.playing;if(P.unMute)P.unMute();if(S.cur.playing)P.pauseVideo?.();else P.playVideo?.()};
-$('#pp').onclick=()=>{if(!S?.cur){toast('Paste a YouTube link to start the room.');return}[P,P2].forEach(pl=>pl&&pl.unMute&&pl.unMute());localToggle();act({type:'play'})};$('#sk').onclick=()=>act({type:'skip'});$('#lock').onclick=()=>act({type:'lock'});
+$('#pp').onclick=()=>{if(!S?.cur){toast('Paste a YouTube link to start the room.');return}if(P?.unMute)P.unMute();localToggle();act({type:'play'})};$('#sk').onclick=()=>act({type:'skip'});$('#lock').onclick=()=>act({type:'lock'});
 $('#au').addEventListener('input',()=>{
  clearTimeout(videoCheckTimer);const url=$('#au').value.trim(),sequence=++videoCheckSequence;
  checkedVideoUrl='';checkedVideoStatus='';
@@ -183,6 +177,7 @@ $('#share').onclick=()=>{const u=location.origin+'/room/'+S.code;$('#lk').value=
  $('#dlg').showModal()};
 $('#cl').onclick=()=>$('#dlg').close();$('#cp').onclick=()=>{navigator.clipboard.writeText($('#lk').value);$('#cp').textContent='Copied'};
 setInterval(()=>{if(!P||!P.getDuration||!S?.cur)return;const d=P.getDuration()||0,t=est();$('#t1').textContent=fmt(t);$('#t2').textContent=fmt(d);if(!seeking&&d)$('#sc').value=Math.min(1000,t/d*1000);updateMediaSession();
+ if(S.cur.playing&&playbackWaitSince&&Date.now()-playbackWaitSince>6000){const st=P.getPlayerState?.();if(st===-1||st===2||st===5)$('#audio-unlock').hidden=false}
  /* stuck-buffer safety net: buffering for 12s straight while the room is
     playing means the stream is wedged — reload it at the live position. */
  if(S.cur.playing&&P.getPlayerState){const st=P.getPlayerState();if(st===3){if(!bufSince)bufSince=Date.now();else if(Date.now()-bufSince>12000){bufSince=0;cv=null;sync()}}else bufSince=0}},500);
@@ -201,7 +196,7 @@ if('mediaSession'in navigator){
  const ms=navigator.mediaSession,setAction=(name,handler)=>{try{ms.setActionHandler(name,handler)}catch(e){if(e.name!=='NotSupportedError'&&e.name!=='TypeError')throw e}};
  const canControl=()=>!!S&&(S.hostId===me.id||S.co.includes(me.id)||(S.ctrl||[]).includes(me.id));
  const seekTo=position=>{if(canControl()&&S?.cur&&Number.isFinite(position))act({type:'seek',pos:Math.max(0,position)})};
- setAction('play',()=>{if(S?.cur&&!S.cur.playing){[P,P2].forEach(pl=>pl&&pl.unMute&&pl.unMute());localToggle();act({type:'play'})}});
+ setAction('play',()=>{if(S?.cur&&!S.cur.playing){if(P?.unMute)P.unMute();localToggle();act({type:'play'})}});
  setAction('pause',()=>{if(S?.cur?.playing){localToggle();act({type:'play'})}});
  setAction('nexttrack',()=>{if(canControl())act({type:'skip'})});
  setAction('previoustrack',()=>{if(canControl())act({type:'prev'})});
