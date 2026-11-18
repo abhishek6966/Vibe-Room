@@ -870,7 +870,7 @@ dialog{max-height:90dvh;overflow-y:auto}
    no layout or control changes. pointer-events:none, clipped by the card's
    overflow:hidden + border-radius. */
 .cosmic{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden;border-radius:inherit}
-.cosmic .cb{position:absolute;border-radius:50%;filter:blur(22px);mix-blend-mode:screen;opacity:.8;will-change:transform}
+.cosmic .cb{position:absolute;border-radius:50%;mix-blend-mode:screen;opacity:.8;will-change:transform} /* v50: the blur(22px) is GONE — it was the #1 reason phones heated up and lagged. Blurring 8 large clouds on every frame makes the GPU work flat-out. The radial-gradient already fades to transparent, so the clouds stay soft without any blur filter, and look the same. */
 .cosmic .c1{width:88%;aspect-ratio:1;left:-24%;top:-18%;background:radial-gradient(circle,#761bff 0%,transparent 66%);animation:drift1 26s ease-in-out infinite}
 .cosmic .c2{width:80%;aspect-ratio:1;right:-22%;top:-10%;background:radial-gradient(circle,#ff26b8 0%,transparent 66%);animation:drift2 22s ease-in-out infinite}
 .cosmic .c3{width:84%;aspect-ratio:1;left:-20%;bottom:-26%;background:radial-gradient(circle,#00d9ff 0%,transparent 66%);animation:drift3 30s ease-in-out infinite}
@@ -882,7 +882,7 @@ dialog{max-height:90dvh;overflow-y:auto}
 @keyframes drift1{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(34px,-22px) scale(1.16)}66%{transform:translate(-22px,18px) scale(.94)}}
 @keyframes drift2{0%,100%{transform:translate(0,0) scale(1.08)}33%{transform:translate(-38px,26px) scale(.9)}66%{transform:translate(26px,-16px) scale(1.2)}}
 @keyframes drift3{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(20px,30px) scale(1.14)}66%{transform:translate(-30px,-24px) scale(.92)}}
-.cosmic .cpulse{position:absolute;left:50%;top:38%;width:88%;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle,rgba(255,38,184,.28) 0%,rgba(118,27,255,.16) 45%,transparent 70%);filter:blur(18px);mix-blend-mode:screen;animation:cpulse 3.4s ease-in-out infinite}
+.cosmic .cpulse{position:absolute;left:50%;top:38%;width:88%;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle,rgba(255,38,184,.28) 0%,rgba(118,27,255,.16) 45%,transparent 70%);mix-blend-mode:screen;animation:cpulse 3.4s ease-in-out infinite} /* v50: blur(18px) removed, same reason as the clouds — the radial gradient already gives the soft glow. */
 @keyframes cpulse{0%,100%{transform:translate(-50%,-50%) scale(.86);opacity:.5}50%{transform:translate(-50%,-50%) scale(1.1);opacity:.95}}
 .cosmic .cp{position:absolute;bottom:8%;border-radius:50%;background:#fff;box-shadow:0 0 8px 2px rgba(255,255,255,.7),0 0 18px 6px rgba(0,217,255,.45);opacity:0;animation:floatUp 11s linear infinite}
 .cosmic .cp.p1{left:12%;width:5px;height:5px;animation-duration:9s}
@@ -1187,3 +1187,15 @@ header #who{margin-left:auto!important}
 /* v49: five transport buttons now share the row — tighten the gap so they
    fit on a phone without crowding. */
 .ctl{gap:14px!important}
+
+/* v50: COOLER PHONE — the device heated up and lagged because the player
+   card ran ~35 infinite animations at once, several of them blurring large
+   elements on every frame (the smoke clouds and pulse), plus a 20px
+   backdrop blur on the whole card. Two changes: (1) the blur filters are
+   gone (see the .cb/.cpulse rules above) — the radial gradients already
+   fade soft, so the look stays and the GPU rests. (2) When no song is
+   playing, the decorative motion freezes: the smoke, orbs and notes stop
+   animating instead of burning battery for nothing. The body gets a
+   `playing` class from render() while a song plays. */
+body:not(.playing) .cosmic *,body:not(.playing) .orb,body:not(.playing) .note,body:not(.playing) .dnote,body:not(.playing) .viz i{animation-play-state:paused!important}
+.stage{backdrop-filter:blur(12px)!important;-webkit-backdrop-filter:blur(12px)!important}
