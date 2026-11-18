@@ -188,6 +188,7 @@ dialog h3{margin:0 0 6px}
 
 /* ---------- toasts, floating reactions, ambient extras ---------- */
 #toasts{position:fixed;top:12px;left:50%;transform:translateX(-50%);display:grid;gap:6px;z-index:9;width:min(90vw,380px)}
+#audio-unlock{position:fixed;left:50%;bottom:calc(126px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:8;white-space:nowrap;background:linear-gradient(135deg,#ff9a1f,#ff3d71 55%,#c026d3);border:1px solid rgba(255,255,255,.35);font-weight:700;box-shadow:0 10px 24px rgba(255,61,113,.42),inset 0 1px 0 rgba(255,255,255,.35)}
 .toast{background:rgba(30,10,60,.95);border:1px solid var(--e);border-radius:14px;padding:.6em 1em;animation:fade .3s}@keyframes fade{from{opacity:0;transform:translateY(-8px)}}
 .fl{position:fixed;bottom:110px;font-size:2rem;animation:up 2.4s ease-out forwards;pointer-events:none;z-index:8}@keyframes up{to{transform:translateY(-60vh) translateX(20px);opacity:0}}
 .orb{position:fixed;border-radius:50%;opacity:.35;z-index:-1;animation:fl 14s ease-in-out infinite alternate;background:radial-gradient(circle at 30% 30%,rgba(255,255,255,.7),var(--o) 60%);box-shadow:inset -12px -12px 30px rgba(0,0,0,.3)}

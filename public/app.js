@@ -36,11 +36,11 @@ else{$('#gate').hidden=false;$('#home-link').hidden=false;$('#gn').value=me.name
  const s=document.createElement('script');s.src='https://www.youtube.com/iframe_api';document.head.append(s)}
 window.onYouTubeIframeAPIReady=()=>{window.ytr=1};
 function pReady(e){applyVolume(e.target);capQuality();sync()}
-function pState(e){if(e.target!==P)return;if(e.data===0&&S?.cur)act({type:'ended',v:S.cur.videoId});if(e.data===1||e.data===2)sync()}
+function pState(e){if(e.target!==P)return;if(e.data===0&&S?.cur)act({type:'ended',v:S.cur.videoId});if(e.data===1)$('#audio-unlock').hidden=true;if(e.data===1||e.data===2)sync()}
 function pErr(e){if(e.target===P&&S?.cur)act({type:'bad',v:S.cur.videoId,code:e.data})}
 function initPlayer(){if(!window.ytr)return setTimeout(initPlayer,200);
  P=new YT.Player('pl',{width:427,height:240,playerVars:{controls:0,disablekb:1,playsinline:1,modestbranding:1,rel:0,vq:'small'},
- events:{onReady:pReady,onStateChange:pState,onError:pErr}});
+ events:{onReady:pReady,onStateChange:pState,onError:pErr,onAutoplayBlocked:()=>{if(S?.cur?.playing&&!volumeMuted)$('#audio-unlock').hidden=false}}});
  /* v17: a 2nd hidden player that pre-buffers the next track so a song change starts instantly instead of re-buffering */
  try{P2=new YT.Player('pl2',{width:320,height:180,playerVars:{controls:0,disablekb:1,playsinline:1,modestbranding:1,rel:0,vq:'small'},
  events:{onReady:pReady,onStateChange:pState,onError:pErr}})}catch(e){P2=null} /* if the 2nd player can't start, the room still works on the single player */}
@@ -87,6 +87,7 @@ function sync(){if(!P||!P.loadVideoById||!S)return;const c=S.cur;if(!c){P.stopVi
 socket.on('state',s=>{S=s;recv=Date.now();
 /* v17: server clock minus this device's clock (one-way delay already removed) — used to run scheduled actions at the same instant on every device */
 clockOff=S.now+rtt/2-recv;
+if(!S.cur||!S.cur.playing)$('#audio-unlock').hidden=true;
 render();sync();preloadNext()});socket.on('say',toast);
 socket.on('react',r=>{const d=document.createElement('div');d.className='fl';d.textContent=r.e;d.style.left=(10+Math.random()*80)+'%';$('#fl').append(d);setTimeout(()=>d.remove(),2400)});
 function render(){if(!joined)return;const isH=S.hostId===me.id,M=isH||S.co.includes(me.id),C=M||(S.ctrl&&S.ctrl.includes(me.id)),can=C,c=S.cur;
@@ -111,6 +112,7 @@ document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)r
  if(d.rm)act({type:'remove',i:+d.rm});if(d.h)act({type:'host',id:d.h});if(d.c)act({type:'cohost',id:d.c});if(d.k)act({type:'kick',id:d.k});if(d.e)act({type:'react',e:d.e});
  if(d.ap)act({type:'approve',rid:d.ap});if(d.rj)act({type:'reject',rid:d.rj});if(d.ctrl)act({type:'ctrl',id:d.ctrl});if(d.replay)act({type:'add',url:'https://youtu.be/'+d.replay})});
 $('#leave').onclick=()=>{socket.emit('leave');setTimeout(()=>{socket.disconnect();location.href='/'},300)}; /* v20: leave the room — the server hands the host on at once if you were the host */
+$('#audio-unlock').onclick=()=>{if(!S?.cur?.playing||!P)return;applyVolume(P);P.playVideo?.();sync();$('#audio-unlock').hidden=true};
 /* v21: pause/play acts instantly on the device you tap. The server still
    schedules the action for the group (SCHED 200ms), so the sound used to keep
    playing ~1s after you tapped pause. localToggle pauses/plays THIS player's
