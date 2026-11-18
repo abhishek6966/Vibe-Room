@@ -80,7 +80,7 @@ const socket=io();let S=null,P=null,P2=null,PYT=null,PAU=null,auEl=null,joined=f
 /* v13: measure the round-trip to this device so the position estimate can
    subtract half of it (the one-way delay) — otherwise every listener lags
    by their own network delay. Smoothed so one slow packet can't jerk it. */
-setInterval(()=>{if(socket.connected)socket.emit('ping',Date.now())},5000);
+setInterval(()=>{if(socket.connected)socket.emit('ping',Date.now())},2000); /* v53: 2s ping (was 5s) so the RTT/clock-offset estimate stays fresh for the tighter sync */
 socket.on('pong',t=>{const d=Date.now()-t;rtt=rtt?rtt*.7+d*.3:d});
 const code=(location.pathname.match(/^\/room\/(\w+)/)||[])[1];
 let rejoinRoom=()=>{};
@@ -401,7 +401,8 @@ function sync(){if(!P||!P.loadVideoById||!S)return;const c=S.cur;if(!c){P.stopVi
     the correction is proportional and capped at 5%: a 0.5s drift gets
     ~1.25%, a 2s drift gets 5%. That is barely audible, and the song no
     longer surges. Drift past 2s is still fixed by a seek (below). */
- let target=rate;if(ad>=0.5&&ad<2){const corr=Math.min(0.05,ad*0.025);target=rate*(d>0?1+corr:1-corr)}
+ /* v53: tighter sync — the speed nudge now covers 0.5s–1.5s (was 0.5s–2s) and the drift seek below fires at 1.5s (was 2s), so the room holds within ~1.5s instead of ~2s. The 3s seek cooldown stays, so seeks still cannot loop and cut the audio. */
+ let target=rate;if(ad>=0.5&&ad<1.5){const corr=Math.min(0.05,ad*0.025);target=rate*(d>0?1+corr:1-corr)}
  if(target!==lastRate){P.setPlaybackRate(target);lastRate=target}
  /* v21: while your own tap is still on its way to the server (~200ms), don't
     let the sync loop undo it — it still sees the old server state. The guard
@@ -413,11 +414,12 @@ function sync(){if(!P||!P.loadVideoById||!S)return;const c=S.cur;if(!c){P.stopVi
     never seek twice within 3s. Without this a drifting player could seek,
     re-buffer, drift again and seek again in a loop (cut, play, cut, play).
     The fresh-load catch-up seek is exempt (it must jump once, immediately). */
+ /* v53: RESCUE SEEK — the old code never sought while buffering (st===3), so a slow WebView that kept buffering sat further and further behind with no correction at all (the 5s+ lag). If it is buffering AND more than 3s behind, seek anyway: YouTube re-buffers at the right position instead of staying behind. */
  if(!seeking&&needCatchup&&(st===1||st===2)){P.seekTo(t,true);needCatchup=false;lastSeek=Date.now()}
- else if(!seeking&&Date.now()-lastSeek>3000){if(st===1&&ad>=2){P.seekTo(t,true);lastSeek=Date.now()}else if(st===2&&ad>.5){P.seekTo(t,true);lastSeek=Date.now()}}
+ else if(!seeking&&Date.now()-lastSeek>3000){if(st===1&&ad>=1.5){P.seekTo(t,true);lastSeek=Date.now()}else if(st===2&&ad>.5){P.seekTo(t,true);lastSeek=Date.now()}else if(st===3&&ad>=3){P.seekTo(t,true);lastSeek=Date.now()}}
  const syn=$('#sync');
  if(st===3){syn.className='off';syn.textContent='● Buffering…'}
- else{const ok=ad<2;syn.className=ok?'':'off';syn.textContent=ok?'● In Sync':'● Syncing…'}}
+ else{const ok=ad<1.5;syn.className=ok?'':'off';syn.textContent=ok?'● In Sync':'● Syncing…'}}
 socket.on('state',s=>{S=s;recv=Date.now();
 /* v17: server clock minus this device's clock (one-way delay already removed) — used to run scheduled actions at the same instant on every device */
 clockOff=S.now+rtt/2-recv;
@@ -603,9 +605,11 @@ setInterval(()=>{if(!P||!P.getDuration||!S?.cur)return;const ld=P.getDuration()|
  const d=S.cur.duration||ld;
  if(ld>0&&!S.cur.duration){const key=S.cur.tid+':'+Math.round(ld);if(key!==lastDurSent){lastDurSent=key;act({type:'dur',tid:S.cur.tid,dur:ld})}}
  $('#t1').textContent=fmt(t);$('#t2').textContent=fmt(d);if(!seeking&&d){const sc=$('#sc'),v=Math.min(1000,t/d*1000);sc.value=v;sc.style.setProperty('--p',(v/10)+'%')}updateMediaSession();
- /* stuck-buffer safety net: buffering for 12s straight while the room is
-    playing means the stream is wedged — reload it at the live position. */
- if(S.cur.playing&&P.getPlayerState){const st=P.getPlayerState();if(st===3){if(!bufSince)bufSince=Date.now();else if(Date.now()-bufSince>12000){bufSince=0;cv=null;sync()}}else bufSince=0}
+ /* stuck-buffer safety net: buffering for 5s straight while the room is
+    playing means the stream is wedged — reload it at the live position.
+    v53: was 12s; a 5s+ lag was already visible to the user before the old
+    net fired, so it now fires sooner. */
+ if(S.cur.playing&&P.getPlayerState){const st=P.getPlayerState();if(st===3){if(!bufSince)bufSince=Date.now();else if(Date.now()-bufSince>5000){bufSince=0;cv=null;sync()}}else bufSince=0}
  /* v43: the v22 autoplay-blocked button is REMOVED — the only audio ask is
     the mandatory popup right after joining/creating a room, never again.
     Sound still turns on from any tap (unlockOnTap) or the Play button. */

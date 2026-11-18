@@ -175,5 +175,5 @@ io.on('connection',s=>{let r=null,me=null,lastVideoCheck=0;
        but if the host comes back within 12s the rejoin clears this timer and
        they keep the seat. */
     if(rr.hostId===me.id)rr.gone=setTimeout(()=>succeed(rr),12000);rr.last=now()})});
-setInterval(()=>{for(const [c,r] of rooms){if(r.cur&&r.cur.playing)push(r);else if(online(r).length)push(r);if(!online(r).length&&now()-r.last>864e5)rooms.delete(c)}},2000); /* v13: 2s heartbeat (was 5s) so drift is corrected sooner */
+setInterval(()=>{for(const [c,r] of rooms){if(r.cur&&r.cur.playing)push(r);else if(online(r).length)push(r);if(!online(r).length&&now()-r.last>864e5)rooms.delete(c)}},1000); /* v53: 1s heartbeat (was 2s) so drift is corrected sooner — fresher state for the tighter sync */
 srv.listen(process.env.PORT||3000,()=>console.log('Vibe Room on :'+(process.env.PORT||3000)));
