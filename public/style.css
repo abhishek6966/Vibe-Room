@@ -1199,3 +1199,11 @@ header #who{margin-left:auto!important}
    `playing` class from render() while a song plays. */
 body:not(.playing) .cosmic *,body:not(.playing) .orb,body:not(.playing) .note,body:not(.playing) .dnote,body:not(.playing) .viz i{animation-play-state:paused!important}
 .stage{backdrop-filter:blur(12px)!important;-webkit-backdrop-filter:blur(12px)!important}
+
+/* v52: UPLOAD AN AUDIO FILE — the real background-audio fix. A dashed
+   premium button under the paste box; the file input itself is hidden
+   and the label opens the picker. */
+.up-audio{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:10px;padding:11px 14px;border:1.5px dashed rgba(255,255,255,.45);border-radius:16px;background:rgba(255,255,255,.06);color:#fff;font-size:.86rem;font-weight:700;cursor:pointer;text-align:center}
+.up-audio:active{transform:scale(.98)}
+.up-audio svg{flex:none;color:#ffd166}
+.up-note{margin:8px 2px 0;font-size:.8rem;font-weight:600;color:#c8f7d4;text-align:center}

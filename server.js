@@ -1,7 +1,31 @@
-const express=require('express'),http=require('http'),path=require('path'),{Server}=require('socket.io'),{randomUUID}=require('crypto');
+const express=require('express'),http=require('http'),path=require('path'),fs=require('fs'),{Server}=require('socket.io'),{randomUUID}=require('crypto');
 const app=express(),srv=http.createServer(app),io=new Server(srv);
 app.use(express.static(path.join(__dirname,'public')));
 app.get('/room/:c',(q,r)=>r.sendFile(path.join(__dirname,'public/index.html')));
+/* v52: UPLOAD AN AUDIO FILE — the real background-audio fix. A YouTube
+   iframe is a video element: iOS suspends it the moment the screen locks
+   or the user switches apps, and no web code can stop that. A plain
+   <audio> element is treated as audio, so it keeps playing through lock
+   and app-switching. The client uploads the user's own audio file here
+   (their file, not a YouTube download), the server saves it under a
+   random id and serves it back to the whole room. Files live in
+   public/uploads/ (ephemeral on the free plan — a server restart wipes
+   them, and a missing file is reported as a bad track and skipped). */
+const uploads=new Map(),UPL=path.join(__dirname,'public/uploads');
+try{fs.mkdirSync(UPL,{recursive:true})}catch(e){}
+const AU_EXT={'.mp3':1,'.m4a':1,'.wav':1,'.ogg':1};
+app.post('/upload',express.raw({type:'*/*',limit:'25mb'}),(q,r)=>{ /* v52: the browser sends the file with its own MIME type (audio/mpeg, audio/mp4...), NOT application/octet-stream, so the raw parser must accept any content type on this route only. */
+  const raw=String(q.query.name||'song').slice(0,100);
+  const ext=path.extname(raw).toLowerCase();
+  if(!AU_EXT[ext])return r.status(400).json({ok:false,message:'Only audio files (.mp3, .m4a, .wav, .ogg) can be uploaded.'});
+  const buf=q.body;
+  if(!buf||!Buffer.isBuffer(buf)||buf.length<1024)return r.status(400).json({ok:false,message:'That file looks empty.'});
+  const id=Math.random().toString(36).slice(2,10),file=id+ext;
+  try{fs.writeFileSync(path.join(UPL,file),buf)}catch(e){return r.status(500).json({ok:false,message:'Could not save the file.'})}
+  const title=raw.replace(/\.[^.]+$/,'').replace(/[_\-]+/g,' ').trim().slice(0,80)||'Uploaded audio';
+  uploads.set(id,{url:'/uploads/'+file,title});
+  r.json({ok:true,id,url:'/uploads/'+file,title});
+});
 const rooms=new Map(),CH='ABCDEFGHJKMNPQRSTUVWXYZ23456789',now=()=>Date.now(),SCHED=200; /* v21: scheduled start — play/pause/seek/track-change take effect at server time now()+SCHED so every device starts together. Was 800; cut to 200 because the host heard the pause land ~1s late. The tapping device also pauses/plays its own player instantly now (localToggle in app.js), so the tap feels instant and the group still follows at once. */
 const newCode=()=>{let c;do c=Array.from({length:6},()=>CH[Math.random()*CH.length|0]).join('');while(rooms.has(c));return c};
 const pos=r=>{if(!r.cur)return 0;if(r.cur.pending)return 0;return ((r.cur.playing?now():r.cur.pausedAt)-r.cur.anchor)/1000*(r.cur.speed||1)};
@@ -13,7 +37,7 @@ const mod=(r,id)=>r.hostId===id||r.co.has(id);
 const ctrl=(r,id)=>mod(r,id)||r.ctrl.has(id);
 const pub=r=>({code:r.code,hostId:r.hostId,co:[...r.co],ctrl:[...r.ctrl],reqs:r.reqs,locked:r.locked,repeat:r.repeat,mode:r.mode,adders:[...r.adders],queue:r.queue,history:r.history.slice(-20),
   users:[...r.users.values()].filter(u=>u.connected).map(({id,name,color})=>({id,name,color})),
-  cur:r.cur&&{videoId:r.cur.videoId,title:r.cur.title,channel:r.cur.channel,artwork:r.cur.artwork,by:r.cur.by,tid:r.cur.tid,duration:r.cur.duration||0,reqs:r.cur.reqs,singerId:r.cur.singerId,singerName:r.cur.singerName,speed:r.cur.speed||1,live:r.cur.live,playing:r.cur.playing,playAt:r.cur.playAt||0,pending:r.cur.pending||false,pos:pos(r)},now:now()});
+  cur:r.cur&&{videoId:r.cur.videoId,kind:r.cur.kind||'youtube',src:r.cur.src||'',title:r.cur.title,channel:r.cur.channel,artwork:r.cur.artwork,by:r.cur.by,tid:r.cur.tid,duration:r.cur.duration||0,reqs:r.cur.reqs,singerId:r.cur.singerId,singerName:r.cur.singerName,speed:r.cur.speed||1,live:r.cur.live,playing:r.cur.playing,playAt:r.cur.playAt||0,pending:r.cur.pending||false,pos:pos(r)},now:now()});
 const push=r=>io.to(r.code).emit('state',pub(r));
 const say=(r,m)=>io.to(r.code).emit('say',m);
 function start(r,t,at){at=at||now();if(r.pendingT){clearTimeout(r.pendingT);r.pendingT=null}r.cur={...t,anchor:at,playing:true,pausedAt:0,live:false,speed:r.speed,playAt:at,pending:true,pendingPos:0};r.bad=new Set();/* v45: the clock does NOT start until a controller's player actually sounds (see 'started' below). Fallback: if nobody reports within 8s, start anyway so a stuck player can't freeze the room. */r.pendingT=setTimeout(()=>{if(r.cur&&r.cur.pending){r.cur.pending=false;r.cur.anchor=now();r.cur.playAt=now();r.pendingT=null;push(r)}},8000)}
@@ -80,11 +104,20 @@ io.on('connection',s=>{let r=null,me=null,lastVideoCheck=0;
     case'started':{if(!C||!r.cur||r.cur.videoId!==a.v||!r.cur.pending)break;if(r.pendingT){clearTimeout(r.pendingT);r.pendingT=null}const sp=r.cur.speed||1,pp=r.cur.pendingPos||0;r.cur.pending=false;r.cur.anchor=now()-pp*1000/sp;r.cur.playAt=now();push(r);break}
     case'skip':if(!C||!r.cur)return;next(r,1);break;
     case'add':{const fail=m=>{if(typeof cb==='function')cb({ok:false,message:m});else s.emit('say',m)};
-      if(r.mode==='karaoke'&&!M&&!r.adders.has(id))return fail('Ask the host to let you add songs.');const v=vid(a.url);if(!v)return fail('That doesn\u2019t look like a YouTube link.');
+      if(r.mode==='karaoke'&&!M&&!r.adders.has(id))return fail('Ask the host to let you add songs.');
+      let t=null;
+      if(a.au){ /* v52: an uploaded audio file — the user's own file, served by this server. No YouTube check at all. */
+        const up=uploads.get(a.au);
+        if(!up)return fail('That upload could not be found. Upload the file again.');
+        t={kind:'audio',videoId:'au:'+a.au,src:up.url,title:up.title,channel:'Your upload',artwork:'/logo.png',by:me.name,byId:id,color:me.color,tid:Math.random().toString(36).slice(2,9),duration:0,reqs:[],singerId:null,singerName:null};
+      }else{
+      const v=vid(a.url);if(!v)return fail('That doesn\u2019t look like a YouTube link.');
       const check=await youtubeEmbedStatus(v);if(check.status==='blocked')return fail('YouTube marks this video as not embeddable, so it cannot play in this room.');
       if(check.status==='unavailable')return fail('YouTube could not find a public video for that link.');
       let title='YouTube track',channel='';try{const j=await(await fetch('https://www.youtube.com/oembed?format=json&url=https://www.youtube.com/watch?v='+v,{signal:AbortSignal.timeout(8000)})).json();title=j.title;channel=j.author_name}catch{return fail('That video can\u2019t be played here. Try another link.')}
-      const t={videoId:v,title,channel,artwork:'https://i.ytimg.com/vi/'+v+'/hqdefault.jpg',by:me.name,byId:id,color:me.color,tid:Math.random().toString(36).slice(2,9),duration:0,reqs:[],singerId:null,singerName:null};
+      t={videoId:v,title,channel,artwork:'https://i.ytimg.com/vi/'+v+'/hqdefault.jpg',by:me.name,byId:id,color:me.color,tid:Math.random().toString(36).slice(2,9),duration:0,reqs:[],singerId:null,singerName:null};
+      }
+      const v=t.videoId,title=t.title;
       if(C){ /* host, co-host or a person the host gave control to: straight into the queue */
       if(r.queue.length>=100)return fail('The queue is full (100 tracks).');
       const dup=r.queue.find(t=>t.videoId===v)||(r.cur&&r.cur.videoId===v&&r.cur);if(dup)return fail('Already queued by '+dup.by);

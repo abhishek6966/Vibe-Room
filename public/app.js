@@ -76,7 +76,7 @@ const newId=()=>crypto.randomUUID?crypto.randomUUID():Array.from(crypto.getRando
 /* Migrate the old shared ID once, then keep each tab's identity in sessionStorage. */
 const getId=()=>{if(T.vid)return T.vid;const old=L.vid;if(old){L.removeItem('vid');return T.vid=old}return T.vid=newId()};
 const me={id:getId(),name:L.vname||'Guest'+(10+Math.random()*89|0),color:L.vcolor||(L.vcolor=hex())};
-const socket=io();let S=null,P=null,P2=null,joined=false,cv=null,cv2=null,recv=0,seeking=false,rtt=0,clockOff=0,pendT=null,needCatchup=false,lastSeek=0,lastRate=null;
+const socket=io();let S=null,P=null,P2=null,PYT=null,PAU=null,auEl=null,joined=false,cv=null,cv2=null,recv=0,seeking=false,rtt=0,clockOff=0,pendT=null,needCatchup=false,lastSeek=0,lastRate=null;
 /* v13: measure the round-trip to this device so the position estimate can
    subtract half of it (the one-way delay) — otherwise every listener lags
    by their own network delay. Smoothed so one slow packet can't jerk it. */
@@ -282,10 +282,64 @@ window.onYouTubeIframeAPIReady=()=>{window.ytr=1};
 function pReady(e){applyVolume(e.target);capQuality();sync()}
 function pState(e){if(e.target!==P)return;if(e.data===0&&S?.cur)act({type:'ended',v:S.cur.videoId});if(e.data===1){$('#audio-unlock').hidden=true;/* v45: tell the server this controller's player is actually sounding, so the server starts the track clock NOW (from 0) instead of from when the track was queued — the song then starts from second 1 instead of a few seconds in. */if(S?.cur&&me){const cc=S.hostId===me.id||(S.co||[]).includes(me.id)||(S.ctrl||[]).includes(me.id);if(cc)act({type:'started',v:S.cur.videoId})}}if(e.data===1||e.data===2)sync()}
 function pErr(e){if(e.target===P&&S?.cur)act({type:'bad',v:S.cur.videoId,code:e.data})}
-function initPlayer(){if(P)return; /* v24: only create the player once — it is now created early (on the gate) so it exists when the user taps Join, and again after joining */
+/* v52: UPLOADED AUDIO — a plain <audio> element plays the user's own
+   uploaded file. Unlike the YouTube iframe (a video element, which iOS
+   suspends the moment the screen locks or the user switches apps), a real
+   <audio> element keeps playing through lock and app-switching — the
+   system treats it as audio, so it is not suspended, and it gets proper
+   lock-screen controls through Media Session. This adapter makes the
+   <audio> element speak the same API as the YouTube player
+   (playVideo/pauseVideo/seekTo/getCurrentTime/getPlayerState/setVolume/
+   loadVideoById/cueVideoById/getDuration/setPlaybackRate/...) so the sync
+   loop, volume, seek and Media Session code all work unchanged. P is the
+   CURRENT player: it points at PYT (YouTube) or PAU (this adapter)
+   depending on the current track's kind; sync() swaps it when the track
+   changes. (auEl is declared with the other globals at the top of this
+   file, so it exists before initPlayer() runs on the gate.) */
+function makeAudioPlayer(){
+  auEl=document.querySelector('#au-el');
+  if(!auEl)return null;
+  const ap={_st:2,_src:null,
+    _fire(st){ap._st=st;pState({target:ap,data:st})},
+    playVideo(){const p=auEl.play();if(p&&p.catch)p.catch(()=>{})},
+    pauseVideo(){auEl.pause()},
+    stopVideo(){auEl.pause();auEl.removeAttribute('src');ap._src=null;ap._st=2},
+    seekTo(t){try{auEl.currentTime=Math.max(0,t||0)}catch(e){}},
+    getCurrentTime(){return auEl.currentTime||0},
+    getDuration(){return (auEl.duration&&isFinite(auEl.duration))?auEl.duration:0},
+    getPlayerState(){return ap._st},
+    setVolume(v){auEl.volume=Math.max(0,Math.min(100,v||0))/100},
+    getVolume(){return auEl.volume*100},
+    isMuted(){return auEl.volume===0},
+    getPlaybackQuality(){return 'small'},
+    setPlaybackQuality(){},setPlaybackQualityRange(){},
+    setPlaybackRate(r){try{auEl.playbackRate=r||1}catch(e){}},
+    getPlaybackRate(){return auEl.playbackRate||1},
+    loadVideoById(vid,t){ap._load(vid,t,true)},
+    cueVideoById(vid,t){ap._load(vid,t,false)},
+    _load(vid,t,play){
+      const src=S?.cur?.src;
+      if(!src)return;
+      if(ap._src!==src){ap._src=src;auEl.src=src;auEl.load()}
+      if(typeof t==='number'){try{auEl.currentTime=Math.max(0,t)}catch(e){}}
+      if(play){const p=auEl.play();if(p&&p.catch)p.catch(()=>{})}
+    }
+  };
+  auEl.addEventListener('play',()=>ap._fire(1));
+  auEl.addEventListener('pause',()=>{if(!auEl.ended)ap._fire(2)});
+  auEl.addEventListener('ended',()=>ap._fire(0));
+  auEl.addEventListener('waiting',()=>ap._fire(3));
+  auEl.addEventListener('playing',()=>ap._fire(1));
+  auEl.addEventListener('error',()=>{pErr({target:ap,data:2})});
+  return ap;
+}
+function initPlayer(){if(PYT)return; /* v24: only create the player once — it is now created early (on the gate) so it exists when the user taps Join, and again after joining */
+ if(!PAU)PAU=makeAudioPlayer();
  if(!window.ytr)return setTimeout(initPlayer,200);
- P=new YT.Player('pl',{width:427,height:240,playerVars:{controls:0,disablekb:1,playsinline:1,modestbranding:1,rel:0,vq:'small'},
+ PYT=new YT.Player('pl',{width:427,height:240,playerVars:{controls:0,disablekb:1,playsinline:1,modestbranding:1,rel:0,vq:'small'},
  events:{onReady:pReady,onStateChange:pState,onError:pErr,onAutoplayBlocked:()=>{/* v43: never ask again here — the only audio ask is the mandatory popup right after joining/creating a room */}}});
+ /* v52: P is the CURRENT player — the audio adapter when the current track is an uploaded file, the YouTube player otherwise. */
+ P=(S?.cur?.kind==='audio'&&PAU)?PAU:PYT;
  /* v17: a 2nd hidden player that pre-buffers the next track so a song change starts instantly instead of re-buffering */
  try{P2=new YT.Player('pl2',{width:320,height:180,playerVars:{controls:0,disablekb:1,playsinline:1,modestbranding:1,rel:0,vq:'small'},
  events:{onReady:pReady,onStateChange:pState,onError:pErr}})}catch(e){P2=null} /* if the 2nd player can't start, the room still works on the single player */}
@@ -297,6 +351,7 @@ function capQuality(){[P,P2].forEach(pl=>{if(!pl||!pl.setPlaybackQuality)return;
 /* v17: keep the next track buffered in the hidden 2nd player while the current one plays */
 function preloadNext(){if(!P2||!P2.cueVideoById||!S)return;const n=S.queue&&S.queue[0];
  if(!n)return; /* no next track — leave cv2 alone so a just-preloaded track can still be swapped in when it becomes current */
+ if(n.kind==='audio')return; /* v52: the 2nd player is a YouTube player — it cannot preload an uploaded audio file. The <audio> element loads fast enough on its own. */
  if(P&&P.getPlayerState&&P.getPlayerState()===3)return; /* v23: don't preload while the current track is buffering — the 2nd player would steal bandwidth and make the stall worse. It resumes once the current track is playing again. */
  if(cv2!==n.videoId){cv2=n.videoId;try{P2.cueVideoById(n.videoId)}catch(e){}capQuality()}}
 /* v23: re-apply the 240p cap every 2s. YouTube's adaptive streaming can creep
@@ -318,8 +373,12 @@ function sync(){if(!P||!P.loadVideoById||!S)return;const c=S.cur;if(!c){P.stopVi
  const at=c.playAt?c.playAt-clockOff:0;
  if(at>Date.now()+30){clearTimeout(pendT);pendT=setTimeout(()=>{pendT=null;sync()},at-Date.now());return}
  if(cv!==c.videoId){
+  /* v52: pick the player for this track — the <audio> element for an uploaded file (it keeps playing when the phone locks or the user switches apps), the YouTube player otherwise. When swapping, stop the old player so the two never sound at once. */
+  const want=(c.kind==='audio'&&PAU)?PAU:PYT;
+  if(want&&P!==want){const old=P;P=want;try{old&&old.stopVideo&&old.stopVideo()}catch(e){}}
+  if(P===PAU){cv=c.videoId;if(c.playing)P.loadVideoById(c.videoId,est());else P.cueVideoById(c.videoId,est());capQuality()}
   /* v17 preload swap: if the 2nd player already has this track buffered, make it the live player so it starts instantly */
-  if(P2&&cv2===c.videoId&&P2.getPlayerState){const tmp=P;P=P2;P2=tmp;cv2=cv;cv=c.videoId;P2.stopVideo?.();capQuality()}
+  else if(P2&&cv2===c.videoId&&P2.getPlayerState){const tmp=P;P=P2;P2=tmp;cv2=cv;cv=c.videoId;P2.stopVideo?.();capQuality()}
   else{cv=c.videoId;if(c.playing)P.loadVideoById(c.videoId,est());else P.cueVideoById(c.videoId,est());capQuality()}
   needCatchup=true /* v17: fresh load — jump straight to the live position instead of drifting there */}
  const st=P.getPlayerState(),t=est(),now=P.getCurrentTime?.()||0,d=t-now,ad=Math.abs(d),rate=c.speed||1;
@@ -477,12 +536,45 @@ $('#af').onsubmit=e=>{e.preventDefault();const u=$('#au').value.trim(),submit=$(
   $('#video-check').hidden=true;$('#video-check').textContent='';$('#video-check').removeAttribute('data-status')
  })
 };
+/* v52: UPLOAD AN AUDIO FILE — the real background-audio fix. A YouTube
+   video pauses when the phone locks or you switch apps (iOS suspends
+   video embeds, and no web code can stop that). An uploaded audio file
+   plays through a plain <audio> element, which keeps playing through
+   lock and app-switching. The file is the user's own (picked from their
+   device), uploaded to this room's server, and plays for everyone. */
+$('#up-file').addEventListener('change',async e=>{
+  const f=e.target.files&&e.target.files[0];e.target.value='';
+  if(!f)return;
+  const note=$('#up-note');note.hidden=false;note.textContent='Uploading '+f.name+'…';
+  if(!socket.connected){note.textContent='Not connected to the room. Reconnect and try again.';return}
+  try{
+    const res=await fetch('/upload?name='+encodeURIComponent(f.name),{method:'POST',body:f});
+    const j=await res.json();
+    if(!j.ok)throw new Error(j.message||'Upload failed');
+    /* v52: use the same timeout+ack pattern as the YouTube add — a plain
+       socket.emit ack passes the server's reply as the FIRST callback
+       argument, so a bare act() callback would read {ok:true} as an error. */
+    socket.timeout(20000).emit('act',{type:'add',au:j.id},(err,result)=>{
+      if(err||!result?.ok){note.textContent=result?.message||'Could not add the file.';return}
+      note.textContent='Added '+j.title+' — it will play for everyone and keeps playing in the background.';
+      toast('Added '+j.title);
+    });
+  }catch(err){note.textContent='Upload failed: '+(err&&err.message||'try again')}
+});
 $('#playlist-clear').onclick=()=>{savePlaylist([]);renderPlaylist();toast('Playlist cleared')};
 /* v46: the playlist is rendered on load too, so your saved songs are there
    before the first state update arrives. */
 renderPlaylist();
-/* v49: FREE volume drag — the old oninput called setVolume, which rebuilt the mute icon's SVG, synced the mix slider and scheduled an iframe call on EVERY tiny move, and the drag stuttered. Now oninput only moves the slider itself (the browser already sets the value; here we store it and paint the pink fill) — nothing else runs while the thumb moves, so the drag is free. onchange (release) runs the full setVolume once: icon, mix slider and the player. NOTE: oninput deliberately does NOT touch volumeMuted — setVolume on release compares the old muted state with the new one to decide whether to rebuild the icon, and if oninput already flipped it, the icon would never update. */
-$('#vol').oninput=e=>{volume=Math.max(0,Math.min(100,Math.round(Number(e.target.value)||0)));if(volume>0)lastVolume=volume;e.target.style.setProperty('--p',volume+'%')};
+/* v51: VOLUME BAR FIX — v49 made oninput do nothing but move the thumb and
+   only applied the volume on `change` (release). On a real phone that
+   broke it: the `change` event is unreliable on mobile Safari while
+   dragging, so the sound never changed at all even though the bar moved.
+   Now oninput applies the volume to the player LIVE while dragging, but
+   throttled to once per 60ms and with ONLY the cheap iframe call — no
+   icon rebuild, no mix-slider sync (those are what made the old drag
+   stutter). onchange still runs the full setVolume once on release so the
+   final value is always applied. */
+$('#vol').oninput=e=>{volume=Math.max(0,Math.min(100,Math.round(Number(e.target.value)||0)));if(volume>0)lastVolume=volume;e.target.style.setProperty('--p',volume+'%');/* v51: live-apply the volume while dragging (throttled, iframe only) — see the note above. Deliberately does NOT touch volumeMuted, so setVolume on release still sees the real muted-state flip and updates the icon. */if(volT)return;volT=setTimeout(()=>{volT=null;[P,P2].forEach(applyVolume)},60)};
 $('#vol').onchange=e=>setVolume(e.target.value,true);
 $('#vm').onclick=()=>setVolume(volumeMuted?lastVolume:0,true);$('#vmx').onclick=()=>setVolume(100,true);
 /* v45: SMOOTH seek drag — the old code only set `seeking` on pointerdown and only
