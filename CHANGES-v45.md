@@ -138,7 +138,11 @@ made it wider; it now shows at most 2 avatars, and the "N listening"
 text still gives the exact total, so no information is lost. On narrow
 phones the header buttons are 30px and the gaps are tighter so it all
 fits. Measured: the full code shows and the header fits (no overflow)
-with 1, 8, 20 and even 99 users, with the lock button visible.
+with 1, 8, 20 and even 99 users, with the lock button visible. Layout:
+the room code sits on the LEFT and every top button/icon (listening
+pill, heart, history, invite, lock) is pushed to the far RIGHT edge as
+one group — the listener pill gets margin-left:auto, so the two sides
+stay cleanly split however many join.
 
 ## Title fix (found while screenshotting v45)
 The scrolling title was invisible: the gradient-text effect

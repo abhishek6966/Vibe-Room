@@ -1119,3 +1119,10 @@ header #rn{white-space:nowrap!important;overflow:visible!important;text-overflow
   .who .pill-who small{font-size:.72rem!important}
   #likes-btn,#hist,#share,#lock{width:30px!important;height:30px!important;min-height:30px!important}
 }
+
+/* v45: HEADER LAYOUT — room code on the LEFT, every top button/icon on
+   the RIGHT. The listener pill (#who) gets margin-left:auto, which pushes
+   it and all the buttons after it (heart, history, invite, lock) to the
+   far right edge as one group. The logo + room code stay pinned left.
+   Nothing else changes — same elements, same sizes, same fit. */
+header #who{margin-left:auto!important}
