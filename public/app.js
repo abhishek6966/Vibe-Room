@@ -4,7 +4,7 @@ const newId=()=>crypto.randomUUID?crypto.randomUUID():Array.from(crypto.getRando
 /* Migrate the old shared ID once, then keep each tab's identity in sessionStorage. */
 const getId=()=>{if(T.vid)return T.vid;const old=L.vid;if(old){L.removeItem('vid');return T.vid=old}return T.vid=newId()};
 const me={id:getId(),name:L.vname||'Guest'+(10+Math.random()*89|0),color:L.vcolor||(L.vcolor=hex())};
-const socket=io();let S=null,P=null,joined=false,cv=null,recv=0,seeking=false,rtt=0,clockOff=0,pendT=null,needCatchup=false;
+const socket=io();let S=null,P=null,joined=false,cv=null,recv=0,seeking=false,rtt=0,clockOff=0,pendT=null,needCatchup=false,playbackWaitSince=0;
 /* v13: measure the round-trip to this device so the position estimate can
    subtract half of it (the one-way delay) — otherwise every listener lags
    by their own network delay. Smoothed so one slow packet can't jerk it. */
@@ -12,7 +12,34 @@ setInterval(()=>{if(socket.connected)socket.emit('ping',Date.now())},5000);
 socket.on('pong',t=>{const d=Date.now()-t;rtt=rtt?rtt*.7+d*.3:d});
 const code=(location.pathname.match(/^\/room\/(\w+)/)||[])[1];
 let rejoinRoom=()=>{};
+/* v31: premium icons — one shared set of clean inline SVG icons (stroke
+   based, currentColor, so they match the text around them). Every emoji in
+   the app is replaced by one of these. app.js loads first, so karaoke.js
+   and extras.js use the same set. */
+const IC={
+ speaker:'<span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg></span>',
+ check:'<span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg></span>',
+ mic:'<span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></span>',
+ crown:'<span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 7l4.5 4L12 4l5.5 7L22 7l-1.5 11h-17L2 7z"/><path d="M5 21h14"/></svg></span>',
+ star:'<span class="ic"><svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></span>',
+ ctrl:'<span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg></span>',
+ play:'<span class="ic"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true"><polygon points="7 4 20 12 7 20 7 4"/></svg></span>',
+ pause:'<span class="ic"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg></span>'};
 const act=(a,cb)=>cb?socket.emit('act',a,cb):socket.emit('act',a),fmt=t=>{t=Math.max(0,t|0);return(t/60|0)+':'+String(t%60).padStart(2,'0')};
+/* v30: ask for sound at the start. A browser will not play sound until the
+   person taps the page — that tap is the "permission". There is no system
+   "Allow audio?" popup for speakers (that popup is only for the microphone),
+   so the app asks with one clear tap when it opens: it resumes an audio
+   context and unmutes the player, which unlocks sound for the whole session.
+   It runs on the landing page and on the join screen, so by the time a song
+   plays the sound is already on. In an installed app (home screen) this is
+   the first thing the person sees. */
+let __ac=null,sndOn=false;
+async function unlockAudio(){try{__ac=__ac||new (window.AudioContext||window.webkitAudioContext)();await __ac.resume()}catch{}if(P){try{P.unMute()}catch{}}/* v32: a tap also unlocks the singer's voice (the karaoke audio element) if it is already streaming. */
+ if(typeof kvPlay==='function')kvPlay();sndOn=true;
+ document.querySelectorAll('.snd').forEach(b=>{b.innerHTML=IC.check+' Sound on';b.classList.add('on');b.disabled=true});
+ try{L.snd='1'}catch{}}
+document.querySelectorAll('.snd').forEach(b=>b.onclick=unlockAudio);
 let toastTimer,videoCheckTimer=0,videoCheckSequence=0,checkedVideoUrl='',checkedVideoStatus='';
 const toast=m=>{const box=$('#toasts');clearTimeout(toastTimer);box.textContent='';const d=document.createElement('div');d.className='toast';d.textContent=m;box.append(d);toastTimer=setTimeout(()=>{if(d.parentNode===box)d.remove()},3500)};
 function renderVideoCheck(result){
@@ -68,7 +95,7 @@ else{$('#gate').hidden=false;$('#home-link').hidden=false;$('#gn').value=me.name
  const s=document.createElement('script');s.src='https://www.youtube.com/iframe_api';document.head.append(s)}
 window.onYouTubeIframeAPIReady=()=>{window.ytr=1};
 function pReady(e){applyVolume(e.target);capQuality();sync()}
-function pState(e){if(e.target!==P)return;if(e.data===0&&S?.cur)act({type:'ended',v:S.cur.videoId});if(e.data===1)$('#audio-unlock').hidden=true;if(e.data===1||e.data===2)sync()}
+function pState(e){if(e.target!==P)return;if(e.data===0&&S?.cur)act({type:'ended',v:S.cur.videoId});if(e.data===1){playbackWaitSince=0;$('#audio-unlock').hidden=true}if(e.data===1||e.data===2)sync()}
 function pErr(e){if(e.target!==P||!S?.cur)return;const message={2:'YouTube rejected the video request on this device.',5:'YouTube could not decode this video on this device.',100:'This video is unavailable or private.',101:'This video does not allow embedded playback.',150:'This video does not allow embedded playback.',153:"YouTube could not verify this embed's referrer."};toast(message[e.data]||'YouTube could not play this track on this device.');act({type:'bad',v:S.cur.videoId,code:e.data})}
 function initPlayer(){if(P)return; /* v24: only create the player once — it is now created early (on the gate) so it exists when the user taps Join, and again after joining */
  if(!window.ytr)return setTimeout(initPlayer,200);
@@ -86,12 +113,13 @@ function capQuality(){if(!P||!P.setPlaybackQuality)return;try{P.setPlaybackQuali
 setInterval(()=>capQuality(),2000);
 const est=()=>S?.cur?S.cur.pos+(S.cur.playing?(Date.now()-recv+rtt/2)/1000*(S.cur.speed||1):0):0;
 let bufSince=0;
-function sync(){if(!P||!P.loadVideoById||!S)return;const c=S.cur;if(!c){P.stopVideo?.();cv=null;needCatchup=false;return}
+function sync(){if(!P||!P.loadVideoById||!S)return;const c=S.cur;if(!c){P.stopVideo?.();cv=null;needCatchup=false;playbackWaitSince=0;return}
  /* v17 scheduled start: if this action is for a future server time, don't touch the player yet — wait until that instant, then apply it */
  const at=c.playAt?c.playAt-clockOff:0;
  if(at>Date.now()+30){clearTimeout(pendT);pendT=setTimeout(()=>{pendT=null;sync()},at-Date.now());return}
  if(cv!==c.videoId){
-  cv=c.videoId;if(c.playing)P.loadVideoById(c.videoId,est());else P.cueVideoById(c.videoId,est());capQuality();
+  cv=c.videoId;playbackWaitSince=c.playing?Date.now():0;
+  if(c.playing)P.loadVideoById(c.videoId,est());else P.cueVideoById(c.videoId,est());capQuality();
   needCatchup=true /* v17: fresh load — jump straight to the live position instead of drifting there */}
  const st=P.getPlayerState(),t=est(),now=P.getCurrentTime?.()||0,d=t-now,ad=Math.abs(d),rate=c.speed||1;
  /* v23 smooth playback: a seek throws the buffer away and stalls the song,
@@ -114,10 +142,11 @@ function sync(){if(!P||!P.loadVideoById||!S)return;const c=S.cur;if(!c){P.stopVi
  const syn=$('#sync');
  if(st===3){syn.className='off';syn.textContent='● Buffering…'}
  else{const ok=ad<1;syn.className=ok?'':'off';syn.textContent=ok?'● In Sync':'● Syncing…'}}
-socket.on('state',s=>{S=s;recv=Date.now();
+socket.on('state',s=>{const previousVideo=S?.cur?.videoId;S=s;recv=Date.now();
 /* v17: server clock minus this device's clock (one-way delay already removed) — used to run scheduled actions at the same instant on every device */
 clockOff=S.now+rtt/2-recv;
-if(!S.cur||!S.cur.playing)$('#audio-unlock').hidden=true;
+if(!S.cur||!S.cur.playing){$('#audio-unlock').hidden=true;playbackWaitSince=0}
+else if(previousVideo!==S.cur.videoId||!playbackWaitSince)playbackWaitSince=Date.now();
 render();sync();updateMediaSession()});socket.on('say',toast);
 socket.on('react',r=>{const d=document.createElement('div');d.className='fl';d.textContent=r.e;d.style.left=(10+Math.random()*80)+'%';$('#fl').append(d);setTimeout(()=>d.remove(),2400)});
 function render(){if(!joined)return;const isH=S.hostId===me.id,M=isH||S.co.includes(me.id),C=M||(S.ctrl&&S.ctrl.includes(me.id)),can=C,c=S.cur;
@@ -143,7 +172,7 @@ function render(){if(!joined)return;const isH=S.hostId===me.id,M=isH||S.co.inclu
  $('#q').innerHTML=S.queue.length?S.queue.map((t,i)=>`<li style="--c:${esc(t.color||'#ff2d87')}"><img src="${esc(t.artwork)}" alt=""><div><b>${esc(t.title)}</b><small>${esc(t.by)}</small>${kq(t,M)}</div>${C||t.byId===me.id?`<button data-rm="${i}" aria-label="Remove ${esc(t.title)}">Remove</button>`:''}</li>`).join(''):'<li class="empty"><div><small>Nothing queued. Paste a link above.</small></div></li>';
  $('#h').innerHTML=S.history.map(t=>`<li><img src="${esc(t.artwork)}" alt=""><div><b>${esc(t.title)}</b><small>${esc(t.by)}</small></div><button data-replay="${esc(t.videoId)}" aria-label="${C?'Replay':'Request'} ${esc(t.title)}">${C?'Replay':'Request'}</button></li>`).reverse().join('');
  $('#ul').innerHTML=S.users.map(u=>{const hasCtrl=S.ctrl&&S.ctrl.includes(u.id);
-  return `<li style="--c:${esc(u.color)}"><div><b>${esc(u.name)}${u.id===S.hostId?' 👑':S.co.includes(u.id)?' ★':hasCtrl?' 🎛':''}</b></div>${isH&&u.id!==me.id?`<div class="uacts">${ku(u)}<button data-h="${u.id}">Make host</button><button data-c="${u.id}">Co-host</button><button data-ctrl="${u.id}">${hasCtrl?'Take control':'Give control'}</button><button data-k="${u.id}">Remove</button></div>`:M&&u.id!==S.hostId&&u.id!==me.id?`<div class="uacts"><button data-k="${u.id}">Remove</button></div>`:''}</li>`}).join('');karRender()}
+  return `<li style="--c:${esc(u.color)}"><div><b>${esc(u.name)}${u.id===S.hostId?' '+IC.crown:S.co.includes(u.id)?' '+IC.star:hasCtrl?' '+IC.ctrl:''}</b></div>${isH&&u.id!==me.id?`<div class="uacts">${ku(u)}<button data-h="${u.id}">Make host</button><button data-c="${u.id}">Co-host</button><button data-ctrl="${u.id}">${hasCtrl?'Take control':'Give control'}</button><button data-k="${u.id}">Remove</button></div>`:M&&u.id!==S.hostId&&u.id!==me.id?`<div class="uacts"><button data-k="${u.id}">Remove</button></div>`:''}</li>`}).join('');karRender()}
 document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const d=b.dataset;
  if(d.rm)act({type:'remove',i:+d.rm});if(d.h)act({type:'host',id:d.h});if(d.c)act({type:'cohost',id:d.c});if(d.k)act({type:'kick',id:d.k});if(d.e)act({type:'react',e:d.e});
  if(d.ap)act({type:'approve',rid:d.ap});if(d.rj)act({type:'reject',rid:d.rj});if(d.ctrl)act({type:'ctrl',id:d.ctrl});if(d.replay)act({type:'add',url:'https://youtu.be/'+d.replay})});
@@ -156,7 +185,9 @@ $('#audio-unlock').onclick=()=>{if(!S?.cur?.playing||!P)return;applyVolume(P);P.
    the gesture the browser needs — after it, sound works for the whole session.
    It is a no-op once the player is playing and unmuted, and the localT guard
    keeps it from undoing your own intentional pause. */
-const unlockOnTap=()=>{if(!joined||!S?.cur?.playing||!P||Date.now()-localT<1000)return;const st=P.getPlayerState&&P.getPlayerState();if(st===1&&!P.isMuted?.())return;applyVolume(P);if(st!==1)P.playVideo?.();$('#audio-unlock').hidden=true};
+const unlockOnTap=()=>{/* v32: a tap anywhere also retries the singer's voice if it was blocked. */
+ if(typeof kvPlay==='function')kvPlay();
+ if(!joined||!S?.cur?.playing||!P||Date.now()-localT<1000)return;const st=P.getPlayerState&&P.getPlayerState();if(st===1&&!P.isMuted?.())return;applyVolume(P);if(st!==1)P.playVideo?.();$('#audio-unlock').hidden=true};
 document.addEventListener('pointerdown',unlockOnTap);
 /* v21: pause/play acts instantly on the device you tap. The server still
    schedules the action for the group (SCHED 200ms), so the sound used to keep
@@ -228,7 +259,7 @@ setInterval(()=>{if(!P||!P.getDuration||!S?.cur)return;const ld=P.getDuration()|
     not fire in every browser, so this check covers both. The localT guard
     keeps your own intentional pause (which takes ~200ms for the server to
     confirm) from flashing the button. */
- if(S.cur.playing&&P.getPlayerState&&!volumeMuted&&Date.now()-localT>1500){const st=P.getPlayerState();if(st===2||P.isMuted?.())$('#audio-unlock').hidden=false}},500);
+ if(S.cur.playing&&P.getPlayerState&&!volumeMuted&&Date.now()-localT>1500){const st=P.getPlayerState(),waiting=playbackWaitSince&&Date.now()-playbackWaitSince>6000;if(st===2||P.isMuted?.()||(waiting&&(st===-1||st===5)))$('#audio-unlock').hidden=false}},500);
 let mediaMetadataKey=null,mediaPlaybackState='';
 function updateMediaSession(){
  if(!navigator.mediaSession)return;const ms=navigator.mediaSession,c=S?.cur;
@@ -254,3 +285,7 @@ if('mediaSession'in navigator){
 }
 const resumeRoom=()=>{if(document.hidden||!joined)return;if(socket.connected)rejoinRoom();else socket.connect()};
 document.addEventListener('visibilitychange',resumeRoom);window.addEventListener('pageshow',resumeRoom);
+/* v29: installable app — register the service worker so the app shell loads
+   fast and the app can be added to the home screen. It never caches rooms or
+   live data, so a room is never stale. */
+if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('/sw.js').catch(error=>console.warn('Vibe Room service worker registration failed:',error))})}

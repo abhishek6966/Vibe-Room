@@ -9,10 +9,10 @@ const X_VIDEO=XIC('<polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" wi
 const X_CHEV='<svg class="chev" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>';
 const X_MUSIC=XIC('<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>');
 for(let i=0;i<7;i++){const o=$$('span','orb'),s=rnd(80,260);o.style.cssText=`width:${s}px;height:${s}px;left:${rnd(-5,95)}%;top:${rnd(0,90)}%;--o:${cols[i%5]};animation-delay:${-rnd(0,14)}s`;document.body.append(o)}
-for(let i=0;i<9;i++){const n=$$('span','note',['♪','♫','♬','🎵'][i%4]);n.style.cssText=`left:${rnd(0,95)}%;animation-duration:${rnd(12,24)}s;animation-delay:${-rnd(0,20)}s;color:${cols[i%5]}`;document.body.append(n)}
+for(let i=0;i<9;i++){const n=$$('span','note',X_MUSIC);n.style.cssText=`left:${rnd(0,95)}%;animation-duration:${rnd(12,24)}s;animation-delay:${-rnd(0,20)}s;color:${cols[i%5]}`;document.body.append(n)}
 const disc=$('#disc'),stage=$('.stage'),deck=$$('div','deck');disc.before(deck);deck.append(disc,$$('div','arm'));
 /* gradient hub button over the disc centre — the YouTube player stays mounted behind it; Show Video reveals it */
-const dp=$$('button','disc-btn','▶');dp.id='dp';dp.setAttribute('aria-label','Play or pause');dp.onclick=()=>{if(!S?.cur){toast('Paste a YouTube link to start the room.');return}localToggle();act({type:'play'})};deck.append(dp);
+const dp=$$('button','disc-btn',IC.play);dp.id='dp';dp.setAttribute('aria-label','Play or pause');dp.onclick=()=>{if(!S?.cur){toast('Paste a YouTube link to start the room.');return}localToggle();act({type:'play'})};deck.append(dp);
 const viz=$$('div','viz');viz.setAttribute('aria-hidden','true');
 const vcols=['#ff3d71','#ff3d71','#ff5c8a','#e14eca','#c026d3','#9b5cff','#7a5cff','#22e1ff'];
 for(let i=0;i<28;i++){const b=$$('i');b.style.animationDuration=rnd(.35,1)+'s';b.style.animationDelay=-rnd(0,1)+'s';b.style.background=vcols[Math.min(vcols.length-1,i*8/28|0)];b.style.height=rnd(8,34)+'px';viz.append(b)}deck.after(viz);
@@ -21,14 +21,14 @@ $('aside').append($$('details','',`<summary>Liked songs</summary><ol id="lk2"></
 /* Compact transport bar for non-Play tabs. */
 const miniIcon=p=>`<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true">${p}</svg>`;
 const miniPlay=miniIcon('<path d="M7 4.5v15L19.5 12z"/>'),miniPause=miniIcon('<rect x="6" y="5" width="4.5" height="14" rx="1"/><rect x="13.5" y="5" width="4.5" height="14" rx="1"/>');
-const mini=$$('div','',`<img id="mi" alt="" width="36" height="36"><b id="mt" style="flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis"></b><button id="mprev" aria-label="Previous track">${miniIcon('<path d="M6 5v14l9-7zM17 5h2v14h-2z"/>')}</button><button id="mp" aria-label="Play">${miniPlay}</button><button id="mnext" aria-label="Next track">${miniIcon('<path d="M18 5v14l-9-7zM5 5h2v14H5z"/>')}</button>`);mini.id='mini';document.body.append(mini);
+const mini=$$('div','',`<img id="mi" alt="" width="36" height="36"><b id="mt" style="flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis"></b><button id="mprev" aria-label="Previous track">${miniIcon('<path d="M18 5v14l-9-7zM5 5h2v14H5z"/>')}</button><button id="mp" aria-label="Play">${miniPlay}</button><button id="mnext" aria-label="Next track">${miniIcon('<path d="M6 5v14l9-7zM17 5h2v14h-2z"/>')}</button>`);mini.id='mini';document.body.append(mini);
 const updMini=()=>mini.classList.toggle('show',document.body.classList.contains('in-room')&&$('#room').dataset.tab!=='play'&&!!S?.cur);window.updMini=updMini;
 /* pink fill on the seek + volume sliders */
 const setFill=el=>{if(el)el.style.setProperty('--p',((el.value-el.min)/(el.max-el.min)*100)+'%')};
 setInterval(()=>{setFill($('#sc'));setFill($('#vol'))},300);
 const likes=()=>JSON.parse(L.likes||'[]'),showLikes=()=>{const C=S&&(S.hostId===me.id||S.co.includes(me.id)||(S.ctrl&&S.ctrl.includes(me.id)));$('#lk2').innerHTML=likes().map(x=>`<li><div><b>${esc(x.t)}</b></div><button data-like="${x.id}">${C?'Add to queue':'Request'}</button></li>`).join('')||'<li><div><small>Tap Like on a song to save it here.</small></div></li>'};
 function paint(){const c=S?.cur,M=S&&(S.hostId===me.id||S.co.includes(me.id)),C=M||(S&&S.ctrl&&S.ctrl.includes(me.id)),can=C;stage.classList.toggle('on',!!c&&c.playing);deck.classList.toggle('on',!!c&&c.playing);
- dp.textContent=c&&c.playing?'❚❚':'▶';dp.disabled=!can;
+ dp.innerHTML=c&&c.playing?IC.pause:IC.play;dp.disabled=!can;
  const rp=S?.repeat||'off';$('#xr').classList.toggle('on',rp!=='off');const xrb=$('#xrb');xrb.hidden=rp==='off';xrb.textContent=rp==='one'?'1':'ALL';
  $('#xp').disabled=!can;['#xs','#xr','#xv'].forEach(i=>$(i).disabled=!C);$('#xv').closest('.pill').classList.toggle('off',!C);if(c)$('#xv').value=String(c.speed||1);
  $('#xl').innerHTML=(c&&likes().some(x=>x.id===c.videoId)?X_HEART('#ff5c8a'):X_HEART_O)+'<span>Like</span>';
@@ -49,7 +49,7 @@ socket.on('react',()=>{const x=innerWidth/2,y=innerHeight*.6;for(let i=0;i<12;i+
    s.style.cssText=`left:${rnd(0,100)}%;top:${rnd(0,100)}%;width:${rnd(1,3.5)}px;height:${rnd(1,3.5)}px;background:${sc[i%5]};animation-duration:${rnd(1.8,4.5)}s;animation-delay:${-rnd(0,4)}s;box-shadow:0 0 ${rnd(4,10)}px ${sc[i%5]}`;
    stars.append(s)}}
  if(notes){const nc=['#ff8ac2','#7fe8ff','#ffd166','#c9ff55','#ff5c9a'];
-  for(let i=0;i<12;i++){const n=document.createElement('span');n.textContent=['♪','♫','♬','♩'][i%4];
+  for(let i=0;i<12;i++){const n=document.createElement('span');n.innerHTML='<svg viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>';
    n.style.cssText=`left:${rnd(2,96)}%;font-size:${rnd(1.1,2.2)}rem;color:${nc[i%5]};animation-duration:${rnd(14,26)}s;animation-delay:${-rnd(0,24)}s`;
    notes.append(n)}}
  const hero=document.querySelector('.hero3d');

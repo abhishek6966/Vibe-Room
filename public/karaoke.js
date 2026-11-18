@@ -7,7 +7,7 @@ let cfg={...FX.party[1],dn:.3,fx:'party'},AC,G={},peers={},inc={},lpc=null,rec=n
 /* v26: the host (or co-host) can sing a track directly — no request, no wait
    to be picked. `data-pick` with their own id assigns them as the singer. */
 const kq=(t,M)=>{if(S.mode!=='karaoke')return'';const mine=t.reqs.some(r=>r.id===me.id);
- return(t.singerId?`<small style="color:var(--li)">🎤 ${esc(t.singerName)}</small>`:'')+t.reqs.map(r=>`<small>${esc(r.name)} wants to sing${M?`<button data-pick="${t.tid}|${r.id}">Pick</button>`:''}</small>`).join('')+
+ return(t.singerId?`<small class="kq-mic" style="color:var(--li)">${IC.mic} ${esc(t.singerName)}</small>`:'')+t.reqs.map(r=>`<small>${esc(r.name)} wants to sing${M?`<button data-pick="${t.tid}|${r.id}">Pick</button>`:''}</small>`).join('')+
  (t.singerId===me.id?'':M?`<button data-pick="${t.tid}|${me.id}">Sing</button>`:`<button data-sing="${t.tid}">${mine?'Cancel request':'Request to sing'}</button>`)+(M&&t.singerId?`<button data-pick="${t.tid}|">Clear singer</button>`:'')};
 const ku=u=>S.mode==='karaoke'?`<button data-adder="${u.id}">${S.adders.includes(u.id)?'Remove add access':'Let add songs'}</button>`:'';
 /* v26: redesigned Sing tab — four clean sections instead of one crowded card.
@@ -15,7 +15,7 @@ const ku=u=>S.mode==='karaoke'?`<button data-adder="${u.id}">${S.adders.includes
    that matters right now) · MIC (singer controls, only when you are the
    singer) · VOICE EFFECTS (FX presets in a grid). */
 const K=document.createElement('section');K.id='kar';K.hidden=true;
-K.innerHTML=`<div class="kar-stage"><div class="kar-stage-top"><div class="kar-avatar" id="kav">🎤</div><div class="kar-stage-info"><div class="kar-stage-label" id="ksl">NO SINGER YET</div><div class="kar-stage-name" id="ksn">—</div><div class="kar-stage-song" id="kss">—</div></div><div class="kar-live" id="klv" hidden>LIVE</div></div><div class="kar-viz" id="kvis" aria-hidden="true">${'<i></i>'.repeat(24)}</div></div>
+K.innerHTML=`<div class="kar-stage"><div class="kar-stage-top"><div class="kar-avatar" id="kav">${IC.mic}</div><div class="kar-stage-info"><div class="kar-stage-label" id="ksl">NO SINGER YET</div><div class="kar-stage-name" id="ksn">—</div><div class="kar-stage-song" id="kss">—</div><div class="kar-voice" id="kvoi" hidden></div></div><div class="kar-live" id="klv" hidden>LIVE</div></div><div class="kar-viz" id="kvis" aria-hidden="true">${'<i></i>'.repeat(24)}</div></div>
 <div class="kar-action" id="ks"></div>
 <div class="kar-mic" id="kc" hidden><p class="kar-tip">Wear headphones so the song doesn’t leak into your microphone.</p><div class="kar-row"><button id="kl" class="kar-big">Start singing</button><label class="kar-hear"><input type="checkbox" id="km"> Hear myself</label></div><div class="kar-row"><button id="kr">Record my vocals</button><a id="kd" hidden download="my-take.webm">Save take</a></div></div>
 <div class="kar-fx"><h4>Voice effects</h4><div id="kf">${Object.entries(FX).map(([k,v])=>`<button data-fx="${k}" aria-label="Effect ${v[0]}">${v[0]}</button>`).join('')}</div>
@@ -48,11 +48,46 @@ async function micStart(){const st=await navigator.mediaDevices.getUserMedia({au
  const nb=AC.createBuffer(1,AC.sampleRate*2,AC.sampleRate),d=nb.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()<.002?Math.random()*2-1:0;
  const ns=AC.createBufferSource();ns.buffer=nb;ns.loop=true;ns.connect(g.cr);g.cr.connect(g.out);ns.start();
  g.out.connect(g.dest);g.out.connect(g.mon);g.mon.connect(AC.destination);ksz=0;apply();vizStart(g.an,'mic');
+ /* v33: "Hear myself" fix — if the singer ticked the box BEFORE tapping
+    "Start singing", the old code lost the setting (the mic did not exist
+    when they ticked it, so the monitor was created silent). Apply the box's
+    current state right here, so the singer hears themselves either way. */
+ g.mon.gain.value=document.querySelector('#km')?.checked?.9:0;
+ /* v33: keep offering the voice to EVERYONE while live (every 3s) — the
+    host, every listener, and anyone who joins late. The old code only
+    offered when a state update arrived, so a late joiner or a dropped
+    connection could miss the voice entirely. */
+ clearInterval(G.offerT);G.offerT=setInterval(()=>{if(!AC||!S?.cur?.live||S.cur.singerId!==me.id)return;S.users.forEach(u=>u.id!==me.id&&offerTo(u.id))},3000);
  const buf=new Float32Array(512);g.timer=setInterval(()=>{g.an.getFloatTimeDomainData(buf);let s=0;for(const v of buf)s+=v*v;const r=Math.sqrt(s/512);g.gate.gain.setTargetAtTime(cfg.dn>0&&r<cfg.dn*.02?.08:1,AC.currentTime,.05)},40)}
-function micStop(){clearInterval(G.timer);G.st?.getTracks().forEach(t=>t.stop());Object.values(peers).forEach(p=>p.close());peers={};AC?.close();AC=null;G={};vizStop();if(rec&&rec.state!=='inactive')rec.stop();$('#kl').textContent='Start singing'}
+function micStop(){clearInterval(G.timer);clearInterval(G.offerT);G.st?.getTracks().forEach(t=>t.stop());Object.values(peers).forEach(p=>p.close());peers={};AC?.close();AC=null;G={};vizStop();if(rec&&rec.state!=='inactive')rec.stop();$('#kl').textContent='Start singing'}
+/* v32: the listener's voice element. The old code created <audio id="kv">
+   only inside ontrack and called play() once — if the browser blocked that
+   one play() (autoplay policy, very common on iPhones: the element is new
+   and play() runs from a WebRTC callback, not from a tap), the promise
+   rejected silently and the voice NEVER sounded, even though the stream had
+   arrived. Now the element is created early (on join, before any voice
+   arrives), and play() is retried on the next user tap if it was blocked,
+   so one tap anywhere starts the voice. */
+let kvTries=0;
+function ensureKv(){let a=document.querySelector('#kv');if(!a){a=new Audio();a.id='kv';a.autoplay=true;a.playsInline=true;a.preload='auto';a.volume=1;a.muted=false;document.body.append(a)}return a}
+function kvPlay(){const a=document.querySelector('#kv');if(!a||!a.srcObject)return;kvTries++;
+ a.play().then(()=>{kvTries=0;voiceStatus('connected')}).catch(()=>{voiceStatus('blocked');
+  const retry=()=>{const b=document.querySelector('#kv');if(b&&b.srcObject)b.play().then(()=>{kvTries=0;voiceStatus('connected')}).catch(()=>{})};
+  document.addEventListener('pointerdown',retry,{once:true})})}
+function voiceStatus(s){const el=document.querySelector('#kvoi');if(!el)return;
+ if(s==='connected'){el.hidden=false;el.textContent='Voice connected — you can hear the singer';el.classList.add('ok');el.classList.remove('warn')}
+ else if(s==='blocked'){el.hidden=false;el.textContent='Voice is ready — tap anywhere to hear it';el.classList.add('warn');el.classList.remove('ok')}
+ else if(s==='connecting'){el.hidden=false;el.textContent='Connecting voice…';el.classList.remove('ok','warn')}
+ else{el.hidden=true}}
 function offerTo(id){if(peers[id])return;const pc=new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'}]});peers[id]=pc;G.dest.stream.getTracks().forEach(t=>pc.addTrack(t,G.dest.stream));
- pc.onicecandidate=e=>e.candidate&&socket.emit('rtc',{to:id,data:{c:e.candidate}});pc.onconnectionstatechange=()=>{if(['failed','closed'].includes(pc.connectionState)){pc.close();delete peers[id]}};
- pc.createOffer().then(o=>pc.setLocalDescription(o)).then(()=>socket.emit('rtc',{to:id,data:{d:pc.localDescription}}))}
+ pc.onicecandidate=e=>e.candidate&&socket.emit('rtc',{to:id,data:{c:e.candidate}});
+ /* v32: if the voice connection fails (strict network, no TURN relay), retry
+    the offer a few times instead of silently dropping it — the old code
+    deleted the peer and never tried again until the next state change. */
+ pc.onconnectionstatechange=()=>{if(pc.connectionState==='connected'){voiceStatus('connected')}
+  if(['failed','closed'].includes(pc.connectionState)){pc.close();delete peers[id];
+   if(S&&S.cur&&S.cur.live&&S.cur.singerId===me.id&&AC){const n=(pc._r||0)+1;if(n<=5)setTimeout(()=>{if(S&&S.cur&&S.cur.live&&S.cur.singerId===me.id&&AC&&!peers[id]){const p2=offerTo(id);if(p2)p2._r=n}},2000)}}};
+ pc.createOffer().then(o=>pc.setLocalDescription(o)).then(()=>socket.emit('rtc',{to:id,data:{d:pc.localDescription}}));return pc}
 let chain=Promise.resolve();
 socket.on('rtc',({from,data})=>{chain=chain.then(async()=>{try{
  if(data.d&&data.d.type==='offer'){lpc?.close();const pc=lpc=new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'}]});
@@ -61,7 +96,7 @@ socket.on('rtc',({from,data})=>{chain=chain.then(async()=>{try{
      stream for the stage visualizer — so the bars on this screen move with
      the voice this person actually hears. The analysis is read-only; the
      audio element keeps playing the stream directly. */
-  pc.ontrack=e=>{let a=$('#kv');if(!a){a=new Audio();a.id='kv';a.autoplay=true;document.body.append(a)}a.srcObject=e.streams[0];a.play().catch(()=>{});
+  pc.ontrack=e=>{const a=ensureKv();a.srcObject=e.streams[0];voiceStatus('connecting');kvPlay();
    try{vizAC=vizAC||new AudioContext();vizAC.resume().catch(()=>{});const src=vizAC.createMediaStreamSource(e.streams[0]);const an=vizAC.createAnalyser();an.fftSize=512;src.connect(an);vizStart(an,'peer')}catch{}};
   await pc.setRemoteDescription(data.d);await pc.setLocalDescription(await pc.createAnswer());socket.emit('rtc',{to:from,data:{d:pc.localDescription}})}
  else if(data.d){await peers[from]?.setRemoteDescription(data.d)}
@@ -74,6 +109,10 @@ document.addEventListener('click',async e=>{const b=e.target.closest('button');i
   rec.onstop=()=>{const a=$('#kd');a.href=URL.createObjectURL(new Blob(chunks,{type:'audio/webm'}));a.hidden=false};rec.start();b.textContent='Stop recording'}}});
 $('#km').onchange=e=>AC&&G.mon.gain.setTargetAtTime(e.target.checked?.9:0,AC.currentTime,.05);
 function karRender(){const k=S.mode==='karaoke',isH=S.hostId===me.id,M=isH||S.co.includes(me.id),c=S.cur;mb.hidden=!isH;mb.textContent=k?'Karaoke: on':'Karaoke: off';K.hidden=!k;
+ /* v32: create the voice audio element early (before any voice arrives) so
+    it exists when the singer's stream comes in — and so a user tap can
+    unlock it in advance. */
+ if(k)ensureKv();
  $('#au').disabled=k&&!M&&!S.adders.includes(me.id);$('#au').placeholder=$('#au').disabled?'Ask the host for add access':'Paste a YouTube link…';
  const mine=c&&c.singerId===me.id;if(!k||!mine){if(AC)micStop()}
  if(!k){vizStop();return}
@@ -87,12 +126,16 @@ function karRender(){const k=S.mode==='karaoke',isH=S.hostId===me.id,M=isH||S.co
  else{sl.textContent='NO SINGER YET';sn.textContent='';ss.textContent=c.title;lv.hidden=true;st.classList.remove('live');vizStop()}
  /* v26: your turn — one clear action. The host (or co-host) sings directly
     with no request and no wait to be picked. Everyone else requests. */
- $('#ks').innerHTML=!c?'':c.singerId?`<div class="kar-now">🎤 <b>${esc(c.singerName)}</b> is singing${c.live?' live now':' — waiting for their mic'}</div>${M?`<button data-pick="${c.tid}|">Clear singer</button>`:''}`:
-  (M?`<button class="kar-sing" data-pick="${c.tid}|${me.id}">🎤 Sing this song</button><span class="kar-hint">You are the host — no request needed.</span>`:
+ $('#ks').innerHTML=!c?'':c.singerId?`<div class="kar-now">${IC.mic} <b>${esc(c.singerName)}</b> is singing${c.live?' live now':' — waiting for their mic'}</div>${M?`<button data-pick="${c.tid}|">Clear singer</button>`:''}`:
+  (M?`<button class="kar-sing" data-pick="${c.tid}|${me.id}">${IC.mic} Sing this song</button><span class="kar-hint">You are the host — no request needed.</span>`:
   `<button class="kar-sing" data-sing="${c.tid}">${c.reqs.some(r=>r.id===me.id)?'Cancel request':'Request to sing'}</button>`)+
   (c.reqs.length?`<div class="kar-reqs"><h4>Waiting to sing</h4>${c.reqs.map(r=>`<div class="kar-req"><span>${esc(r.name)}</span>${M?`<button data-pick="${c.tid}|${r.id}">Pick</button>`:''}</div>`).join('')}</div>`:'');
  $('#kc').hidden=!mine;
- if(mine&&AC&&c.live)S.users.forEach(u=>u.id!==me.id&&offerTo(u.id));
+ if(mine&&AC&&c.live){S.users.forEach(u=>u.id!==me.id&&offerTo(u.id));
+  /* v33: the singer sees how many listeners their voice is reaching, so
+     they know everyone (host included) can hear them. */
+  const n=Object.values(peers).filter(p=>p.connectionState==='connected').length,tot=S.users.length-1;
+  const el=document.querySelector('#kvoi');if(el){el.hidden=false;el.textContent=tot>0?`Voice live — ${n} of ${tot} listener${tot===1?'':'s'} connected`:'Voice live — waiting for listeners';el.classList.toggle('ok',n>0&&n===tot);el.classList.toggle('warn',n<tot)}}
  if(mine)Object.keys(peers).forEach(id=>{if(!S.users.some(u=>u.id===id)){peers[id].close();delete peers[id]}});
  if(!(c&&c.live&&!mine)&&lpc){lpc.close();lpc=null;const a=$('#kv');if(a)a.srcObject=null;vizStop()}}
 apply();

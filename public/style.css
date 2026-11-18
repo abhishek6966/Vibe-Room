@@ -104,7 +104,7 @@ h2{font-size:1.28rem;margin:0;line-height:1.2;font-weight:700}
 #tt{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 #ch,#by{margin:2px 0;display:inline}
 #by:not(:empty)::before{content:" • "}
-#tt::before{content:"♪ ";color:var(--pink)}
+/* v31: the "♪ " before the track title is gone — no text glyphs, premium icons only. */
 p{margin:.3em 0}#ch{color:var(--mu)}.by{color:var(--li)}
 
 /* ---------- seek + time ---------- */
@@ -750,3 +750,47 @@ dialog{max-height:90dvh;overflow-y:auto}
 /* Empty state: clean, centered, muted — not a fake song card. */
 #p-queue li.empty{justify-content:center;background:transparent;border:1px dashed rgba(255,255,255,.16);box-shadow:none;padding:14px}
 #p-queue li.empty small{font-size:.85rem;color:#b9a8e8}
+
+/* v30: "Tap to enable sound" — asked at the start, so the music plays the
+   moment a song starts. A clear, inviting button on the home and join
+   screens. Once tapped it turns into a quiet "Sound on" confirmation. */
+.snd{display:block;width:100%;min-height:48px;margin:10px 0 0;border-radius:999px;border:1px solid rgba(255,255,255,.35);background:linear-gradient(135deg,#ff9a1f,#ff3d71 55%,#c026d3);color:#fff;font-weight:800;font-size:.98rem;box-shadow:0 10px 26px -8px #ff3d71aa,inset 0 1px 0 rgba(255,255,255,.35);cursor:pointer}
+.snd.on{background:rgba(182,255,59,.14);border-color:rgba(182,255,59,.4);color:#d6ff7a;box-shadow:none}
+/* In the installed app (home screen) make it gently pulse, so it is the
+   first thing the person notices when the app opens. */
+@media (display-mode:standalone){.snd:not(.on){animation:sndPulse 1.6s ease-in-out infinite}}
+@keyframes sndPulse{0%,100%{box-shadow:0 10px 26px -8px #ff3d71aa,inset 0 1px 0 rgba(255,255,255,.35)}50%{box-shadow:0 10px 34px -4px #ff3d71,inset 0 1px 0 rgba(255,255,255,.35)}}
+
+/* v31: Queue tab — restructure the section spacing. The headings were stuck
+   to the elements above and below them: the first heading ("Current song")
+   had margin-top:0 so it touched the paste bar, and 16px/8px was too tight
+   to read as a section break. Now every heading has a clear gap above it
+   (20px) and a clear gap below it (12px), so the page reads as separate
+   sections instead of one stuck-together list. The paste bar also gets a
+   little room underneath it. */
+#p-queue h3{margin:20px 0 12px}
+#p-queue h3:first-of-type{margin-top:20px}
+#p-queue #af{margin-bottom:2px}
+
+/* v31: premium icons. Every emoji is replaced by a clean inline SVG icon
+   (stroke-based, currentColor, so it matches the text around it). The .ic
+   wrapper sizes the icon to the text and keeps it vertically aligned. */
+.ic{display:inline-flex;vertical-align:-.14em}
+.ic svg{width:1.05em;height:1.05em;display:block}
+.snd .ic svg{width:1.25em;height:1.25em}
+#kav .ic svg{width:44px;height:44px}
+.kar-now .ic,.kar-sing .ic{vertical-align:-.18em}
+.kar-sing .ic svg{width:1.15em;height:1.15em}
+.kq-mic .ic svg{width:.95em;height:.95em}
+.uacts .ic svg{width:1em;height:1em}
+#tabs button i .ic svg{width:22px;height:22px}
+#tabs button.mic i .ic svg{width:30px;height:30px}
+.disc-btn .ic svg{width:26px;height:26px}
+
+/* v32: karaoke voice status line on the stage — tells everyone whether the
+   singer's voice is actually reaching this screen. Green = connected and
+   audible; amber = the voice is ready but the browser blocked it, so tap
+   anywhere to hear it. */
+.kar-voice{font-size:.78rem;margin-top:3px;color:#b9a8e8}
+.kar-voice.ok{color:#b6ff3b}
+.kar-voice.warn{color:#ffd166}
