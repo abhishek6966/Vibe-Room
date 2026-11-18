@@ -458,3 +458,22 @@ li div{min-width:0!important}
   overflow-wrap:anywhere;
   text-overflow:clip;
 }
+
+#gate{min-height:100vh;min-height:100svh;align-content:center;gap:22px}
+#gate .gate-badge{width:min(42vw,156px);margin:0 auto}
+#gate .gate-panel{display:grid;gap:14px;padding:clamp(20px,5vw,28px);border:1px solid rgba(255,255,255,.2);border-radius:28px;background:linear-gradient(150deg,rgba(255,255,255,.13),rgba(40,8,90,.48));box-shadow:0 24px 60px rgba(0,0,0,.32),inset 0 1px 0 rgba(255,255,255,.2);backdrop-filter:blur(18px)}
+#gate .gate-panel h1{font-size:clamp(2.25rem,9vw,3.2rem)}
+#gate .gate-panel .lead{max-width:34ch;margin:0 auto;line-height:1.55}
+#gate #join-fields{align-items:center}
+#gate #gn{flex:1;min-width:0}
+#gate #gc{flex:none;width:48px;height:48px;border:1px solid rgba(255,255,255,.24);border-radius:50%;overflow:hidden}
+#gate #gc::-webkit-color-swatch-wrapper{padding:4px}
+#gate #gc::-webkit-color-swatch{border:0;border-radius:50%}
+#gate #gc::-moz-color-swatch{border:0;border-radius:50%}
+#gate #go,#gate #new-room{width:100%;min-height:54px;margin:0}
+#gate .gate-home{display:block;padding:13px 16px;border:1px solid rgba(255,255,255,.2);border-radius:16px;background:rgba(255,255,255,.08);color:#fff;font-weight:600;text-decoration:none}
+#gate .gate-home:hover{background:rgba(255,255,255,.14)}
+#gate #ge{margin:0;line-height:1.5}
+#gate.gate-error .gate-badge{width:min(34vw,124px)}
+#gate.gate-error #ge{padding:10px 12px;border:1px solid rgba(255,255,255,.12);border-radius:14px;background:rgba(255,61,113,.12)}
+body:not(.in-room) #mini{display:none!important}

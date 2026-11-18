@@ -15,17 +15,19 @@ const AIC=(p)=>'<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stro
 const AIC_LOCK=AIC('<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>');
 const AIC_UNLOCK=AIC('<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/>');
 const AIC_USERS='<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>';
+const showJoinError=message=>{$('#gate').classList.add('gate-error');$('#gt').textContent='Room unavailable';$('#gs').textContent='This invite link may be incorrect or expired.';$('#ge').textContent=message+' Create a new room to get a fresh invite link.';$('#join-fields').hidden=true;$('#go').hidden=true;$('#new-room').hidden=false;$('#home-link').hidden=false};
 if(!code){$('#home').hidden=false;
  $('#create').onclick=()=>socket.emit('create',me,r=>location.href='/room/'+r.code);
  $('#jf').onsubmit=e=>{e.preventDefault();const c=$('#jc').value.trim().toUpperCase();if(c)location.href='/room/'+c};
  const rc=JSON.parse(L.recent||'[]');$('#recent').innerHTML=rc.length?'<p class="steps">Recent rooms</p>'+rc.map(c=>`<a href="/room/${esc(c)}" style="color:var(--cy)">${esc(c)}</a>`).join(' '):''}
 else{$('#gate').hidden=false;$('#gn').value=me.name;$('#gc').value=me.color.length==7?me.color:'#ff2d87';
- socket.on('connect',()=>socket.emit('join',{code,...me},r=>{if(r.error){$('#gt').textContent='Can’t join';$('#ge').textContent=r.error;return}
-  $('#gt').textContent='Room '+code.toUpperCase();$('#gs').textContent='Pick a name, then tap to start listening in sync.';$('#go').disabled=false;
-  L.recent=JSON.stringify([...new Set([code.toUpperCase(),...JSON.parse(L.recent||'[]')])].slice(0,5))}));
- $('#go').onclick=()=>{me.name=L.vname=$('#gn').value.trim()||me.name;me.color=L.vcolor=$('#gc').value;socket.emit('join',{code,...me},()=>{});
+ $('#new-room').onclick=()=>{const b=$('#new-room');b.disabled=true;b.textContent='Creating room…';socket.emit('create',me,r=>{if(!r?.code){b.disabled=false;b.textContent='Create a new room';$('#ge').textContent='Could not create a room. Please try again.';return}location.href='/room/'+r.code})};
+ socket.on('connect',()=>{if(joined)return;socket.emit('join',{code,...me},r=>{if(joined)return;if(r.error){showJoinError(r.error);return}
+  $('#gate').classList.remove('gate-error');$('#gt').textContent='Room '+code.toUpperCase();$('#gs').textContent='Choose your name, then join the room.';$('#ge').textContent='';$('#join-fields').hidden=false;$('#go').hidden=false;$('#go').disabled=false;$('#new-room').hidden=true;$('#new-room').disabled=false;$('#new-room').textContent='Create a new room';$('#home-link').hidden=true;
+  L.recent=JSON.stringify([...new Set([code.toUpperCase(),...JSON.parse(L.recent||'[]')])].slice(0,5))})});
+ $('#go').onclick=()=>{me.name=L.vname=$('#gn').value.trim()||me.name;me.color=L.vcolor=$('#gc').value;$('#go').disabled=true;$('#go').textContent='Joining…';socket.emit('join',{code,...me},r=>{if(r.error){showJoinError(r.error);return}
   joined=true;document.body.classList.add('in-room'); /* v14: hide the landing/gate FX once inside a room */
-  $('#gate').hidden=true;$('#room').hidden=false;initPlayer();if(S)render()};
+  $('#gate').hidden=true;$('#room').hidden=false;initPlayer();if(S)render()})};
  const s=document.createElement('script');s.src='https://www.youtube.com/iframe_api';document.head.append(s)}
 window.onYouTubeIframeAPIReady=()=>{window.ytr=1};
 function pReady(e){const pl=e.target;if(pl.unMute)pl.unMute();if(pl.setVolume)pl.setVolume(+$('#vol').value);capQuality();sync()}

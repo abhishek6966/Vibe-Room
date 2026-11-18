@@ -16,9 +16,15 @@
 </main>
 <main id="gate" hidden>
  <div class="gate-badge"><img src="/gate-vibe.jpg" alt="Join the vibe"></div>
- <h1 id="gt">Joining…</h1><p class="lead" id="gs"></p>
- <div class="row"><input id="gn" maxlength="20" aria-label="Your name"><input id="gc" type="color" aria-label="Your colour"></div>
- <button id="go" class="big" disabled>Join audio stream</button><p id="ge" class="err"></p></main>
+ <section class="gate-panel">
+  <h1 id="gt">Joining…</h1><p class="lead" id="gs">Checking this room’s invite link…</p>
+  <div class="row" id="join-fields"><input id="gn" maxlength="20" aria-label="Your name"><input id="gc" type="color" aria-label="Your colour"></div>
+  <button id="go" class="big" disabled>Join audio stream</button>
+  <button id="new-room" class="big" hidden>Create a new room</button>
+  <a id="home-link" class="gate-home" href="/" hidden>Back to home page</a>
+  <p id="ge" class="err" role="status" aria-live="polite"></p>
+ </section>
+</main>
 <div id="room" data-tab="play" hidden>
  <header><div class="logo" aria-hidden="true"><svg viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="M7 4.5v15l12.5-7.5z"/></svg></div><div class="rt"><b id="rn"></b><small>● Live Room</small></div><div id="who" class="who"></div><button id="share"><span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg></span> <span class="tx">Invite</span></button><button id="lock" hidden></button></header>
  <section class="stage"><span class="dnote n1" aria-hidden="true">♪</span><span class="dnote n2" aria-hidden="true">♫</span><span class="dnote n3" aria-hidden="true">♪</span><span class="dnote n4" aria-hidden="true">♬</span>

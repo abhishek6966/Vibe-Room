@@ -28,7 +28,7 @@ $('aside').append($$('details','',`<summary>Liked songs</summary><ol id="lk2"></
    host/control-only (guests see them greyed out); Next stays enabled for
    everyone — a guest's tap is a vote to skip. */
 const mini=$$('div','',`<img id="mi" alt="" width="40" height="30"><b id="mt" style="flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis"></b><button id="mprev" aria-label="Previous">⏮</button><button id="mp">Play</button><button id="mnext" aria-label="Next">⏭</button>`);mini.id='mini';document.body.append(mini);
-const updMini=()=>mini.classList.toggle('show',!$('#room').hidden&&!!S?.cur);window.updMini=updMini;
+const updMini=()=>mini.classList.toggle('show',document.body.classList.contains('in-room')&&!!S?.cur);window.updMini=updMini;
 /* pink fill on the seek + volume sliders */
 const setFill=el=>{if(el)el.style.setProperty('--p',((el.value-el.min)/(el.max-el.min)*100)+'%')};
 setInterval(()=>{setFill($('#sc'));setFill($('#vol'))},300);
