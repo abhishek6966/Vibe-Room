@@ -9,15 +9,16 @@ setInterval(()=>{if(socket.connected)socket.emit('ping',Date.now())},5000);
 socket.on('pong',t=>{const d=Date.now()-t;rtt=rtt?rtt*.7+d*.3:d});
 const code=(location.pathname.match(/^\/room\/(\w+)/)||[])[1];
 const act=a=>socket.emit('act',a),fmt=t=>{t=Math.max(0,t|0);return(t/60|0)+':'+String(t%60).padStart(2,'0')};
-const toast=m=>{const d=document.createElement('div');d.className='toast';d.textContent=m;$('#toasts').append(d);setTimeout(()=>d.remove(),3500)};
+let toastTimer;
+const toast=m=>{const box=$('#toasts');clearTimeout(toastTimer);box.textContent='';const d=document.createElement('div');d.className='toast';d.textContent=m;box.append(d);toastTimer=setTimeout(()=>{if(d.parentNode===box)d.remove()},3500)};
 const volumeOnIcon=$('#vm').innerHTML,volumeMutedIcon='<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="17" y1="9" x2="22" y2="14"/><line x1="22" y1="9" x2="17" y2="14"/></svg>';
 let volume=80,lastVolume=80,volumeMuted=false;
 function applyVolume(pl){if(!pl)return;if(volumeMuted){pl.setVolume?.(0);pl.mute?.()}else{pl.setVolume?.(volume);pl.unMute?.()}}
 function setVolume(value){volume=Math.max(0,Math.min(100,Math.round(Number(value)||0)));if(volume>0)lastVolume=volume;volumeMuted=volume===0;$('#vol').value=String(volume);[P,P2].forEach(applyVolume);$('#vm').innerHTML=volumeMuted?volumeMutedIcon:volumeOnIcon;$('#vm').setAttribute('aria-label',volumeMuted?'Unmute':'Mute');$('#vm').setAttribute('aria-pressed',String(volumeMuted))}
 /* clean line icons (Feather-style) for the header, like the mockup */
 const AIC=(p)=>'<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+p+'</svg>';
-const AIC_LOCK=AIC('<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>');
-const AIC_UNLOCK=AIC('<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/>');
+const AIC_LOCK=AIC('<rect x="4" y="10" width="16" height="11" rx="2.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/><circle cx="12" cy="15" r="1"/><path d="M12 16v2"/>');
+const AIC_UNLOCK=AIC('<rect x="4" y="10" width="16" height="11" rx="2.5"/><path d="M8 10V7a4 4 0 0 1 7.8-1"/><circle cx="12" cy="15" r="1"/><path d="M12 16v2"/>');
 const AIC_USERS='<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>';
 const showJoinError=message=>{$('#gate').classList.add('gate-error');$('#gt').textContent='Room unavailable';$('#gs').textContent='This invite link may be incorrect or expired.';$('#ge').textContent=message+' Create a new room to get a fresh invite link.';$('#join-fields').hidden=true;$('#go').hidden=true;$('#new-room').hidden=false;$('#home-link').hidden=false};
 if(!code){$('#home').hidden=false;

@@ -27,23 +27,17 @@ document.querySelectorAll('.xtra select').forEach(sel=>{const pill=sel.closest('
  const upd=()=>lab.textContent=sel.selectedOptions[0].text;upd();setInterval(upd,300);pill.tabIndex=0;pill.setAttribute('role','button');
  pill.addEventListener('click',e=>{e.preventDefault();if(!sel.disabled)open(sel,pill)});pill.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();sel.disabled||open(sel,pill)}if(e.key==='Escape')close()}});
 })();
-document.querySelectorAll('#xoff option').forEach(o=>{if(+o.value)o.textContent=o.value+' min'});
-
 /* ===== v11: premium icon set for the glass buttons ===== */
 (()=>{const q=s=>document.querySelector(s),I=p=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
 const SHUF=I('<path d="M3 7h3c5 0 5 10 10 10h3M3 17h3c1.5 0 2.7-.8 3.7-2M14 8.4C14.8 7.5 15.8 7 17 7h2M17 4l3 3-3 3M17 14l3 3-3 3"/>'),
 REP=I('<path d="M17 2.5l3.5 3.5L17 9.5"/><path d="M3.5 11V9.5A3.5 3.5 0 0 1 7 6h13.5"/><path d="M7 21.5L3.5 18 7 14.5"/><path d="M20.5 13v1.5A3.5 3.5 0 0 1 17 18H3.5"/>'),
 SPD=I('<path d="M3.8 17.5a9 9 0 1 1 16.4 0"/><path d="M12 14l4.2-5"/><circle cx="12" cy="14.3" r="1.7" fill="currentColor"/><path d="M6.2 11.2l.1.1M12 6.2v.1M17.8 11.2l-.1.1"/>'),
-TMR=I('<circle cx="12" cy="13.5" r="7.5"/><path d="M12 9.5v4l2.6 1.6M9.5 2.5h5"/>'),
-MOON=I('<path d="M20.5 14.2A8.6 8.6 0 0 1 9.8 3.5a8.6 8.6 0 1 0 10.7 10.7z"/><path d="M17 3v3M15.5 4.5h3"/>'),
-SHR=I('<rect x="2.5" y="4" width="19" height="12.5" rx="3"/><path d="M8.5 20.5h7M12 16.5v4"/><path d="M12 12.8V7.6M9.6 9.9L12 7.4l2.4 2.5"/>'),
 VID=I('<rect x="2.5" y="6" width="13.5" height="12" rx="3.2"/><path d="M16 10.4l5.5-3.2v9.6L16 13.6"/>'),
 AUD=I('<path d="M4 14v-2a8 8 0 0 1 16 0v2"/><rect x="2.8" y="14" width="4.4" height="6.2" rx="1.8"/><rect x="16.8" y="14" width="4.4" height="6.2" rx="1.8"/>');
 const rep=(s,h)=>{const e=q(s);e&&(e.outerHTML=h)};
-rep('#xs svg',SHUF);rep('#xr svg',REP);rep('#xz svg',MOON);rep('#xh svg',SHR);rep('#xd svg',VID);
+rep('#xs svg',SHUF);rep('#xr svg',REP);rep('#xd svg',VID);
 q('#xv').closest('.pill').insertAdjacentHTML('afterbegin',SPD);
-const t=q('#xoff').closest('.pill').querySelector('svg:not(.chev)');t&&(t.outerHTML=TMR);
-const tt={xs:'Shuffle',xr:'Repeat',xl:'Like',xz:'Sleep timer',xh:'Share song',xd:'Show video'};Object.entries(tt).forEach(([k,v])=>{const e=q('#'+k);e.title=v;e.setAttribute('aria-label',v)});
-q('#xv').closest('.pill').title='Playback speed';q('#xoff').closest('.pill').title='Sleep timer duration';
+const tt={xs:'Shuffle',xr:'Repeat',xl:'Like',xd:'Show video'};Object.entries(tt).forEach(([k,v])=>{const e=q('#'+k);e.title=v;e.setAttribute('aria-label',v)});
+q('#xv').closest('.pill').title='Playback speed';
 q('#xd').addEventListener('click',()=>{const v=q('.deck').classList.contains('vid'),e=q('#xd svg');e&&(e.outerHTML=v?AUD:VID);q('#xd').title=v?'Audio only':'Show video'});
-setInterval(()=>{const l=q('#xoff').closest('.pill').querySelector('.dd-l');l&&l.classList.toggle('hid',/^off$/i.test(l.textContent))},300)})();
+})();
