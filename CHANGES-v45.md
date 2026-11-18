@@ -30,14 +30,18 @@ proven by the code path (zero quality calls, zero seeks for drift under
 2s, zero redundant rate calls) — Abhi should confirm on a real phone
 that a full song now plays straight through with no cut at all.
 
-## 2. Bottom nav corners follow the device's bottom screen shape
-In v44 all four corners were one fixed 26px. Abhi wants the bottom
+## 2. Bottom nav corners — all four the same, following the device's bottom screen shape
+In v44 all four corners were one fixed 26px. Abhi first wanted the bottom
 corners responsive to the device's own bottom screen shape — the screen
 itself has rounded bottom corners on modern iPhones (plus a home
 indicator). The bar's bottom corners now grow with the safe-area bottom
 inset: 26px on a flat device, ~43px on a notched iPhone (26px + 34px/2),
 curving like the device's own rounded bottom screen instead of one
-fixed radius. Top corners stay 26px. It stays docked at the very bottom.
+fixed radius. Then Abhi pointed out the top corners were still 26px, so
+on a notched iPhone the bottom was more curved than the top. Now the top
+corners use the SAME responsive radius, so all four corners match on
+every device: 26px on a flat screen, ~43px on a notched iPhone. It stays
+docked at the very bottom.
 
 ## 3. History panel — rooms removed + premium close button
 The Rooms section (with its Rejoin buttons) is gone — the panel now
@@ -57,24 +61,36 @@ refined song rows and a proper pill Clear button.
 The app never paused the player itself when hidden — the music stopped
 because the system suspends the page and pauses the video when the app
 is backgrounded or the screen locks, and the sync loop (which would
-resume it) cannot run while JavaScript is suspended. Fix: at the exact
-moment the page is about to be hidden — while JS is still alive — the
-app now re-asserts playback (unmute, play, and refresh the Media
-Session lock-screen controls to "playing" with the live position).
+resume it) cannot run while JavaScript is suspended. First fix (v45):
+at the exact moment the page is about to be hidden — while JS is still
+alive — the app re-asserts playback (unmute, play, and refresh the
+Media Session lock-screen controls to "playing" with the live position).
 That is the signal the system needs to keep the audio alive in the
-background and on the lock screen instead of suspending it. The same
-re-assert runs when the page comes back, so if the system did pause
-it, it resumes the instant the app is visible again. The player itself
-(YouTube, playsinline) and the Media Session are what make background
-audio possible; this keeps them asserted.
-HONEST LIMIT: no web app can force the system to keep it alive — if
-iOS/Android kills the app entirely (swiped away / force-closed, or the
-system reclaims it under memory pressure), the music stops, like every
-other web app. What this fixes is the normal case: switching to
-another app, or locking the screen, while the song plays. Test it on
-a real phone: start a song, press the home button (or lock the screen)
-— the song should keep playing, and the lock screen should show the
-Vibe Room controls.
+background and on the lock screen instead of suspending it. But Abhi
+reported it STILL stopped on his real phone when switching apps. The
+problem: keepPlaying() ran only ONCE when the page hid, but the system
+pauses the YouTube player a moment AFTER that (when the app is fully
+backgrounded), and by then JS is throttled so nothing resumes it.
+Second fix: when the page hides, the app now RETRIES the resume a few
+times over the next seconds (at 400ms, 1200ms, 2500ms) — JS is still
+briefly alive right after hiding, so one of the retries catches the
+player after the system pauses it and starts it again. It also listens
+for 'freeze' (the page is about to be suspended) as a last chance, and
+coming back resumes instantly (visibilitychange + pageshow + focus).
+Verified in the sandbox: the player was paused the moment the app was
+backgrounded, the retry resumed it (state back to playing), and
+returning to the app resumed it instantly — zero errors.
+HONEST LIMIT: the audio comes from a YouTube video embed, and
+iOS/Android ultimately decide whether a backgrounded video keeps
+sounding — no web page can force the system. This does everything a
+web page can do: an active Media Session (lock-screen controls), an
+unmuted playing player at the moment of hiding, and repeated resume
+attempts. If the system still pauses it, it restarts the instant the
+user returns — no tap needed. If iOS/Android kills the app entirely
+(swiped away / force-closed, or the system reclaims it under memory
+pressure), the music stops, like every other web app. Test it on a
+real phone: start a song, switch to another app — the song should keep
+playing; if it does pause, it should restart the instant you return.
 
 ## 6. Song name slowly scrolls in the player card + more premium fonts
 A long song name no longer gets cut off with "…" — it now slowly
@@ -167,3 +183,26 @@ or sent anywhere — the camera feed is read frame-by-frame in the page
 and stopped the moment the modal closes. Camera needs https (the live
 site) or localhost; if it is denied or unavailable, the message says so
 and the code box stays as the fallback.
+
+## 11. Share hero image + favicon of the logo
+Sharing the room link used to show a plain/broken preview (no image,
+no description) and the browser tab had no icon. Now the app has a
+proper share card and a favicon, both from Abhi's neon headphone
+emblem. public/og-hero.png (1200x630, the standard share size) is a
+cosmic-purple hero: the emblem on the left with a pink glow ring, the
+"Vibe Room" title in a pink-to-orange gradient, the tagline "One link.
+No login. Everyone hears the same song, at the same second.", the
+"No login • In sync • YouTube audio" line, and the live site address.
+index.html now carries the full Open Graph set (og:title,
+og:description, og:image, og:image:width/height/alt, og:type, og:url,
+og:site_name) plus the Twitter large-image card (twitter:card,
+twitter:title, twitter:description, twitter:image) and a meta
+description, so WhatsApp, iMessage, X, Facebook and others all show
+the same nice card. The favicon is the emblem on a dark-purple rounded
+square: public/favicon.ico (16/32/48 multi-size) plus
+public/favicon-32.png for modern browsers, linked in index.html.
+Verified: all three assets return 200 from the server, the tags are in
+the served HTML, and the full test suite still passes with zero errors.
+Note: a chat app that already cached the old (imageless) preview for
+the link may keep showing it until its cache expires — the new card
+appears for fresh shares.

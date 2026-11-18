@@ -30,6 +30,7 @@ Vibe Room is a shared listening room for YouTube. One person hosts, everyone lis
 
 - **Create a room** and share its link, QR code, or 6-character code.
 - **Paste a YouTube link** and the whole room hears it — audio only, in sync.
+- **Scan a room QR code** — the home page has a **Scan QR code to join** button that opens your camera; point it at a room's QR code and you join instantly.
 - **Hand over control** — the host can give playback control to any guest.
 - **Switch to karaoke** — the host picks a singer and their live voice streams to everyone, over the music.
 
@@ -42,7 +43,10 @@ It runs as a web app on any phone or computer, and it can be added to a phone's 
 ### Shared listening
 - **Synchronised playback** — the server owns the room clock; every device corrects drift while playing, so the room stays in sync.
 - **No login** — join from a link, QR code, or room code with just a display name and a colour.
-- **Instant sound** — the moment you create or join a room, a small popup asks for sound; one tap and the music plays.
+- **Instant sound** — the moment you create or join a room, a small popup asks for sound; one tap and the music plays. It asks on every join, and never anywhere else.
+- **Background audio** — music keeps playing when you leave the app or lock the screen.
+- **Scrolling song title** — a long song name slowly scrolls across the player card in the premium Sora typeface, instead of being cut off.
+- **Swipe to dismiss** — any notification can be swiped up to dismiss it.
 
 ### Queue & requests
 - **Paste any YouTube link** — the Queue tab has the paste box; the Play page's empty state has a compact **Add a YouTube link** button that jumps straight there.
@@ -52,6 +56,7 @@ It runs as a web app on any phone or computer, and it can be added to a phone's 
 
 ### Host controls & moderation
 - **Host transfer & co-hosts** — if the host leaves, duties pass immediately; after an unexpected disconnect, succession waits 12 seconds.
+- **Request notifications** — when a guest requests a song or asks to sing, the host gets a yellow toast notification.
 - **Grant / revoke control** — the host can give playback control to any guest, and take it back.
 - **Remove / ban** — the host can remove or ban participants.
 - **Embed pre-check** — with a YouTube Data API key configured, a pasted link is checked for embed restrictions before it is added.
@@ -62,10 +67,14 @@ It runs as a web app on any phone or computer, and it can be added to a phone's 
 - **Record my vocals** — saves the processed microphone signal (YouTube audio is never recorded).
 
 ### Experience
-- **Cosmic smoke player** — the player card has a living neon smoke background (purple, magenta, cyan, orange) that breathes harder while a song plays and calms when it pauses.
-- **History** — a three-dots menu in the header shows the rooms you visited and the songs played, saved on your device. Every old song can be copied or added back to the queue. Reloading the page rejoins your room and keeps all history.
-- **iPhone-ready** — the layout respects the notch and Dynamic Island (iPhone 13–18) and the home-indicator bar, so nothing is ever hidden.
+- **Cosmic smoke player** — the player card has a living neon smoke background (purple, magenta, cyan, orange) that jumps and drifts randomly on the song's beat while a song plays and calms when it pauses. It is a playback-driven beat simulation — the page cannot read YouTube audio directly.
+- **Liked songs** — a heart icon in the header opens a slide-in panel with every song you liked, saved forever on your device. Add any of them to the queue or request it.
+- **History** — a three-dots menu in the header shows the songs you played, saved on your device. Every old song can be copied or added back to the queue. Reloading the page rejoins your room and keeps all history.
+- **iPhone-ready** — the layout auto-detects the notch and Dynamic Island (iPhone 13–18) and the home-indicator bar and adjusts every element automatically, so nothing is ever hidden. Tapping a text field never zooms the page.
+- **Header that fits everyone** — the full 6-letter room code is always visible on the left, and every top button sits on the right, however many people join.
+- **Bottom navigation** — docked at the very bottom of the screen, with all four corners the same radius, following your device's own bottom screen shape.
 - **Installable (PWA)** — add it to your home screen from Safari or Chrome for a full-screen app experience.
+- **Share card & favicon** — sharing the room link shows a proper preview card (the neon emblem, the name, and the tagline) on WhatsApp, iMessage, X, and Facebook, and the browser tab shows the emblem as its icon.
 - **Mini-player** — a compact player bar follows you across the Queue, Sing, Room, and More tabs.
 - **Media Session** — lock-screen play, pause, skip, previous, and seek on supported browsers.
 
@@ -94,7 +103,7 @@ Every screen below is a fresh screenshot of the app running in a 3D iPhone frame
 
 1. **Create a room** — tap **Create a Vibe Room** on the home page.
 2. **Invite friends** — share the room link, QR code, or 6-character code.
-3. **Join** — pick a display name and colour, then tap **Join audio stream**. When the sound popup appears, tap **Enable sound**.
+3. **Join** — pick a display name and colour, then tap **Join audio stream**. Or tap **Scan QR code to join** on the home page and point your camera at a room's QR code. When the sound popup appears, tap **Enable sound**.
 4. **Add music** — go to the **Queue** tab and paste a YouTube link (or tap **Add a YouTube link** on the empty Play page). The host starts or pauses playback.
 5. **Request songs** — guests paste a link to request it; the host approves or rejects.
 6. **Switch tabs** — use the bottom bar for **Play**, **Queue**, **Sing**, **Room**, and **More**. Tap **Invite** any time to share the room again.
@@ -110,7 +119,7 @@ If a room link is invalid or the room has expired, tap **Create a new room** for
 3. The selected singer grants microphone access and taps **Start singing**.
 4. Choose a vocal effect, or tune the custom reverb, EQ, and denoise controls. Tick **Hear myself** to monitor your own voice.
 
-Microphone access requires HTTPS (except on `localhost`), and the singer must grant browser permission. Headphones are recommended so the backing track does not leak into the mic. WebRTC uses a public STUN server by default; some restrictive networks need a TURN server configured in `public/karaoke.js`.
+Microphone access requires HTTPS (except on `localhost`), and the singer must grant browser permission. Headphones are recommended so the backing track does not leak into the mic. The singer's voice starts with the **Start singing** tap, so the browser allows the microphone audio to flow; it then reaches every participant, including the host, and the singer hears themselves when **Hear myself** is ticked. WebRTC uses a public STUN server by default; some restrictive networks need a TURN server configured in `public/karaoke.js`.
 
 **Record my vocals** records the processed microphone signal only; it does not record YouTube audio.
 
@@ -193,7 +202,7 @@ Without the key, Vibe Room still accepts links but cannot pre-check their embed 
 - **Volume** — the slider and speaker buttons control local playback volume; the low-volume button mutes/restores the previous level, and the high-volume button sets it to 100%.
 - **Permissions** — host and co-host controls are available by default. The host may grant control to a guest. Other guests can request tracks; the host must approve a request before it enters the queue.
 - **Media Session** — on supporting browsers, Vibe Room publishes track metadata and lock-screen play, pause, skip, previous, and seek actions. Returning from a suspended page triggers a room reconnect and state resync.
-- **Background playback** — controlled by the browser and operating system. In particular, iOS Safari and Home Screen web apps may suspend YouTube embeds or block audio while locked; a web app cannot guarantee Spotify-like uninterrupted playback or controls in every locked-screen condition.
+- **Background playback** — when you leave the app or lock the screen, the app asks the player to keep going and refreshes the lock-screen controls, and retries the resume a few times over the next seconds so the song keeps playing even if the system pauses it a moment after you leave. If the system does pause it, the music restarts the instant you return — no tap needed. It cannot survive the app being swiped away or force-closed, or the system reclaiming it.
 - **Host succession** — if the host leaves explicitly, host duties transfer immediately; after an unexpected disconnect, succession waits 12 seconds.
 - **Room lifetime** — rooms are held in memory and are not persisted to a database. They are removed 24 hours after becoming empty.
 - **Scaling** — a single server instance is expected. Multi-instance deployment needs shared room state and a Socket.IO adapter.
@@ -217,6 +226,10 @@ public/
   style.css               Responsive glassmorphic UI
   smoke.jpg               Cosmic smoke texture for the player card
   logo.png                Vibe Room emblem (header, landing, PWA icons)
+  og-hero.png             Share-preview hero image (1200×630) for link cards
+  favicon.ico             Browser-tab icon (16/32/48) from the emblem
+  favicon-32.png          Browser-tab icon (32×32) for modern browsers
+  jsqr.min.js             QR-code reader for the Scan-to-join camera
 docs/screenshots/         iPhone page screenshots for this README
 ```
 
@@ -230,7 +243,7 @@ docs/screenshots/         iPhone page screenshots for this README
 | **A YouTube link will not play** | Check the Queue tab's embed-status message. Configure `YOUTUBE_API_KEY` for pre-checks; YouTube may still restrict a video by region, account, or availability. |
 | **No sound after joining** | Tap **Enable sound** in the popup, or tap anywhere on the page once. Check the tab is not muted and the device volume is up. |
 | **No microphone access** | Use HTTPS (or `localhost`) and allow microphone permission in the browser. |
-| **Karaoke audio does not reach someone** | Restrictive NAT or firewall settings may require a TURN server. |
+| **Karaoke audio does not reach someone** | Make sure the singer tapped **Start singing** (the voice starts on that tap) and allowed microphone permission. The stage shows a voice status line — green means the voice is connected. Restrictive NAT or firewall settings may still require a TURN server. |
 
 ---
 

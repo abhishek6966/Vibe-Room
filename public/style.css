@@ -1126,3 +1126,12 @@ header #rn{white-space:nowrap!important;overflow:visible!important;text-overflow
    far right edge as one group. The logo + room code stay pinned left.
    Nothing else changes — same elements, same sizes, same fit. */
 header #who{margin-left:auto!important}
+
+/* v45: BOTTOM NAV — all four corners the SAME radius, and that radius is
+   responsive to the device's bottom screen shape. The v45 bottom corners
+   already grew with the safe-area inset (26px + sab/2), but the top
+   corners stayed at 26px, so on a notched iPhone the bottom was more
+   curved than the top. Now the top corners use the same responsive
+   radius, so all four corners match on every device: 26px on a flat
+   screen, ~43px on a notched iPhone. */
+#tabs{border-top-left-radius:calc(26px + var(--sab,env(safe-area-inset-bottom,0px))*0.5)!important;border-top-right-radius:calc(26px + var(--sab,env(safe-area-inset-bottom,0px))*0.5)!important}

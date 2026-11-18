@@ -485,9 +485,29 @@ function fitTitle(){const t=$('#tt'),inner=$('#tt-in');if(!t||!inner)return;
  else{t.classList.remove('scroll');t.style.removeProperty('--tt-dx');t.style.removeProperty('--tt-dur')}}
 window.addEventListener('resize',()=>{clearTimeout(fitTitle._t);fitTitle._t=setTimeout(fitTitle,150)});
 const keepPlaying=()=>{if(!S?.cur?.playing||!P)return;try{if(P.unMute)P.unMute()}catch(e){}try{if(P.getPlayerState&&P.getPlayerState()!==1&&P.playVideo)P.playVideo()}catch(e){}try{updateMediaSession()}catch(e){}};
-document.addEventListener('visibilitychange',()=>{if(document.hidden)keepPlaying();else resumeRoom()});
-window.addEventListener('pagehide',keepPlaying);
+/* v45: BACKGROUND AUDIO — keep the song playing when the user switches
+   to another app or locks the screen. The old keepPlaying() ran ONCE
+   when the page hid, but the system pauses the YouTube player a moment
+   AFTER that (when the app is fully backgrounded), and by then JS is
+   throttled so nothing resumes it — the song stopped and stayed stopped.
+   Fix: when the page hides, retry the resume a few times over the next
+   seconds (JS is still briefly alive right after hiding), so one of the
+   retries catches the player after the system pauses it and starts it
+   again. Also listen for 'freeze' (the page is about to be suspended)
+   as a last chance. Coming back resumes instantly via resumeRoom().
+   HONEST LIMIT: the audio itself comes from a YouTube video embed, and
+   iOS/Android ultimately decide whether a backgrounded video keeps
+   sounding. This does everything a web page can do: an active Media
+   Session (lock-screen controls), an unmuted playing player at the
+   moment of hiding, and repeated resume attempts. If the system still
+   pauses it, it restarts the instant the user returns — no tap needed. */
+let keepT=[];
+const keepPlayingRetry=()=>{keepT.forEach(clearTimeout);keepT=[];keepPlaying();[400,1200,2500].forEach(ms=>keepT.push(setTimeout(keepPlaying,ms)))};
+document.addEventListener('visibilitychange',()=>{if(document.hidden)keepPlayingRetry();else resumeRoom()});
+window.addEventListener('pagehide',keepPlayingRetry);
+document.addEventListener('freeze',keepPlayingRetry);
 window.addEventListener('pageshow',resumeRoom);
+window.addEventListener('focus',()=>{if(!document.hidden)keepPlaying()});
 /* v29: installable app — register the service worker so the app shell loads
    fast and the app can be added to the home screen. It never caches rooms or
    live data, so a room is never stale. */
