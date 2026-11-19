@@ -24,6 +24,16 @@ Prefer to start fresh? Open the app and create your own room:
 
 ---
 
+## 📱 Android app — download the APK
+
+**On Android? Get the app directly — no Play Store needed:**
+
+### 👉 [Download VibeRoom.apk](https://vibe-room-0isd.onrender.com/VibeRoom.apk)
+
+Tap the link on your Android phone, then tap the downloaded file to install. Your phone may ask you to allow installs from this source — that is normal for a direct download. The app plays music in the background, has mic, audio, storage and Bluetooth access, shows the Vibe Room logo as its icon, and checks for updates itself — it offers a new version whenever one is released.
+
+---
+
 ## What is Vibe Room?
 
 Vibe Room is a shared listening room for YouTube. One person hosts, everyone listens to the same song at the same time, and anyone can join from a link — no account, no app install, no extra steps.
