@@ -43,13 +43,16 @@ It runs as a web app on any phone or computer, and it can be added to a phone's 
 ### Shared listening
 - **Synchronised playback** — the server owns the room clock; every device corrects drift while playing, so the room stays in sync.
 - **No login** — join from a link, QR code, or room code with just a display name and a colour.
-- **Instant sound** — the moment you create or join a room, a small popup asks for sound; one tap and the music plays. It asks on every join, and never anywhere else.
+- **Instant sound** — the moment you create or join a room, a small popup asks for sound; one tap and the music plays. It asks once per device, then never again on that device.
 - **Background audio** — music keeps playing when you leave the app or lock the screen.
+- **10-second skip** — compact forward/back 10s buttons sit outside prev/next in the player.
 - **Scrolling song title** — a long song name slowly scrolls across the player card in the premium Sora typeface, instead of being cut off.
 - **Swipe to dismiss** — any notification can be swiped up to dismiss it.
 
 ### Queue & requests
 - **Paste any YouTube link** — the Queue tab has the paste box; the Play page's empty state has a compact **Add a YouTube link** button that jumps straight there.
+- **Upload an audio file** — pick an MP3, M4A, WAV, or OGG from your device (up to 25 MB); it plays for everyone in sync, and unlike YouTube songs it keeps playing in the background on lock screen and app-switch.
+- **Your playlist** — every link you paste is saved on your device; tap any past song to queue it again.
 - **Song requests** — guests request tracks for host approval (up to 3 pending per guest, 20 per room); the host can open or close requests.
 - **Queue safeguards** — 100-track cap, duplicate prevention, and a fair-add limit of 3 tracks among the next 10 per person.
 - **Smart skipping** — only the host, co-hosts, and authorised controllers can skip. A track auto-skips only when a strict majority of listeners report a playback error.
@@ -64,6 +67,7 @@ It runs as a web app on any phone or computer, and it can be added to a phone's 
 ### Karaoke
 - **Live voice** — the host assigns the mic; the singer's processed voice streams to every participant over WebRTC, in real time with the music.
 - **11 voice effects** plus custom reverb, EQ, and denoise controls — and a **Hear myself** monitor.
+- **Sound mix** — separate Music and Voice sliders in the Sing tab; Voice controls your own monitor if you are singing, or the singer's voice if you are listening. Both are remembered on your device.
 - **Record my vocals** — saves the processed microphone signal (YouTube audio is never recorded).
 
 ### Experience
@@ -73,7 +77,9 @@ It runs as a web app on any phone or computer, and it can be added to a phone's 
 - **iPhone-ready** — the layout auto-detects the notch and Dynamic Island (iPhone 13–18) and the home-indicator bar and adjusts every element automatically, so nothing is ever hidden. Tapping a text field never zooms the page.
 - **Header that fits everyone** — the full 6-letter room code is always visible on the left, and every top button sits on the right, however many people join.
 - **Bottom navigation** — docked at the very bottom of the screen, with all four corners the same radius, following your device's own bottom screen shape.
+- **Cool mode** — a switch in the More tab turns the page flat and dark so the phone stays cool while music plays; leave it untouched for 30 seconds and the animations freeze instead (same colours, nothing moving) until you tap.
 - **Installable (PWA)** — add it to your home screen from Safari or Chrome for a full-screen app experience.
+- **Android app** — a native APK wrapper loads the live site, with background audio, mic/files/Bluetooth permissions, the Vibe Room logo as its icon, and a self-update check that offers a new version whenever one is released.
 - **Share card & favicon** — sharing the room link shows a proper preview card (the neon emblem, the name, and the tagline) on WhatsApp, iMessage, X, and Facebook, and the browser tab shows the emblem as its icon.
 - **Mini-player** — a compact player bar follows you across the Queue, Sing, Room, and More tabs.
 - **Media Session** — lock-screen play, pause, skip, previous, and seek on supported browsers.
