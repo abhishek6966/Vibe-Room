@@ -621,9 +621,12 @@ main#home,main#gate{
 #room[data-tab=play] .ctl{flex:none;gap:clamp(6px,2vw,14px)!important;margin:0!important}
 #room[data-tab=play] #pp{width:clamp(46px,7.3svh,62px)!important;height:clamp(46px,7.3svh,62px)!important}
 #room[data-tab=play] #xp,#room[data-tab=play] #sk{width:clamp(40px,6svh,50px)!important;height:clamp(40px,6svh,50px)!important}
-#room[data-tab=play] .vol{gap:clamp(6px,2vw,12px);margin:0}
-#room[data-tab=play] .vol button.spk{width:32px;height:34px;min-height:34px}
-#room[data-tab=play] .vol input{height:18px}
+/* v57: VOLUME CONTROLS MADE BIG ENOUGH TO TAP ON A PHONE. The mute/max buttons were 32×34px and the slider track only 18px tall on the Play tab — too small to hit reliably with a thumb, so the volume felt dead on mobile even though the handlers worked. Now the buttons are a full 44×44px touch target and the slider is taller with a bigger thumb, and touch-action stops the double-tap zoom delay. */
+#room[data-tab=play] .vol{gap:clamp(8px,2vw,12px);margin:0}
+#room[data-tab=play] .vol button.spk{width:44px;height:44px;min-height:44px;touch-action:manipulation}
+#room[data-tab=play] .vol input{height:28px;touch-action:manipulation}
+#room[data-tab=play] .vol input::-webkit-slider-thumb{width:26px;height:26px;margin-top:-9px}
+#room[data-tab=play] .vol input::-moz-range-thumb{width:26px;height:26px}
 #room[data-tab=play] .xtra{--pill-size:clamp(34px,5.2svh,44px);flex:none;margin:0!important}
 #room[data-tab=play] .xrow{justify-content:space-evenly;gap:0!important;margin:0!important}
 #room[data-tab=play] .xrow+.xrow{margin-top:clamp(2px,.7svh,6px)!important}
@@ -1257,12 +1260,13 @@ body.cool #tt{color:#f0f0f5!important}
 body.cool #ch{color:#b9b9c9!important}
 body.cool .cool-card{background:rgba(255,255,255,.07)!important;border-color:rgba(255,255,255,.14)!important}
 /* v55: the Cool mode card in the More tab */
-.cool-card{display:flex;align-items:center;gap:12px;margin:12px 0;padding:14px;border:1px solid rgba(255,255,255,.16);border-radius:18px;background:rgba(255,255,255,.06)}
-.cool-ic{flex:none;width:38px;height:38px;display:flex;align-items:center;justify-content:center;border-radius:12px;background:linear-gradient(135deg,#3b2a6b,#1c0f3d);color:#b9a7ff}
-.cool-txt{flex:1;min-width:0}
-.cool-txt h4{margin:0 0 3px;font-size:.92rem}
-.cool-txt p{margin:0;font-size:.78rem;line-height:1.4;color:var(--mu)}
-.cool-switch{flex:none;width:52px;height:30px;border:none;border-radius:999px;background:rgba(255,255,255,.22);position:relative;cursor:pointer;padding:0;transition:background .2s}
+/* v57: COOL CARD REDESIGNED — clean and structured. One header row (moon icon + "Cool mode" + the switch on the right), and the description as a short paragraph underneath. The old layout put the icon, the heading, the long text and the switch in one flex row, which stacked awkwardly and left the switch floating alone at the bottom. */
+.cool-card{margin:12px 0;padding:14px;border:1px solid rgba(255,255,255,.16);border-radius:18px;background:rgba(255,255,255,.06)}
+.cool-head{display:flex;align-items:center;gap:10px}
+.cool-ic{flex:none;width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:12px;background:linear-gradient(135deg,#3b2a6b,#1c0f3d);color:#b9a7ff}
+.cool-title{flex:1;font-weight:700;font-size:1rem}
+.cool-desc{margin:10px 0 0;font-size:.84rem;line-height:1.5;color:var(--mu)}
+.cool-switch{flex:none;width:52px;height:30px;min-height:30px;border:none;border-radius:999px;background:rgba(255,255,255,.22);position:relative;cursor:pointer;padding:0;transition:background .2s}
 .cool-switch .cool-knob{position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;transition:left .2s;box-shadow:0 1px 4px rgba(0,0,0,.4)}
 .cool-switch.on{background:linear-gradient(135deg,#7b5cff,#c026d3)}
 .cool-switch.on .cool-knob{left:25px}

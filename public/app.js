@@ -107,7 +107,7 @@ const act=(a,cb)=>cb?socket.emit('act',a,cb):socket.emit('act',a),fmt=t=>{t=Math
    plays the sound is already on. In an installed app (home screen) this is
    the first thing the person sees. */
 let __ac=null,sndOn=false;
-async function unlockAudio(){try{__ac=__ac||new (window.AudioContext||window.webkitAudioContext)();await __ac.resume()}catch{}if(P){try{applyVolume(P)}catch{}}/* v32: a tap also unlocks the singer's voice (the karaoke audio element) if it is already streaming. */
+async function unlockAudio(){try{__ac=__ac||new (window.AudioContext||window.webkitAudioContext)();await __ac.resume()}catch{}if(P){try{applyVolume(P)}catch{}/* v57: the Enable-sound tap is a real user gesture — start the player NOW if the room is playing, so a guest who joins a live song actually hears it. Before this, unlockAudio only resumed the AudioContext and the player stayed paused (the browser blocks playVideo on a timer, so only a gesture can start it — a guest whose tap did not start the player heard nothing while everyone else heard the song). */if(S?.cur?.playing&&P.playVideo){try{P.playVideo()}catch{}}}/* v32: a tap also unlocks the singer's voice (the karaoke audio element) if it is already streaming. */
  if(typeof kvPlay==='function')kvPlay();sndOn=true;hideSndModal();
  document.querySelectorAll('.snd').forEach(b=>{b.innerHTML=IC.check+' Sound on';b.classList.add('on');b.disabled=true});
  try{L.snd='1'}catch{}}
@@ -702,8 +702,13 @@ const wakeSync=()=>{wakeWant=!!(S?.cur?.playing);if(wakeWant)wakeAcquire();else 
    is visible and the room is playing, a paused player is resumed. The
    localT guard (same as sync) keeps it from undoing your own intentional
    pause — a tap you just made is left alone for 1s. */
+/* v57: SOUND CHECK — the app now watches whether sound is actually coming out. If the room is playing but THIS device's player is not playing (and not buffering — it is trying), the browser has blocked it (no valid tap yet) and the timer retries cannot fix it, because only a real tap counts as a gesture. After 2 seconds of silence, show the big "Tap to enable audio" button (it was never shown before — nothing ever unhid it, so a silent guest had no way to start the sound) and say so once. Tapping it calls playVideo() inside the tap, which the browser allows. It hides itself the moment the player starts (pState) or the room stops. */
+let silentSecs=0,silentTold=false;
 setInterval(()=>{if(document.hidden||!joined||!S?.cur?.playing||!P||Date.now()-localT<1000)return;
- try{if(P.getPlayerState&&P.getPlayerState()!==1){applyVolume(P);P.playVideo?.()}}catch(e){}},1000);
+ try{const st=P.getPlayerState&&P.getPlayerState();
+  if(st===1){silentSecs=0;silentTold=false;return}
+  if(st!==3){silentSecs++;if(silentSecs>=2){const u=$('#audio-unlock');if(u&&u.hidden){u.hidden=false;if(!silentTold){silentTold=true;toast('Tap to enable sound — the song is playing but your device is silent.')}}}}
+  applyVolume(P);P.playVideo?.()}catch(e){}},1000);
 /* v45: BACKGROUND AUDIO — keep the song playing when the user switches
    to another app or locks the screen. The old keepPlaying() ran ONCE
    when the page hid, but the system pauses the YouTube player a moment
