@@ -656,7 +656,9 @@ function updateMediaSession(){
  if(!navigator.mediaSession)return;const ms=navigator.mediaSession,c=S?.cur;
  const metadataKey=c?[c.videoId,c.title,c.channel,c.artwork].join('|'):'';
  if(metadataKey!==mediaMetadataKey){mediaMetadataKey=metadataKey;if(typeof MediaMetadata==='function')ms.metadata=c?new MediaMetadata({title:c.title,artist:c.channel||'Vibe Room',album:'Vibe Room',artwork:c.artwork?[{src:c.artwork}]:[]}):null}
- const playbackState=c?(c.playing?'playing':'paused'):'none';
+ /* v64: report the LOCAL player's state, not just the room's. When iOS pauses the video on lock, the room is still "playing" but this device is silent — reporting 'playing' then shows a pause button on the lock screen, and the play action (which only fired when the room was paused) did nothing, so the lock-screen play button was dead. Reporting 'paused' shows a play button, and pressing it resumes this device. */
+ const localPlaying=P?.getPlayerState&&P.getPlayerState()===1;
+ const playbackState=!c?'none':c.playing?(localPlaying?'playing':'paused'):'paused';
  if(playbackState!==mediaPlaybackState){mediaPlaybackState=playbackState;ms.playbackState=playbackState}
  if(!c||typeof ms.setPositionState!=='function'||!P?.getDuration)return;
  const duration=c.duration||P.getDuration(),position=est();
@@ -666,7 +668,7 @@ if('mediaSession'in navigator){
  const ms=navigator.mediaSession,setAction=(name,handler)=>{try{ms.setActionHandler(name,handler)}catch(e){if(e.name!=='NotSupportedError'&&e.name!=='TypeError')throw e}};
  const canControl=()=>!!S&&(S.hostId===me.id||S.co.includes(me.id)||(S.ctrl||[]).includes(me.id));
  const seekTo=position=>{if(canControl()&&S?.cur&&Number.isFinite(position))act({type:'seek',pos:Math.max(0,position)})};
- setAction('play',()=>{if(S?.cur&&!S.cur.playing){[P,P2].forEach(applyVolume);localToggle();act({type:'play'})}});
+ setAction('play',()=>mediaPlay());
  setAction('pause',()=>{if(S?.cur?.playing){localToggle();act({type:'play'})}});
  setAction('nexttrack',()=>{if(canControl())act({type:'skip'})});
  setAction('previoustrack',()=>{if(canControl())act({type:'prev'})});
@@ -689,6 +691,10 @@ function fitTitle(){const t=$('#tt'),inner=$('#tt-in');if(!t||!inner)return;
  else{t.classList.remove('scroll');t.style.removeProperty('--tt-dx');t.style.removeProperty('--tt-dur')}}
 window.addEventListener('resize',()=>{clearTimeout(fitTitle._t);fitTitle._t=setTimeout(fitTitle,150)});
 const keepPlaying=()=>{if(!S?.cur?.playing||!P)return;try{applyVolume(P)}catch(e){}try{if(P.getPlayerState&&P.getPlayerState()!==1&&P.playVideo)P.playVideo()}catch(e){}try{updateMediaSession()}catch(e){}};
+/* v64: LOCK-SCREEN RESUME — the Media Session 'play' action is what the lock-screen play button sends. The old handler only fired when the ROOM was paused, so when iOS paused the video on lock (room still "playing"), the button did nothing and Safari background audio looked broken. Now: room paused → resume the room (as before); room playing but THIS device's player not playing → just resume this device (keepPlaying + sync to the live position), no room action, so nobody else's playback is touched. */
+const mediaPlay=()=>{if(!S?.cur)return;
+ if(!S.cur.playing){[P,P2].forEach(applyVolume);localToggle();act({type:'play'})}
+ else{keepPlaying();try{sync()}catch{}}};
 /* v48: SCREEN WAKE LOCK — the #1 reason music stops on lock is that the
    screen locks and iOS then suspends the app. While a song is playing,
    hold a screen wake lock so the screen stays on and the app stays in

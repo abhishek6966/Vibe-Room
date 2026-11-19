@@ -44,7 +44,7 @@ It runs as a web app on any phone or computer, and it can be added to a phone's 
 - **Synchronised playback** — the server owns the room clock; every device corrects drift while playing, so the room stays in sync.
 - **No login** — join from a link, QR code, or room code with just a display name and a colour.
 - **Instant sound** — the moment you create or join a room, a small popup asks for sound; one tap and the music plays. It asks once per device, then never again on that device.
-- **Background audio** — music keeps playing when you leave the app or lock the screen.
+- **Background audio** — music keeps playing when you leave the app or lock the screen. If it stops when you lock the screen, press play on the lock screen — the audio keeps playing. Uploaded audio files keep playing automatically, with no button needed.
 - **10-second skip** — compact forward/back 10s buttons sit outside prev/next in the player.
 - **Scrolling song title** — a long song name slowly scrolls across the player card in the premium Sora typeface, instead of being cut off.
 - **Swipe to dismiss** — any notification can be swiped up to dismiss it.
