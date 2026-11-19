@@ -106,7 +106,8 @@ const act=(a,cb)=>cb?socket.emit('act',a,cb):socket.emit('act',a),fmt=t=>{t=Math
    It runs on the landing page and on the join screen, so by the time a song
    plays the sound is already on. In an installed app (home screen) this is
    the first thing the person sees. */
-let __ac=null,sndOn=false;
+/* v60: SOUND PERMISSION IS REMEMBERED ON THIS DEVICE — sndOn used to start as false on every page load, so the "Enable sound" popup appeared every time a room was joined, even though unlockAudio() had already saved L.snd='1'. Nothing ever read that saved value back. Now sndOn is initialised from localStorage at startup: once the user has enabled sound on this device, it stays enabled and the popup never asks again. */
+let __ac=null,sndOn=false;try{sndOn=L.snd==='1'}catch{}
 async function unlockAudio(){try{__ac=__ac||new (window.AudioContext||window.webkitAudioContext)();await __ac.resume()}catch{}if(P){try{applyVolume(P)}catch{}/* v57: the Enable-sound tap is a real user gesture — start the player NOW if the room is playing, so a guest who joins a live song actually hears it. Before this, unlockAudio only resumed the AudioContext and the player stayed paused (the browser blocks playVideo on a timer, so only a gesture can start it — a guest whose tap did not start the player heard nothing while everyone else heard the song). */if(S?.cur?.playing&&P.playVideo){try{P.playVideo()}catch{}}}/* v32: a tap also unlocks the singer's voice (the karaoke audio element) if it is already streaming. */
  if(typeof kvPlay==='function')kvPlay();sndOn=true;hideSndModal();
  document.querySelectorAll('.snd').forEach(b=>{b.innerHTML=IC.check+' Sound on';b.classList.add('on');b.disabled=true});
@@ -116,6 +117,8 @@ async function unlockAudio(){try{__ac=__ac||new (window.AudioContext||window.web
    It shows once per page load, and only if sound is not already enabled. */
 let sndAsked=false;
 function showSndModal(){if(sndAsked||sndOn)return;sndAsked=true;const m=$('#snd-modal');if(m)m.hidden=false}
+/* v61: show the one-line iOS volume tip (YouTube volume is locked to the device buttons on iPhone/iPad) — only on iOS, nowhere else. */
+try{if(/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1)){const t=document.querySelector('#ios-vol-tip');if(t)t.hidden=false}}catch{}
 function hideSndModal(){const m=$('#snd-modal');if(m)m.hidden=true}
 $('#snd-go').onclick=async()=>{await unlockAudio();hideSndModal()};
 $('#snd-x').onclick=hideSndModal;$('#snd-later').onclick=hideSndModal;
@@ -299,7 +302,9 @@ function pErr(e){if(e.target===P&&S?.cur)act({type:'bad',v:S.cur.videoId,code:e.
 function makeAudioPlayer(){
   auEl=document.querySelector('#au-el');
   if(!auEl)return null;
-  const ap={_st:2,_src:null,
+  /* v61: VOLUME THAT WORKS ON iOS — on iPhone/iPad the <audio> element's .volume is read-only (Apple locks it to the system volume), so setVolume() was ignored and the slider did nothing for uploaded songs. Route the element through a Web Audio GainNode, whose gain IS controllable on iOS. Set up lazily (only once the shared AudioContext is running) so a suspended context never silences the song — until then the element plays directly, as before. */
+  const ap={_st:2,_src:null,_gain:null,
+    _ensureGain(){if(ap._gain)return ap._gain;try{if(!__ac||__ac.state!=='running')return null;const src=__ac.createMediaElementSource(auEl);const g=__ac.createGain();g.gain.value=volume/100;src.connect(g);g.connect(__ac.destination);ap._gain=g;return g}catch(e){return null}},
     _fire(st){ap._st=st;pState({target:ap,data:st})},
     playVideo(){const p=auEl.play();if(p&&p.catch)p.catch(()=>{})},
     pauseVideo(){auEl.pause()},
@@ -308,9 +313,9 @@ function makeAudioPlayer(){
     getCurrentTime(){return auEl.currentTime||0},
     getDuration(){return (auEl.duration&&isFinite(auEl.duration))?auEl.duration:0},
     getPlayerState(){return ap._st},
-    setVolume(v){auEl.volume=Math.max(0,Math.min(100,v||0))/100},
-    getVolume(){return auEl.volume*100},
-    isMuted(){return auEl.volume===0},
+    setVolume(v){const vv=Math.max(0,Math.min(100,v||0))/100;try{auEl.volume=vv}catch(e){}const g=ap._ensureGain();if(g){try{g.gain.setTargetAtTime(vv,__ac.currentTime,.02)}catch(e){}}},
+    getVolume(){return volume},
+    isMuted(){return volume===0},
     getPlaybackQuality(){return 'small'},
     setPlaybackQuality(){},setPlaybackQualityRange(){},
     setPlaybackRate(r){try{auEl.playbackRate=r||1}catch(e){}},
@@ -554,6 +559,8 @@ $('#au').addEventListener('input',()=>{
  },650)
 });
 $('#af').onsubmit=e=>{e.preventDefault();const u=$('#au').value.trim(),submit=$('#af button');if(!u||submit.disabled)return;
+ /* v60: the Add tap IS a user gesture — unlock the audio right here, so the song that is about to start plays with sound and the app never asks for audio permission again after adding a song. unlockAudio() resumes the AudioContext, applies the volume and starts the player if the room is playing; once it has run, the browser's sticky activation keeps later songs playing without another tap. */
+ try{unlockAudio()}catch{}
  const vid=vidFromUrl(u);if(vid)myPastes.add(vid); /* v46: remember this paste so it lands in Your playlist even if it becomes the current song at once */
  if(checkedVideoUrl===u&&['blocked','unavailable'].includes(checkedVideoStatus)){toast($('#video-check').textContent);return}
  if(!socket.connected){toast('Not connected to the room. Reconnect and try again.');return}
@@ -677,7 +684,8 @@ const resumeRoom=()=>{if(document.hidden||!joined)return;if(socket.connected)rej
    box width changes with the screen. */
 function fitTitle(){const t=$('#tt'),inner=$('#tt-in');if(!t||!inner)return;
  const over=inner.scrollWidth-t.clientWidth;
- if(over>4){t.style.setProperty('--tt-dx',over+'px');t.style.setProperty('--tt-dur',(over/30).toFixed(1)+'s');t.classList.add('scroll')}
+ /* v59: SLOW MARQUEE — the old speed (~30px/s, no minimum) made the title ping-pong frantically on a wide screen: on an iPad the box is ~586px wide so a long title only overflows by ~19px, giving a 0.6s duration — it jerked back and forth almost twice a second. Now it scrolls at 20px/s AND never faster than 5s one-way, so even a tiny overflow drifts slowly and calmly. */
+ if(over>4){t.style.setProperty('--tt-dx',over+'px');t.style.setProperty('--tt-dur',Math.max(over/20,5).toFixed(1)+'s');t.classList.add('scroll')}
  else{t.classList.remove('scroll');t.style.removeProperty('--tt-dx');t.style.removeProperty('--tt-dur')}}
 window.addEventListener('resize',()=>{clearTimeout(fitTitle._t);fitTitle._t=setTimeout(fitTitle,150)});
 const keepPlaying=()=>{if(!S?.cur?.playing||!P)return;try{applyVolume(P)}catch(e){}try{if(P.getPlayerState&&P.getPlayerState()!==1&&P.playVideo)P.playVideo()}catch(e){}try{updateMediaSession()}catch(e){}};

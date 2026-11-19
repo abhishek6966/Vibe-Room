@@ -35,8 +35,9 @@ function vizStart(an,src){if(vizSrc===src&&vizAn===an)return;vizStop();vizAn=an;
 function vizStop(){if(vizRAF)cancelAnimationFrame(vizRAF);vizRAF=null;vizAn=null;vizSrc=null;document.querySelectorAll('#kvis i').forEach(b=>b.style.height='8px')}
 function ir(sec){const n=AC.sampleRate*sec|0,b=AC.createBuffer(2,n,AC.sampleRate);for(let c=0;c<2;c++){const d=b.getChannelData(c);for(let i=0;i<n;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/n,2.5)}return b}
 function apply(){K.querySelectorAll('[data-fx]').forEach(b=>b.classList.toggle('on',b.dataset.fx===cfg.fx));K.querySelectorAll('[data-k]').forEach(i=>i.value=cfg[i.dataset.k]);
- if(!AC)return;const t=AC.currentTime;G.revG.gain.setTargetAtTime(cfg.rev,t,.05);G.dry.gain.setTargetAtTime(1-cfg.rev*.5,t,.05);G.ec.gain.setTargetAtTime(cfg.echo,t,.05);G.fb.gain.value=cfg.fb;
- G.lo.gain.value=cfg.low;G.mi.gain.value=cfg.mid;G.hi.gain.value=cfg.high;G.lp.frequency.value=cfg.lp;G.cr.gain.value=cfg.cr;if(ksz!==cfg.size){G.rv.buffer=ir(cfg.size);ksz=cfg.size}}
+ if(!AC)return;const t=AC.currentTime;G.revG.gain.setTargetAtTime(cfg.rev,t,.05);G.dry.gain.setTargetAtTime(1-cfg.rev*.5,t,.05);G.ec.gain.setTargetAtTime(cfg.echo,t,.05);
+ /* v62: SMOOTH PRESET SWITCHING — the feedback, EQ, lowpass and crackle gains used to jump instantly (.value), which clicks when a preset changes mid-song. Now every parameter glides (setTargetAtTime, 0.05s), so switching effects live is smooth for the singer AND for every listener hearing the processed stream. */
+ G.fb.gain.setTargetAtTime(cfg.fb,t,.05);G.lo.gain.setTargetAtTime(cfg.low,t,.05);G.mi.gain.setTargetAtTime(cfg.mid,t,.05);G.hi.gain.setTargetAtTime(cfg.high,t,.05);G.lp.frequency.setTargetAtTime(cfg.lp,t,.05);G.cr.gain.setTargetAtTime(cfg.cr,t,.05);if(ksz!==cfg.size){G.rv.buffer=ir(cfg.size);ksz=cfg.size}}
 function setFx(k){cfg={...FX[k][1],dn:cfg.dn,fx:k};apply()}
 K.oninput=e=>{const k=e.target.dataset.k;if(k){cfg[k]=+e.target.value;cfg.fx='custom';apply()}};
 /* v47: SOUND MIX — music vs voice, separately. `voiceVol` (0-100, remembered
@@ -45,7 +46,11 @@ K.oninput=e=>{const k=e.target.dataset.k;if(k){cfg[k]=+e.target.value;cfg.fx='cu
    level on your phone (the #kv element). The music level is the same
    YouTube volume as the main slider, and the two stay in sync. */
 let voiceVol=90;try{voiceVol=Math.max(0,Math.min(100,parseInt(L.vvol||'90',10)||90))}catch{voiceVol=90}
+let kvGain=null;
+function ensureKvGain(){if(kvGain)return kvGain;try{const kv=document.querySelector('#kv');if(!kv||!__ac||__ac.state!=='running')return null;const src=__ac.createMediaElementSource(kv);const g=__ac.createGain();g.gain.value=voiceVol/100;src.connect(g);g.connect(__ac.destination);kvGain=g;return g}catch(e){return null}}
 function applyVoiceVol(){const v=voiceVol/100;const kv=document.querySelector('#kv');if(kv)kv.volume=v;
+/* v61: on iPhone/iPad the <audio> element's .volume is read-only, so the Voice slider did nothing for a listener. Route #kv through a Web Audio GainNode (controllable on iOS), set up lazily once the shared AudioContext is running. */
+const g=ensureKvGain();if(g){try{g.gain.setTargetAtTime(v,__ac.currentTime,.02)}catch(e){}}
  if(AC&&G.mon)G.mon.gain.setTargetAtTime(document.querySelector('#km')?.checked?v:0,AC.currentTime,.05);
  const s=document.querySelector('#kmix-v');if(s){s.value=String(voiceVol);s.style.setProperty('--p',voiceVol+'%')}
  const sv=document.querySelector('#kmix-vv');if(sv)sv.textContent=String(voiceVol);
