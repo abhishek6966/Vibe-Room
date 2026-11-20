@@ -1485,3 +1485,27 @@ main#home,main#gate{height:calc(var(--vh)*100)!important;min-height:calc(var(--v
 #home,#gate{height:max(100dvh,calc(var(--vh)*100))!important;min-height:max(100dvh,calc(var(--vh)*100))!important}
 main#home,main#gate{height:max(100dvh,calc(var(--vh)*100))!important;min-height:max(100dvh,calc(var(--vh)*100))!important}
 #room{min-height:max(100dvh,calc(var(--vh)*100))!important;height:max(100dvh,calc(var(--vh)*100))!important}
+
+/* ===== v84: PIN THE LANDING TO THE SCREEN ITSELF. v80-v83 all measured the
+   page height (innerHeight, then 100dvh, then the larger of the two) — but
+   every one of those numbers still comes from the phone, and on a real
+   iPhone 13 the number comes out short, so the page ended early and
+   "Recent rooms" ended early with it. The iPhone's bottom edge is curved,
+   and the page kept stopping where the curve begins.
+   This version does not measure anything. The landing and the gate are
+   pinned to the viewport itself (position:fixed; inset:0 — top, bottom,
+   left and right all 0), so they ARE the screen, whatever the phone
+   reports. The content inside still spreads with space-between, so
+   "Recent rooms" sits at the bottom, just above the home indicator. The
+   safe-area padding stays, so nothing hides behind the home indicator. */
+main#home,main#gate{position:fixed!important;top:0!important;left:0!important;right:0!important;bottom:0!important}
+
+/* ===== v84b: PIN THE ROOM TO THE SCREEN TOO. Same idea as the landing:
+   the room also measured its height (--vh / 100dvh), and on a real iPhone
+   that number comes out short, so the room ended early. Now the room is
+   pinned to the viewport itself (position:fixed; inset:0), so it IS the
+   screen, whatever the phone reports. The bottom nav is already pinned
+   (v82) and the room's bottom padding still keeps the card and panes
+   clear of it. Every bottom-anchored element — landing, gate, room, nav —
+   now adapts to the screen itself, including its curved bottom edges. */
+#room{position:fixed!important;top:0!important;left:0!important;right:0!important;bottom:0!important}
