@@ -1667,3 +1667,50 @@ body.in-room{display:flex!important;flex-direction:column!important}
    column the player card needs. */
 html body:not(.in-room){display:block!important}
 html body.in-room{display:flex!important;flex-direction:column!important}
+
+/* ===== v92.1: DRAGGABLE MINI-PLAYER. Abhi (07:11 EST): on the Queue tab
+   the mini-player bar floats over the list and hides the content behind it
+   (the playlist row's Queue button, Clear playlist). Fix, and ONLY this:
+   the bar is now draggable up/down by its own body. Its lowest spot is
+   unchanged — just above the bottom nav, it can never go below that or over
+   the nav (lift is clamped 0..360px in extras.js, saved on the device).
+   touch-action:none so a vertical drag on the bar moves the bar instead of
+   scrolling the list behind it; the grip pill on top shows it can be
+   dragged; the play/prev/next buttons still work (a tap with no movement
+   is a tap, a move is a drag). Nothing else in v92 is touched. */
+#mini{--mini-lift:0px;bottom:calc(133px + var(--sab,env(safe-area-inset-bottom,0px)) + var(--sab,env(safe-area-inset-bottom,0px)) + var(--mini-lift,0px))!important;touch-action:none!important;cursor:grab!important}
+#mini.dragging{cursor:grabbing!important;transition:none!important}
+#mini::before{content:"";position:absolute;top:2px;left:50%;transform:translateX(-50%);width:32px;height:4px;border-radius:4px;background:rgba(255,255,255,.35);pointer-events:none}
+
+/* ===== v92.2: STANDALONE (home-screen app) BOTTOM — FINAL GUARANTEE.
+   Abhi (07:16 EST): on the iPhone home-screen app the nav floats above the
+   bottom with dead space below it, and the player card ends early. Measured
+   on his 07:15 screenshot: the gap below the nav is ~46px — 12px + the 34px
+   home-indicator safe area — exactly the PRE-v82 #tabs rule
+   (bottom:calc(12px + var(--sab))). v82 already pins the nav to bottom:0,
+   so a phone showing that gap is running a STALE cached shell from before
+   v82: the home-screen app resumes a suspended page and never re-fetches
+   the shell (the exact case v86's version check was built for). This block
+   does two things. (1) It makes the standalone bottom bulletproof: every
+   rule here uses html.standalone, which beats every plain #tabs/#room rule
+   on specificity AND sits last in the file, so the pin cannot lose to an
+   earlier rule again. (2) The version bump to v92.2 forces the new shell
+   in: v86's check reloads a stale shell the moment version.json differs.
+   SCOPE: html.standalone ONLY — a browser session (Chrome/Safari) never
+   has that class, so no selector here matches it and browser layout is
+   byte-identical. Nothing else changes.
+   - nav: pinned to the viewport's very bottom (bottom:0). The home
+     indicator stays clear because the safe area lives INSIDE the nav as
+     bottom padding, exactly as before.
+   - room: pinned to the viewport (inset:0) and a flex column, so it is
+     exactly the screen height even if innerHeight under-reports.
+   - Play card: flex:1 with space-evenly (the v77 rule, restated) so the
+     card stretches down to just above the nav — no dead space below the
+     buttons, and the video box stays full 35svh (the 24svh cap only ever
+     applied under 500px height).
+   - List tabs: the pane stays flex:1 with its own scroll, bottom padding
+     clears the nav + mini-player. */
+html.standalone #tabs{position:fixed!important;left:50%!important;bottom:0!important;transform:translateX(-50%)!important;width:min(calc(100% - 24px),520px)!important}
+html.standalone #room{position:fixed!important;top:0!important;left:0!important;right:0!important;bottom:0!important;display:flex!important;flex-direction:column!important}
+html.standalone #room[data-tab=play] .stage{flex:1 1 0!important}
+html.standalone #room:not([data-tab=play]) aside{flex:1 1 auto!important;min-height:0!important}
