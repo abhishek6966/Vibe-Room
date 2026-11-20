@@ -1667,3 +1667,25 @@ body.in-room{display:flex!important;flex-direction:column!important}
    column the player card needs. */
 html body:not(.in-room){display:block!important}
 html body.in-room{display:flex!important;flex-direction:column!important}
+
+/* ===== v93: BOTTOM FIT (iPhone home-screen app + browsers) =====
+   1) HOME-SCREEN APP: fit.js measures the strip the page is short of the real
+      screen (--gap). The app shell, the room padding and the bottom nav all extend
+      into it (negative bottom offset), so the app reaches the very bottom edge.
+      --gap is 0 in Safari/Chrome, so browser behaviour is unchanged.
+   2) EVERY MODE: the record/video is the one flexible piece of the player card. It
+      takes whatever height is left (never pushing the buttons under the nav) and the
+      video grows to fill the card instead of leaving an empty band under the buttons. */
+html.v93{background:#241068!important}
+html.v93 body{background-color:#241068!important}
+html.v93.standalone main#home,html.v93.standalone main#gate,html.v93.standalone body #room{position:fixed!important;top:0!important;left:0!important;right:0!important;bottom:calc(-1*var(--gap,0px))!important;height:auto!important;min-height:0!important;max-height:none!important}
+html.v93.standalone body #room{padding-bottom:calc(92px + var(--sab,env(safe-area-inset-bottom,0px)))!important}
+html.v93.standalone body #tabs{bottom:calc(-1*var(--gap,0px))!important}
+html.v93.standalone body #mini{bottom:calc(133px + var(--sab,env(safe-area-inset-bottom,0px))*2 - var(--gap,0px))!important}
+html.v93.standalone body #audio-unlock{bottom:calc(193px + var(--sab,env(safe-area-inset-bottom,0px))*2 - var(--gap,0px))!important}
+html.v93 body #room[data-tab=play] .stage{display:flex!important;flex-direction:column!important;justify-content:space-evenly!important;overflow-y:auto!important}
+html.v93 body #room[data-tab=play] .stage .deck{flex:1 1 0!important;min-height:56px!important;width:auto!important;max-width:100%!important;max-height:min(300px,34svh)!important;aspect-ratio:1/1!important;align-self:center!important;margin:clamp(4px,1.2svh,12px) auto!important}
+html.v93 body #room[data-tab=play] .stage .deck.vid{aspect-ratio:auto!important;width:100%!important;max-height:min(46svh,380px)!important}
+html.v93 .stage .deck.vid .disc{aspect-ratio:auto!important;height:100%!important;width:100%!important}
+html.v93 .stage .deck.vid .label{height:100%!important}
+html.v93 .stage .deck.vid .label iframe,html.v93 .stage .deck.vid .label #pl{width:auto!important;min-width:100%!important;height:100%!important;aspect-ratio:16/9}
