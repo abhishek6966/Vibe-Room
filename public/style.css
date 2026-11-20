@@ -1320,3 +1320,26 @@ html.apk .stage,html.apk .pane,html.apk #tabs,html.apk #mini,html.apk .chip,html
 html.apk .disc{transform-style:flat!important;animation:spinFlat 24s linear infinite!important}
 html.apk .deck{transform-style:flat!important}
 @keyframes spinFlat{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+
+/* ===== v76.2: ROOM ONLY — the player-card + nav fix, WITHOUT touching the
+   landing or the body. WHY (Abhi, 2026-11-20): v76's home-screen app works
+   instantly, but its player card does not fill properly in Chrome/Safari and
+   its bottom nav floats 12px above the screen's end. v77 fixed the card by
+   making the BODY a flex column too — and every version after that (v80–v92)
+   kept changing the LANDING, which is what broke the home-screen app. v76.2
+   does the opposite: it changes ONLY #room and #tabs. The body stays a
+   normal block (exactly as in v76, which is why the landing still works),
+   and main#home/main#gate are NOT touched at all. What changes:
+   (1) #room becomes a flex column that fills the screen (min-height 100dvh),
+   so the stage grows and the player card uses the full height in
+   Chrome/Safari — on the home-screen app the card already filled, so this
+   changes nothing there. (2) #tabs is pinned to the very bottom (bottom:0,
+   was 12px) so the nav sits at the screen's end, in the browser AND in the
+   home-screen app; the safe area stays INSIDE the nav's padding, so the
+   buttons still clear the home indicator. The 118px bottom padding on #room
+   still clears the fixed nav. Nothing else in the UI changes. */
+#room:not([hidden]){display:flex!important;flex-direction:column!important;min-height:100vh!important;min-height:100dvh!important}
+#tabs{bottom:0!important}
+/* v76.2: version badge (same as v89) — tiny, last item of the landing, so
+   Abhi can see exactly which version his phone is running. */
+#ver{font-size:11px;color:rgba(255,255,255,.45);text-align:center}
