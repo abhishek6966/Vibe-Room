@@ -69,7 +69,7 @@ It runs as a web app on any phone or computer, and it can be added to a phone's 
 - **Smart skipping** — only the host, co-hosts, and authorised controllers can skip. A track auto-skips only when a strict majority of listeners report a playback error.
 
 ### Host controls & moderation
-- **Host transfer & co-hosts** — if the host leaves, duties pass immediately; after an unexpected disconnect, succession waits 12 seconds.
+- **Host transfer & co-hosts** — if the host leaves or goes offline, duties pass to the next user instantly. If only one person is in the room, they are the host. If the previous host rejoins, they get the host seat back instantly (the person they displace becomes a co-host).
 - **Request notifications** — when a guest requests a song or asks to sing, the host gets a yellow toast notification.
 - **Grant / revoke control** — the host can give playback control to any guest, and take it back.
 - **Remove / ban** — the host can remove or ban participants.
@@ -85,7 +85,7 @@ It runs as a web app on any phone or computer, and it can be added to a phone's 
 - **Cosmic smoke player** — the player card has a living neon smoke background (purple, magenta, cyan, orange) that jumps and drifts randomly on the song's beat while a song plays and calms when it pauses. It is a playback-driven beat simulation — the page cannot read YouTube audio directly.
 - **Liked songs** — a heart icon in the header opens a slide-in panel with every song you liked, saved forever on your device. Add any of them to the queue or request it.
 - **History** — a three-dots menu in the header shows the songs you played, saved on your device. Every old song can be copied or added back to the queue. Reloading the page rejoins your room and keeps all history.
-- **iPhone-ready** — the layout auto-detects the notch and Dynamic Island (iPhone 13–18) and the home-indicator bar and adjusts every element automatically, so nothing is ever hidden. Tapping a text field never zooms the page.
+- **iPhone-ready** — the layout auto-detects the notch and Dynamic Island (iPhone 13–18) and the home-indicator bar and adjusts every element automatically, so nothing is ever hidden. Tapping a text field never zooms the page. The player card and buttons fill the visible screen on any browser (Chrome, Safari) and in the home-screen app, on any device.
 - **Header that fits everyone** — the full 6-letter room code is always visible on the left, and every top button sits on the right, however many people join.
 - **Bottom navigation** — docked at the very bottom of the screen, with all four corners the same radius, following your device's own bottom screen shape.
 - **Cool mode** — a switch in the More tab turns the page flat and dark, stops the floating orbs and rising notes as well as the disc and smoke, and lets the screen sleep, so the phone stays cool while music plays; the phone already stays cool in normal use too, because every animation runs on cheap transforms only (no blur on any moving layer), the glass blur is kept light, and nothing polls the interface on a timer; leave it untouched for 30 seconds and the animations freeze instead (same colours, nothing moving) until you tap.
@@ -220,7 +220,7 @@ Without the key, Vibe Room still accepts links but cannot pre-check their embed 
 - **Permissions** — host and co-host controls are available by default. The host may grant control to a guest. Other guests can request tracks; the host must approve a request before it enters the queue.
 - **Media Session** — on supporting browsers, Vibe Room publishes track metadata and lock-screen play, pause, skip, previous, and seek actions. Returning from a suspended page triggers a room reconnect and state resync.
 - **Background playback** — uploaded audio keeps playing when you leave the app or lock the screen (it plays through the phone's native audio path, with lock-screen play/pause controls on supported devices). YouTube songs play only while Vibe Room is visible — YouTube's rules do not allow background playback of embedded videos, so a YouTube song pauses when you leave the app and resumes the moment you come back. It cannot survive the app being swiped away or force-closed, or the system reclaiming it.
-- **Host succession** — if the host leaves explicitly, host duties transfer immediately; after an unexpected disconnect, succession waits 12 seconds.
+- **Host succession** — if the host leaves or goes offline, host duties transfer to the next user instantly. If only one person is in the room, they are the host. If the previous host rejoins, they get the host seat back instantly (the person they displace becomes a co-host). A host who was given the seat by a manual transfer keeps it — the old host rejoining does not take it back.
 - **Room lifetime** — rooms are held in memory and are not persisted to a database. They are removed 24 hours after becoming empty.
 - **Scaling** — a single server instance is expected. Multi-instance deployment needs shared room state and a Socket.IO adapter.
 - **Hosting** — deploy on a host that supports long-lived Node.js processes and WebSockets. A serverless-only host such as Vercel Functions cannot run this Socket.IO server by itself.

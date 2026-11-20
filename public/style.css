@@ -1320,3 +1320,26 @@ html.apk .stage,html.apk .pane,html.apk #tabs,html.apk #mini,html.apk .chip,html
 html.apk .disc{transform-style:flat!important;animation:spinFlat 24s linear infinite!important}
 html.apk .deck{transform-style:flat!important}
 @keyframes spinFlat{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+
+/* v77: FULLY RESPONSIVE — same UI, fills the screen on any browser/device.
+   ROOT CAUSE (found by reading the CSS): the player card (.stage) and the
+   panes ALREADY had flex:1 + space-evenly + svh sizing — but their parent
+   #room was a plain block with no height, so flex:1 did NOTHING and the
+   card stayed content-height, leaving dead purple space below the nav.
+   And body used 100vh — the LARGE viewport (full screen height, including
+   the area behind the browser's address bar/tab bar). In the home-screen
+   app there is no browser chrome, so 100vh == the screen and it fit. In
+   Chrome/Safari the VISIBLE area is shorter, so the page never filled it.
+   FIX: #room becomes the flex column with min-height:100dvh (dynamic
+   viewport height — the VISIBLE area in the browser, the full screen in
+   the app). That SWITCHES ON the flex:1 the card/panes already had. The
+   transport buttons, disc and card gaps already scale with the viewport
+   via their existing svh clamp rules. No colour, icon, order or font
+   changes — only sizing. */
+body{min-height:100vh;min-height:100dvh}
+#room{display:flex;flex-direction:column;min-height:100vh;min-height:100dvh}
+/* v77 note: the transport buttons need NO new rule — they already scale
+   with the viewport via the existing #room[data-tab=play] #pp / #xp / #sk
+   clamp(...svh...) rules with !important. Verified: #pp is 62px at 844px
+   height and 47px at 644px height; #xp/#sk 50px -> 40px. Same for the disc
+   and the card gaps, which already use svh. */
