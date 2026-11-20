@@ -1371,3 +1371,36 @@ html.apk .deck{transform-style:flat!important}
   #room[data-tab=play] .deck.vid{width:min(100%,26svh)!important}
   #room[data-tab=play] .xtra{--pill-size:clamp(32px,4.6svh,40px)}
 }
+
+/* ===== v76.5: FLEX CARD REDESIGN — the player card is rebuilt so it fits
+   on EVERY screen (browser, home-screen app, small phone, tall phone)
+   with nothing hidden and no dead space. THE OLD PROBLEM: the card was a
+   rigid stack of fixed-height pieces (disc + title + seek + controls +
+   volume + extras + tip ≈ 565px) in a stage that is only ~500px tall in
+   a browser, so the bottom was clipped. THE REDESIGN: the card is now
+   two zones. (1) MEDIA ZONE — the deck is the ONE flexible item
+   (flex:1, min-height:0): it takes all the free vertical space and
+   shrinks when the screen is short, so it never pushes the controls off
+   the bottom. The vinyl fills the deck's height and stays square; in
+   video mode it is widescreen and fills the deck's height too, so the
+   video stays as big as the space allows (bigger is OK, smaller only
+   when the screen itself is shorter). (2) CONTROLS ZONE — everything
+   below the deck (title, seek, play controls, volume, extras, tip) is
+   fixed (flex:0 0 auto), always fully visible, pinned to the bottom.
+   The v76.4 browser-only scroll stays as a safety net for very short
+   screens. Nothing else in the UI changes — same colours, same smoke,
+   same buttons, same disc. */
+#room[data-tab=play] .stage{justify-content:flex-start!important}
+#room[data-tab=play] .deck{
+  flex:1 1 0!important;min-height:80px!important;
+  width:100%!important;max-width:100%!important;
+  margin:0 auto!important;display:grid!important;place-items:center!important
+}
+#room[data-tab=play] .deck .disc{
+  height:100%!important;max-height:100%!important;
+  width:auto!important;max-width:100%!important;aspect-ratio:1!important
+}
+#room[data-tab=play] .deck.vid .disc{
+  aspect-ratio:16/9!important;height:100%!important;max-height:100%!important;
+  width:auto!important;max-width:100%!important
+}
