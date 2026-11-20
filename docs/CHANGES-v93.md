@@ -1,4 +1,5 @@
 # v93 — bottom fit for the iPhone home-screen app + browsers
+Reload-loop fix: app.js APP_VERSION and the index.html badge now say v93 to match version.json.
 Files: public/fit.js (new), public/style.css (v93 block at the end), public/index.html (1 script tag), public/sw.js (cache v93), public/version.json.
 1. Home-screen app: fit.js measures how much shorter the page is than the real screen (--gap) and the app shell, room padding and bottom nav extend into it. Safari/Chrome get gap=0 (unchanged).
 2. All modes: the record/video is the flexible part of the card. It takes the leftover height, so buttons never slide under the nav, and the video grows to fill the card (no empty band under the buttons).
