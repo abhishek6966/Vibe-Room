@@ -1452,3 +1452,20 @@ main#home,main#gate{height:calc(var(--vh)*100)!important;min-height:calc(var(--v
    description becomes the last item and sits at the bottom. Once the user
    joins/creates a room from the app, Recent rooms appears as normal. */
 #home #recent:empty{display:none!important}
+
+/* ===== v82: NAV PINNED TO THE VIEWPORT BOTTOM. v79 made the nav a flex
+   child of #room (position:static) so it sits at the bottom of the room.
+   That only works if #room is exactly as tall as the screen — and on a real
+   iPhone home-screen app, window.innerHeight (which --vh comes from) reads
+   a little shorter than the true screen, so #room ends ~50px short and the
+   nav floats ~60px above the screen's end with dead space below it.
+   Fix: the nav no longer depends on #room's height at all — it is pinned
+   to the viewport itself (position:fixed; bottom:0), so it is ALWAYS at the
+   screen's very end, in the browser and in the home-screen app. The safe
+   area stays INSIDE the nav (its bottom padding), so the buttons still
+   clear the home indicator. #room gets its bottom padding back so the
+   card/panes end above the fixed nav instead of sliding under it. */
+#tabs{position:fixed!important;left:50%!important;bottom:0!important;transform:translateX(-50%)!important;width:min(calc(100% - 24px),520px)!important;max-width:520px!important;margin:0 auto!important;flex:none!important}
+#room{padding-bottom:calc(92px + var(--sab,env(safe-area-inset-bottom,0px)))!important}
+#room[data-tab=play]{padding-bottom:calc(92px + var(--sab,env(safe-area-inset-bottom,0px)))!important}
+#room:not([data-tab=play]){padding-bottom:calc(92px + var(--sab,env(safe-area-inset-bottom,0px)))!important}
