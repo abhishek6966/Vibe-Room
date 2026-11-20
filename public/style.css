@@ -1509,3 +1509,18 @@ main#home,main#gate{position:fixed!important;top:0!important;left:0!important;ri
    clear of it. Every bottom-anchored element — landing, gate, room, nav —
    now adapts to the screen itself, including its curved bottom edges. */
 #room{position:fixed!important;top:0!important;left:0!important;right:0!important;bottom:0!important}
+
+/* ===== v85: BOTTOM FIX, TAKING REFERENCE FROM v69. Abhi (02:42 EST):
+   "still not covering that full bottom area" — "see v69 version there it
+   was fixed properly for bottom only not player card in middel take
+   reference fro that to fix its bottom". v69's landing was SIMPLE: just
+   height:100dvh (with 100vh/100svh fallbacks) and the body's fixed
+   background covering the whole screen. v80-v84 then layered --vh, then
+   max(100dvh,--vh), then position:fixed on top of it — and the --vh
+   number comes from the phone, which keeps reporting it short on a real
+   iPhone, so the page kept ending early. This version goes back to v69's
+   simple height for the landing and the gate (plain 100dvh, no --vh in
+   it at all) while KEEPING the viewport pin (position:fixed inset:0) so
+   the page is the screen itself. The room and its bottom nav are left
+   exactly as v84 (the player card in the middle was never the complaint). */
+main#home,main#gate{height:100vh!important;height:100svh!important;height:100dvh!important}
