@@ -449,7 +449,7 @@ socket.on('react',r=>{const d=document.createElement('div');d.className='fl';d.t
 let coolMode=false;try{coolMode=L.getItem('cool')==='1'}catch(e){}
 let autoDimmed=false,idleT=null;
 function applyDim(){document.body.classList.toggle('cool',coolMode);document.body.classList.toggle('idle',autoDimmed&&!coolMode);const sw=document.querySelector('#cool-toggle');if(sw){sw.setAttribute('aria-checked',String(coolMode));sw.classList.toggle('on',coolMode)}}
-function setCool(on){coolMode=!!on;try{L.setItem('cool',coolMode?'1':'0')}catch(e){}applyDim();armIdle()}
+function setCool(on){coolMode=!!on;try{L.setItem('cool',coolMode?'1':'0')}catch(e){}applyDim();armIdle();wakeSync(); /* v68: toggling Cool mode immediately releases (on) or re-acquires (off) the wake lock, and stops (on) or restarts (off) the smoke beat — so the phone starts cooling the moment Cool mode is switched on. */ if(coolMode)smokeStop();else if(S?.cur?.playing)smokeStart();}
 function armIdle(){const should=S&&S.cur&&S.cur.playing&&!coolMode;if(!should){if(idleT){clearTimeout(idleT);idleT=null}return}if(idleT)return;idleT=setTimeout(()=>{idleT=null;autoDimmed=true;applyDim()},30000)}
 function wakeCool(){if(autoDimmed){autoDimmed=false;applyDim()}if(idleT){clearTimeout(idleT);idleT=null}armIdle()}
 document.addEventListener('pointerdown',wakeCool);
@@ -468,7 +468,7 @@ function render(){if(!joined)return;const isH=S.hostId===me.id,M=isH||S.co.inclu
  const lk=$('#lock');lk.hidden=!isH;lk.innerHTML=S.locked?'<span class="ic" aria-hidden="true">'+AIC_UNLOCK+'</span> <span class="tx">Open requests</span>':'<span class="ic" aria-hidden="true">'+AIC_LOCK+'</span> <span class="tx">Close requests</span>';
  $('#disc').classList.toggle('on',!!c&&c.playing);
  document.querySelector('.stage')?.classList.toggle('playing',!!c&&c.playing); /* v37: the cosmic smoke breathes harder while the music plays, calms when paused */
- if(c&&c.playing)smokeStart();else smokeStop(); /* v43: beat-reactive smoke */
+ if(c&&c.playing&&!coolMode)smokeStart();else smokeStop(); /* v43: beat-reactive smoke — v68: never start the beat while Cool mode is on (the smoke is hidden then, so the ~500ms timer would only burn CPU for nothing). */
  let h=0;if(c)for(const ch of c.videoId)h=(h*31+ch.charCodeAt(0))%360;document.documentElement.style.setProperty('--h',h);
  $('#tt-in').textContent=c?c.title:'Queue is empty';fitTitle();$('#ch').textContent=c?c.channel:'Paste a YouTube link to start the room.';$('#by').textContent=c?'Added by '+c.by:'';$('#addlink').hidden=!!c; /* v40: the empty-state button shows only while the queue is empty */
  $('#pp').innerHTML=c&&c.playing?IC_PAUSE:IC_PLAY;$('#pp').disabled=!can;/* v50: tell the page whether a song is playing, so the decorative motion (smoke, orbs, notes) freezes when nothing plays instead of burning battery and heating the phone for nothing. */document.body.classList.toggle('playing',!!(c&&c.playing));/* v55: COOL MODE + AUTO-DIM — if the song stopped, wake the page (no need to stay dimmed when paused); (re)arm the 30s idle timer when playing. armIdle() never resets a running timer, so this is safe even though render() runs often. */if(!(c&&c.playing)&&autoDimmed){autoDimmed=false;applyDim()}armIdle();$('#sk').innerHTML=IC_NEXT;$('#sk').disabled=!can||!c;$('#sk').setAttribute('aria-label',C?'Skip':'Skip (host control only)');$('#sk').title=C?'Skip to next track':'Only the host, co-hosts, or authorized controllers can skip';$('#sc').disabled=!can||!c;/* v49: 10s skip buttons follow the same rule as the seek bar — only controllers can move the room. */const b10=$('#b10'),f10=$('#f10');if(b10)b10.disabled=!can||!c;if(f10)f10.disabled=!can||!c;
@@ -641,7 +641,9 @@ setInterval(()=>{if(!P||!P.getDuration||!S?.cur)return;const ld=P.getDuration()|
     the server keeps it, and from then on everyone shows the same number. */
  const d=S.cur.duration||ld;
  if(ld>0&&!S.cur.duration){const key=S.cur.tid+':'+Math.round(ld);if(key!==lastDurSent){lastDurSent=key;act({type:'dur',tid:S.cur.tid,dur:ld})}}
+ if(!coolMode){ /* v68: in Cool mode the screen is dark / asleep, so nobody is watching the clock — skip the time, seek-bar and Media Session DOM writes (they wake the CPU and force a repaint every 500ms). The buffering watchdog below still runs, so a stuck stream is still rescued. */
  $('#t1').textContent=fmt(t);$('#t2').textContent=fmt(d);if(!seeking&&d){const sc=$('#sc'),v=Math.min(1000,t/d*1000);sc.value=v;sc.style.setProperty('--p',(v/10)+'%')}updateMediaSession();
+ }
  /* stuck-buffer safety net: buffering for 5s straight while the room is
     playing means the stream is wedged — reload it at the live position.
     v53: was 12s; a 5s+ lag was already visible to the user before the old
@@ -708,7 +710,7 @@ let wakeLock=null,wakeWant=false;
 const wakeAcquire=async()=>{if(!('wakeLock'in navigator)||wakeLock||document.hidden||!wakeWant)return;
  try{wakeLock=await navigator.wakeLock.request('screen');
   wakeLock.addEventListener('release',()=>{wakeLock=null;if(wakeWant&&!document.hidden)wakeAcquire()})}catch{wakeLock=null}};
-const wakeSync=()=>{wakeWant=!!(S?.cur?.playing);if(wakeWant)wakeAcquire();else if(wakeLock){try{wakeLock.release()}catch{}wakeLock=null}};
+const wakeSync=()=>{wakeWant=!!(S?.cur?.playing)&&!coolMode;if(wakeWant)wakeAcquire();else if(wakeLock){try{wakeLock.release()}catch{}wakeLock=null}}; /* v68: COOL MODE releases the wake lock — the screen is the #1 heat source (a lit screen is the biggest battery/heat drain on a phone). When Cool mode is on, the lock is released so the screen can sleep and the phone cools. The music keeps playing via the background paths (uploaded MP3s and the Android APK keep playing with the screen off; iOS Safari + YouTube pauses on lock — press play on the lock screen, v64, to resume). */
 /* v48: RESUME SAFETY NET — when the user comes back to the app, the music
    must restart by itself within a second, even if they do not tap
    anything. The visibility/focus handlers already call keepPlaying(),
@@ -717,8 +719,9 @@ const wakeSync=()=>{wakeWant=!!(S?.cur?.playing);if(wakeWant)wakeAcquire();else 
    localT guard (same as sync) keeps it from undoing your own intentional
    pause — a tap you just made is left alone for 1s. */
 /* v57: SOUND CHECK — the app now watches whether sound is actually coming out. If the room is playing but THIS device's player is not playing (and not buffering — it is trying), the browser has blocked it (no valid tap yet) and the timer retries cannot fix it, because only a real tap counts as a gesture. After 2 seconds of silence, show the big "Tap to enable audio" button (it was never shown before — nothing ever unhid it, so a silent guest had no way to start the sound) and say so once. Tapping it calls playVideo() inside the tap, which the browser allows. It hides itself the moment the player starts (pState) or the room stops. */
-let silentSecs=0,silentTold=false;
+let silentSecs=0,silentTold=false,silentTick=0;
 setInterval(()=>{if(document.hidden||!joined||!S?.cur?.playing||!P||Date.now()-localT<1000)return;
+ if(coolMode){silentTick++;if(silentTick%3!==0)return} /* v68: in Cool mode this 1s sound check runs every 3s instead — the screen is asleep, so a paused player resuming within 3s (not 1s) is fine, and the CPU wakes a third as often. */
  try{const st=P.getPlayerState&&P.getPlayerState();
   if(st===1){silentSecs=0;silentTold=false;return}
   if(st!==3){silentSecs++;if(silentSecs>=2){const u=$('#audio-unlock');if(u&&u.hidden){u.hidden=false;if(!silentTold){silentTold=true;toast('Tap to enable sound — the song is playing but your device is silent.')}}}}
