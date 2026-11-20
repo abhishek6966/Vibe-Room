@@ -1580,3 +1580,37 @@ main#home,main#gate{min-height:100vh!important;min-height:100svh!important;min-h
    a stale cached copy and has never loaded any of v80-v89. */
 body{background:radial-gradient(75% 38% at 100% 100%,rgba(205,35,175,.5),transparent),radial-gradient(90% 30% at 0 0,rgba(120,70,255,.35),transparent),linear-gradient(180deg,#4a1fc4,#2a1275 40%,#3a1a8f)!important}
 #ver{font-size:11px;line-height:1;color:rgba(255,255,255,.45);text-align:center;padding:2px 0 0}
+
+/* ===== v90: STANDALONE GETS ITS OWN LAYOUT. Abhi's insight (04:00 EST):
+   "previously we fixed it for Chrome's browsers bottom settings because in
+   Chrome's bottom area there are few buttons ... so we have fixed the bottom
+   for the Chrome browser's bottom limitations ... when I added as a home
+   screen app web app it follows through same and it has that gap ... where
+   there is no any of browser's button in the bottom there is no need of
+   bottom limitation bottom gap". He is right: every fix so far sized the
+   page for a BROWSER viewport (visible area above the browser's own bottom
+   toolbar) and reserved bottom space for that toolbar. The home-screen app
+   has NO browser toolbar — the full screen is free. So in standalone mode
+   (the home-screen app) the page gets its own layout: html/body are the
+   full screen, the landing/gate/room are flex children that GROW to fill
+   it, and the bottom padding is ONLY the home-indicator safe area — no
+   extra bottom reservation for a browser toolbar that is not there.
+   Browser mode is untouched. */
+@media (display-mode: standalone){
+ html,body{height:100%!important;min-height:100%!important}
+ body{display:flex!important;flex-direction:column!important}
+ main#home,main#gate{position:static!important;top:auto!important;left:auto!important;right:auto!important;bottom:auto!important;height:auto!important;min-height:0!important;flex:1 1 auto!important;width:100%!important}
+ #room{position:static!important;top:auto!important;left:auto!important;right:auto!important;bottom:auto!important;height:auto!important;min-height:0!important;flex:1 1 auto!important}
+ main#home,main#gate{padding-bottom:env(safe-area-inset-bottom,0px)!important}
+}
+
+/* v90 (continued): the same standalone layout via the html.standalone class
+   that app.js sets (safeArea), so it applies even where the display-mode
+   media query is not honoured. In the home-screen app the bottom padding
+   is ONLY the home-indicator safe area — no extra bottom reservation for
+   a browser toolbar that is not there. */
+html.standalone,html.standalone body{height:100%!important;min-height:100%!important}
+html.standalone body{display:flex!important;flex-direction:column!important}
+html.standalone main#home,html.standalone main#gate{position:static!important;top:auto!important;left:auto!important;right:auto!important;bottom:auto!important;height:auto!important;min-height:0!important;flex:1 1 auto!important;width:100%!important}
+html.standalone #room{position:static!important;top:auto!important;left:auto!important;right:auto!important;bottom:auto!important;height:auto!important;min-height:0!important;flex:1 1 auto!important}
+html.standalone main#home,html.standalone main#gate{padding-bottom:env(safe-area-inset-bottom,0px)!important}

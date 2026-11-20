@@ -33,6 +33,11 @@ const safeArea=()=>{
     root.setProperty('--sat',t+'px');root.setProperty('--sab',b+'px');
     root.setProperty('--sal',l+'px');root.setProperty('--sar',r+'px');
     document.documentElement.classList.toggle('has-notch',t>0);
+    /* v90: STANDALONE CLASS — the home-screen app has NO browser bottom
+       toolbar, so it gets its own layout (see the standalone block in
+       style.css). Mark it on <html> so the layout does not depend only on
+       the display-mode media query. */
+    document.documentElement.classList.toggle('standalone',(window.matchMedia('(display-mode: standalone)').matches||navigator.standalone));
   }catch(e){}
 };
 safeArea();
@@ -48,7 +53,7 @@ addEventListener('orientationchange',()=>setTimeout(safeArea,250));
    home-screen app on its very next open. It never reloads while a song is
    playing in a room (that would cut the music) — it waits until the app is
    on the landing page or the room is idle. */
-const APP_VERSION='v89';
+const APP_VERSION='v90';
 let verChecked=false;
 const checkVersion=()=>{
   if(verChecked) return; verChecked=true;
