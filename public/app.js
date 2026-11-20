@@ -20,59 +20,17 @@ const safeArea=()=>{
         l=parseFloat(cs.paddingLeft)||0,r=parseFloat(cs.paddingRight)||0;
     /* Fallback: a tall iPhone (X and later, 812px+) always has a notch or
        Dynamic Island. If env() reported 0 here, the browser didn't expose
-       it — use the island values rather than letting content hide.
-       BUT only when running full-screen (home-screen app). In a browser
-       (Chrome/Safari) env()=0 is CORRECT — the browser's own URL bar
-       already sits below the island — so forcing 59px here doubles the
-       gap and leaves a big empty space above the room header. */
-    if(!t&&/iPhone/.test(navigator.userAgent)&&Math.max(screen.width,screen.height)>=812){
-      const standalone=window.matchMedia('(display-mode: standalone)').matches||navigator.standalone;
-      if(standalone){t=59;b=b||34}
-    }
+       it — use the island values rather than letting content hide. */
+    if(!t&&/iPhone/.test(navigator.userAgent)&&Math.max(screen.width,screen.height)>=812){t=59;b=b||34}
     const root=document.documentElement.style;
     root.setProperty('--sat',t+'px');root.setProperty('--sab',b+'px');
     root.setProperty('--sal',l+'px');root.setProperty('--sar',r+'px');
     document.documentElement.classList.toggle('has-notch',t>0);
-    /* v90: STANDALONE CLASS — the home-screen app has NO browser bottom
-       toolbar, so it gets its own layout (see the standalone block in
-       style.css). Mark it on <html> so the layout does not depend only on
-       the display-mode media query. */
-    document.documentElement.classList.toggle('standalone',(window.matchMedia('(display-mode: standalone)').matches||navigator.standalone));
   }catch(e){}
 };
 safeArea();
 addEventListener('resize',()=>setTimeout(safeArea,120));
 addEventListener('orientationchange',()=>setTimeout(safeArea,250));
-/* v86: SELF-UPDATE — the home-screen app can get stuck on an old version
-   (the page is resumed from a suspended state instead of freshly loaded,
-   so it keeps serving the old cached shell and the user keeps seeing an
-   old bug even though the live site already has the fix). This check fetches
-   the live version and reloads the page the moment it differs from the
-   version this page was built with. It runs once on load and again every
-   time the app comes back to the foreground, so a pushed fix reaches the
-   home-screen app on its very next open. It never reloads while a song is
-   playing in a room (that would cut the music) — it waits until the app is
-   on the landing page or the room is idle. */
-const APP_VERSION='v92';
-let verChecked=false;
-const checkVersion=()=>{
-  if(verChecked) return; verChecked=true;
-  try{
-    fetch('version.json?'+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.json():null).then(j=>{
-      verChecked=false;
-      if(j&&j.version&&j.version!==APP_VERSION){
-        const playing=document.body.classList.contains('in-room')&&document.body.classList.contains('playing');
-        if(!playing) location.reload();
-        else setTimeout(()=>{verChecked=false;checkVersion()},30000);
-      }
-    }).catch(()=>{verChecked=false});
-  }catch(e){verChecked=false}
-};
-setTimeout(checkVersion,1500);
-document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(checkVersion,800)});
-if('serviceWorker' in navigator){
-  navigator.serviceWorker.addEventListener('controllerchange',()=>{location.reload()});
-}
 /* v43: BEAT-REACTIVE SMOKE — the clouds used to drift at one fixed rate.
    Honest limit: the smoke CANNOT read the real YouTube audio (it plays
    inside YouTube's own frame, which the page cannot analyse), so there is
