@@ -1442,3 +1442,13 @@ main#home,main#gate{height:calc(var(--vh)*100)!important;min-height:calc(var(--v
   #home .hero3d{width:64px!important}
   #home{gap:2px!important}
 }
+
+/* ===== v81: FRESH HOME-SCREEN INSTALL HAS NO DEAD GAP. A home-screen app
+   keeps its OWN storage, separate from Safari/Chrome — so a freshly added
+   app has no Recent rooms saved yet and #recent is empty. An empty #recent
+   still sat in the grid as the last item, so space-between left a gap
+   between the description and the (invisible) empty section at the bottom.
+   Fix: when #recent is empty it leaves the layout entirely, so the
+   description becomes the last item and sits at the bottom. Once the user
+   joins/creates a room from the app, Recent rooms appears as normal. */
+#home #recent:empty{display:none!important}

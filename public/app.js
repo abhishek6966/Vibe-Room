@@ -20,8 +20,15 @@ const safeArea=()=>{
         l=parseFloat(cs.paddingLeft)||0,r=parseFloat(cs.paddingRight)||0;
     /* Fallback: a tall iPhone (X and later, 812px+) always has a notch or
        Dynamic Island. If env() reported 0 here, the browser didn't expose
-       it — use the island values rather than letting content hide. */
-    if(!t&&/iPhone/.test(navigator.userAgent)&&Math.max(screen.width,screen.height)>=812){t=59;b=b||34}
+       it — use the island values rather than letting content hide.
+       BUT only when running full-screen (home-screen app). In a browser
+       (Chrome/Safari) env()=0 is CORRECT — the browser's own URL bar
+       already sits below the island — so forcing 59px here doubles the
+       gap and leaves a big empty space above the room header. */
+    if(!t&&/iPhone/.test(navigator.userAgent)&&Math.max(screen.width,screen.height)>=812){
+      const standalone=window.matchMedia('(display-mode: standalone)').matches||navigator.standalone;
+      if(standalone){t=59;b=b||34}
+    }
     const root=document.documentElement.style;
     root.setProperty('--sat',t+'px');root.setProperty('--sab',b+'px');
     root.setProperty('--sal',l+'px');root.setProperty('--sar',r+'px');
