@@ -1614,3 +1614,56 @@ html.standalone body{display:flex!important;flex-direction:column!important}
 html.standalone main#home,html.standalone main#gate{position:static!important;top:auto!important;left:auto!important;right:auto!important;bottom:auto!important;height:auto!important;min-height:0!important;flex:1 1 auto!important;width:100%!important}
 html.standalone #room{position:static!important;top:auto!important;left:auto!important;right:auto!important;bottom:auto!important;height:auto!important;min-height:0!important;flex:1 1 auto!important}
 html.standalone main#home,html.standalone main#gate{padding-bottom:env(safe-area-inset-bottom,0px)!important}
+
+/* ===== v91: PIN TO THE VIEWPORT. Abhi (04:13 EST): "v90 is still wrong
+   not fixed". v87-v90 all relied on the BODY (flex column) to stretch the
+   landing/gate/room to the full height — if the body's own height is not
+   definite on the real iPhone, flex:1 has nothing to stretch into and the
+   page ends early. v91 stops depending on the body entirely: the landing,
+   the gate and the room are PINNED to the viewport itself
+   (position:fixed; inset:0), so they are exactly the screen size no matter
+   what the body measures. The nav stays pinned to the viewport bottom
+   (v82) and the room keeps its bottom padding so content clears it. The
+   min-height:100svh/100dvh is a fallback in case fixed positioning is ever
+   constrained. This rule is appended LAST so it wins over v87's
+   position:static and v90's standalone static rules. */
+main#home,main#gate{position:fixed!important;top:0!important;left:0!important;right:0!important;bottom:0!important;height:auto!important;min-height:100svh!important;min-height:100dvh!important}
+#room{position:fixed!important;top:0!important;left:0!important;right:0!important;bottom:0!important;height:auto!important;min-height:100svh!important;min-height:100dvh!important}
+
+/* v91 (specificity fix): the fixed pin above lost to v90's
+   html.standalone rules (ID+class+element beats plain ID+element). These
+   use the same selectors so they win by source order. */
+html.standalone main#home,html.standalone main#gate{position:fixed!important;top:0!important;left:0!important;right:0!important;bottom:0!important;height:auto!important;min-height:100svh!important;min-height:100dvh!important}
+html.standalone #room{position:fixed!important;top:0!important;left:0!important;right:0!important;bottom:0!important;height:auto!important;min-height:100svh!important;min-height:100dvh!important}
+html main#home,html main#gate{position:fixed!important;top:0!important;left:0!important;right:0!important;bottom:0!important;height:auto!important;min-height:100svh!important;min-height:100dvh!important}
+html #room{position:fixed!important;top:0!important;left:0!important;right:0!important;bottom:0!important;height:auto!important;min-height:100svh!important;min-height:100dvh!important}
+
+/* ===== v92: RESTORE THE v76 LANDING. Abhi (04:17 EST): "till version 76
+   everything was correct except for it player card on chrome browser and
+   safari browser — what did [you] change after that is the real issue
+   started". He is right. In v76 the landing was a SIMPLE layout that
+   worked: main#home/main#gate had a plain height (100vh/100svh/100dvh),
+   min-height:0, and the content was CENTERED; the body was a normal block,
+   not a flex container. v77 fixed the player card by making the BODY and
+   #room flex columns — but every version after that (v80 --vh height, v83
+   max(), v84 fixed pin, v85 100dvh+pin, v87 flex grow, v88 min-height,
+   v90 standalone, v91 fixed pin) kept piling NEW height/position rules
+   onto the LANDING too, and the landing's simple v76 layout was buried
+   under them. v92 restores the v76 landing EXACTLY (same height, same
+   centering, same padding) and scopes the flex layout to the ROOM ONLY:
+   the body is a normal block on the landing and a flex column ONLY when
+   body has class in-room. The v77 player-card fix stays (the room is
+   still a flex column that fills the screen in Chrome/Safari); the landing
+   is untouched by it. The version badge and the vibrant background stay. */
+html.standalone main#home,html.standalone main#gate,html main#home,html main#gate,main#home,main#gate{position:static!important;top:auto!important;left:auto!important;right:auto!important;bottom:auto!important;height:100vh!important;height:100svh!important;height:100dvh!important;min-height:0!important;flex:none!important;overflow:hidden!important;width:100%!important}
+html.standalone #home,html #home,#home{align-content:center!important}
+body{display:block!important}
+body.in-room{display:flex!important;flex-direction:column!important}
+
+/* v92 (body scope fix): the plain `body{display:block}` above lost to v90's
+   html.standalone body rule (higher specificity). These use the same
+   specificity and win by source order. On the landing (no in-room class)
+   the body is a normal block, exactly as in v76; in a room it is the flex
+   column the player card needs. */
+html body:not(.in-room){display:block!important}
+html body.in-room{display:flex!important;flex-direction:column!important}
