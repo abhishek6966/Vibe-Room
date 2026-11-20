@@ -1,5 +1,7 @@
 const $=s=>document.querySelector(s),esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const L=localStorage,T=sessionStorage,hex=()=>'#'+[0,1,2].map(()=>(100+Math.random()*155|0).toString(16)).join('');
+/* v69: APK SMOOTH — backup native-app detection (the <head> script already checks the "wv" user agent; this catches Capacitor even if the UA does not say "wv"). When the app runs inside the Android APK (or any native shell), the <html> gets class "apk" and the CSS below turns ALL backdrop-filter off — Android WebView re-renders a blurred backdrop on every frame, so any animation makes every blurred element on every page flicker. With blur off the APK uses the solid backgrounds that are already there, and everything stops flickering. */
+try{if(window.Capacitor||/\bwv\b/.test(navigator.userAgent))document.documentElement.classList.add('apk')}catch(e){}
 /* v42: SAFE-AREA AUTO-DETECT — the app measures the device's real screen
    cutout (notch / Dynamic Island / home indicator) and adjusts every
    element automatically. CSS env() is the source of truth, but it can read
@@ -63,7 +65,7 @@ const smokeStart=()=>{
         {transform:`translateY(-${20+Math.random()*44}px)`},
         {duration:480+Math.random()*520,easing:'ease-out',fill:'forwards'});
     });
-    smokeT=setTimeout(beat,420+Math.random()*180); /* ~120 BPM with jitter */
+    smokeT=setTimeout(beat,document.documentElement.classList.contains('apk')?1400+Math.random()*400:420+Math.random()*180); /* ~120 BPM with jitter — v70: in the APK the beat is ~3x slower (~40 BPM) so far fewer WAAPI animations fire while playing, which stops the playing flicker in the Android WebView. */
   };
   beat();
 };
@@ -743,7 +745,7 @@ setInterval(()=>{if(document.hidden||!joined||!S?.cur?.playing||!P||Date.now()-l
    moment of hiding, and repeated resume attempts. If the system still
    pauses it, it restarts the instant the user returns — no tap needed. */
 let keepT=null;
-const keepPlayingRetry=()=>{keepPlaying();if(keepT){clearInterval(keepT);keepT=null}/* v45: keep retrying while hidden — in a home-screen app iOS suspends JS fast and pauses the YouTube player a moment after you leave, so a few retries over 2.5s often miss it. Retry every 2s for up to 30s while hidden, so one of the retries catches the player after the system pauses it and starts it again. Stops when the page is visible again or after 30s. */keepT=setInterval(()=>{if(document.hidden)keepPlaying();else if(keepT){clearInterval(keepT);keepT=null}},2000);setTimeout(()=>{if(keepT){clearInterval(keepT);keepT=null}},30000)};
+const keepPlayingRetry=()=>{keepPlaying();if(keepT){clearInterval(keepT);keepT=null}/* v45: keep retrying while hidden — in a home-screen app iOS suspends JS fast and pauses the YouTube player a moment after you leave, so a few retries over 2.5s often miss it. Retry every 2s for up to 30s while hidden, so one of the retries catches the player after the system pauses it and starts it again. Stops when the page is visible again or after 30s. v70: the 30s cap is REMOVED — the retry now runs INDEFINITELY while the page is hidden and the room is playing. In the Android APK the screen-off throttles JS timers, so a 30s window can expire before a retry ever fires; an indefinite retry guarantees the music eventually resumes after a lock, no matter how throttled the timers are. It still stops the moment the page becomes visible again. */keepT=setInterval(()=>{if(document.hidden)keepPlaying();else if(keepT){clearInterval(keepT);keepT=null}},2000)};
 document.addEventListener('visibilitychange',()=>{if(document.hidden)keepPlayingRetry();else{resumeRoom();wakeSync()}});
 window.addEventListener('pagehide',keepPlayingRetry);
 document.addEventListener('freeze',keepPlayingRetry);

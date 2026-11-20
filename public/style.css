@@ -334,12 +334,12 @@ main,#room{position:relative;z-index:1}
 .hero-title{font-size:2.6rem;font-weight:800;line-height:1.05;margin:8px 0 2px;background:linear-gradient(135deg,#ffb020,#ff3d71 45%,#b026ff);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 4px 18px rgba(255,61,113,.55))}
 /* --- flowing music: animated equalizer + feature chips --- */
 .eq{display:flex;gap:4px;align-items:flex-end;justify-content:center;height:34px;margin:12px auto 2px}
-.eq i{width:5px;border-radius:4px;background:linear-gradient(180deg,#ff3d71,#b026ff);animation:eqB 1s ease-in-out infinite alternate}
+.eq i{width:5px;height:32px;border-radius:4px;background:linear-gradient(180deg,#ff3d71,#b026ff);transform-origin:bottom;transform:scaleY(.25);animation:eqB 1s ease-in-out infinite alternate;will-change:transform}
 .eq i:nth-child(odd){background:linear-gradient(180deg,#22e1ff,#7a5cff)}
 .eq i:nth-child(3n){animation-duration:.7s}
 .eq i:nth-child(4n){animation-duration:1.3s}
 .eq i:nth-child(2){animation-delay:-.2s}.eq i:nth-child(5){animation-delay:-.5s}.eq i:nth-child(7){animation-delay:-.1s}.eq i:nth-child(9){animation-delay:-.7s}.eq i:nth-child(11){animation-delay:-.3s}.eq i:nth-child(13){animation-delay:-.6s}.eq i:nth-child(15){animation-delay:-.4s}
-@keyframes eqB{from{height:8px}to{height:32px}}
+@keyframes eqB{from{transform:scaleY(.25)}to{transform:scaleY(1)}} /* v69: was height:8px->32px — animating height is a LAYOUT property (the browser recalculates layout + repaints every frame, which flickers and lags in the Android WebView). scaleY is a composited transform (GPU only, no layout, no repaint) — the same look, perfectly smooth. transform-origin:bottom (set on .eq i) keeps the bars growing upward from the bottom, exactly as before. */
 .chips{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:10px 0 4px}
 .chip{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.22);backdrop-filter:blur(12px);font-size:.78rem;font-weight:600;color:#fff;box-shadow:0 6px 16px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.25)}
 .chip svg{width:14px;height:14px;color:#ffd166}
@@ -1301,3 +1301,9 @@ body.idle .stage *,body.idle .hero3d,body.idle .eq i,body.idle #fx *{animation-p
 body.cool .chip,body.cool .toast,body.cool .hdr-tip,body.cool .ad-board,body.cool .ad-board-big,body.cool .snd-modal,body.cool .gate-panel,body.cool .who .pill-who,body.cool .cool-card,body.cool .ad-board ins{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
 body.cool .disc{opacity:.7}
 body.cool .ctl,body.cool .xtra{opacity:.75}
+/* v69: APK SMOOTH — no backdrop-filter in the native app. WHY: Android WebView re-renders a blurred backdrop on EVERY frame. The app has backdrop-filter on 21 places (stage, panes, nav, mini-player, chips, toasts, header pill, gate panel, sound modal, ad boards) — and the equalizer, disc, smoke and marquee all animate continuously. Every animation frame forces every blurred element on the page to re-render its backdrop, so buttons and cards flicker on EVERY page, exactly as reported. In the APK (html.apk, set by the <head> script / app.js when Capacitor or a "wv" WebView user agent is detected) ALL backdrop blur is off; the semi-opaque backgrounds that are already there (rgba purple glass) carry the look, solid and flicker-free. The web app in a real browser keeps its blur (browsers composite it properly). */
+html.apk .stage,html.apk .pane,html.apk #tabs,html.apk #mini,html.apk .chip,html.apk .toast,html.apk .hdr-tip,html.apk .who .pill-who,html.apk .gate-panel,html.apk .snd-modal,html.apk .ad-board,html.apk .ad-board-big,html.apk .cool-card,html.apk #fx,html.apk .cosmic{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+/* v70: APK SMOOTH WHILE PLAYING — flat disc + calmer smoke. WHY (the live site is v68, so v69's blur fix is not live yet — but the disc's 3D spin is a second, playing-only flicker source in the WebView): the vinyl spins with transform-style:preserve-3d + translateZ(24px), a 3D rendering context that the Android WebView re-composites every frame while the song plays. In the APK the disc now spins flat (plain 2D rotate, no translateZ, no preserve-3d) — the same look, no 3D context, no flicker. The smoke beat is also slowed in the APK (see app.js) so fewer WAAPI animations fire while playing. */
+html.apk .disc{transform-style:flat!important;animation:spinFlat 24s linear infinite!important}
+html.apk .deck{transform-style:flat!important}
+@keyframes spinFlat{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}

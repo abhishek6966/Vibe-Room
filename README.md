@@ -30,7 +30,7 @@ Prefer to start fresh? Open the app and create your own room:
 
 ### 👉 [Download VibeRoom.apk](https://vibe-room-0isd.onrender.com/VibeRoom.apk)
 
-Tap the link on your Android phone, then tap the downloaded file to install. Your phone may ask you to allow installs from this source — that is normal for a direct download. The app plays music in the background, has mic, audio, storage and Bluetooth access, shows the Vibe Room logo as its icon, and checks for updates itself — it offers a new version whenever one is released.
+Tap the link on your Android phone, then tap the downloaded file to install. Your phone may ask you to allow installs from this source — that is normal for a direct download. The app plays music in the background (it keeps playing after the screen locks, and the lock-screen play/pause buttons control the room), has mic, audio, storage and Bluetooth access, shows the Vibe Room logo as its icon, and checks for updates itself — it offers a new version whenever one is released.
 
 ---
 
@@ -90,7 +90,7 @@ It runs as a web app on any phone or computer, and it can be added to a phone's 
 - **Bottom navigation** — docked at the very bottom of the screen, with all four corners the same radius, following your device's own bottom screen shape.
 - **Cool mode** — a switch in the More tab turns the page flat and dark and lets the screen sleep, so the phone stays cool while music plays; leave it untouched for 30 seconds and the animations freeze instead (same colours, nothing moving) until you tap.
 - **Installable (PWA)** — add it to your home screen from Safari or Chrome for a full-screen app experience.
-- **Android app** — a native APK wrapper loads the live site, with background audio, mic/files/Bluetooth permissions, the Vibe Room logo as its icon, and a self-update check that offers a new version whenever one is released.
+- **Android app** — a native APK wrapper loads the live site, with background audio that keeps playing after the screen locks (the lock-screen play/pause buttons control the room), mic/files/Bluetooth permissions, the Vibe Room logo as its icon, and a self-update check that offers a new version whenever one is released.
 - **Share card & favicon** — sharing the room link shows a proper preview card (the neon emblem, the name, and the tagline) on WhatsApp, iMessage, X, and Facebook, and the browser tab shows the emblem as its icon.
 - **Mini-player** — a compact player bar follows you across the Queue, Sing, Room, and More tabs.
 - **Media Session** — lock-screen play, pause, skip, previous, and seek on supported browsers.
@@ -219,7 +219,7 @@ Without the key, Vibe Room still accepts links but cannot pre-check their embed 
 - **Volume** — the slider and speaker buttons control local playback volume; the low-volume button mutes/restores the previous level, and the high-volume button sets it to 100%.
 - **Permissions** — host and co-host controls are available by default. The host may grant control to a guest. Other guests can request tracks; the host must approve a request before it enters the queue.
 - **Media Session** — on supporting browsers, Vibe Room publishes track metadata and lock-screen play, pause, skip, previous, and seek actions. Returning from a suspended page triggers a room reconnect and state resync.
-- **Background playback** — when you leave the app or lock the screen, the app asks the player to keep going and refreshes the lock-screen controls, and retries the resume a few times over the next seconds so the song keeps playing even if the system pauses it a moment after you leave. If the system does pause it, the music restarts the instant you return — no tap needed. It cannot survive the app being swiped away or force-closed, or the system reclaiming it.
+- **Background playback** — when you leave the app or lock the screen, the app asks the player to keep going and refreshes the lock-screen controls, and keeps retrying the resume for as long as the page stays hidden, so the song keeps playing even if the system pauses it a moment after you leave. The Android app (v1.4+) also owns a native media session, so the music keeps playing after the screen locks and the lock-screen play/pause buttons control the room. If the system does pause it, the music restarts the instant you return — no tap needed. It cannot survive the app being swiped away or force-closed, or the system reclaiming it.
 - **Host succession** — if the host leaves explicitly, host duties transfer immediately; after an unexpected disconnect, succession waits 12 seconds.
 - **Room lifetime** — rooms are held in memory and are not persisted to a database. They are removed 24 hours after becoming empty.
 - **Scaling** — a single server instance is expected. Multi-instance deployment needs shared room state and a Socket.IO adapter.
