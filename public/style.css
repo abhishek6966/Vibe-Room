@@ -1343,3 +1343,46 @@ body{min-height:100vh;min-height:100dvh}
    clamp(...svh...) rules with !important. Verified: #pp is 62px at 844px
    height and 47px at 644px height; #xp/#sk 50px -> 40px. Same for the disc
    and the card gaps, which already use svh. */
+
+/* ===== v79: UNIVERSAL LAYOUT — one layout for every screen ratio, in Chrome,
+   Safari, and the home-screen app. v77's 100dvh + fixed-nav fix passed in the
+   sandbox but NOT on a real iPhone: the nav floated ~90px above the screen
+   bottom and the player card's bottom hid behind it, in BOTH Chrome and the
+   home-screen app. The sandbox (desktop Chromium) cannot reproduce iOS
+   Safari's viewport behaviour, so v79 stops depending on it entirely:
+   (1) the room's height comes from --vh, set by JS in index.html to
+   window.innerHeight (the TRUE visible height on iOS); (2) the bottom nav
+   is now a normal flex child at the bottom of the room, NOT position:fixed
+   — so it is ALWAYS at the screen's end, on any ratio; (3) the page never
+   scrolls inside a room, so nothing can sit below the fold; (4) the stage
+   content shrinks harder on short screens so the WHOLE card is visible.
+   No colour, icon, order or font changes — only sizing/positioning. */
+:root{--vh:1dvh}
+body.in-room{overflow:hidden!important}
+#room{min-height:calc(var(--vh)*100)!important;height:calc(var(--vh)*100)!important;padding-bottom:0!important}
+#room[data-tab=play]{padding-bottom:0!important}
+#room:not([data-tab=play]){padding-bottom:0!important}
+/* the nav is in-flow now: it sits at the bottom of the flex column, so it is
+   at the screen's end on every device. Its look is unchanged. */
+#tabs{position:static!important;left:auto!important;bottom:auto!important;transform:none!important;
+  width:100%!important;max-width:520px!important;margin:6px auto 12px!important;flex:0 0 auto!important}
+#room>header{flex:0 0 auto!important}
+/* the Sing mic sticks 34px above the nav; give the stage bottom padding so
+   its last line (the iOS volume tip) never hides under the mic. */
+#room[data-tab=play] .stage{padding-bottom:clamp(44px,6.5svh,52px)!important}
+/* short screens: shrink the card harder so the WHOLE card is visible. */
+@media (max-height:760px){
+  #room[data-tab=play] .deck{width:clamp(80px,min(40vw,15svh),150px)!important}
+  #room[data-tab=play] #pp{width:clamp(44px,6.5svh,56px)!important;height:clamp(44px,6.5svh,56px)!important}
+  #room[data-tab=play] #xp,#room[data-tab=play] #sk{width:clamp(38px,5.5svh,46px)!important;height:clamp(38px,5.5svh,46px)!important}
+  #room[data-tab=play] .stage{gap:clamp(1px,.5svh,4px)!important}
+  #addlink{padding:6px 11px!important;font-size:.75rem!important}
+}
+@media (max-height:620px){
+  #room[data-tab=play] .deck{width:clamp(72px,min(36vw,13svh),120px)!important}
+  #room[data-tab=play] .xtra{--pill-size:clamp(30px,4.5svh,38px)}
+  .ios-vol-tip{font-size:.68rem!important}
+  /* last resort on a very short screen: the card scrolls inside itself
+     rather than hiding anything behind the nav. */
+  #room[data-tab=play] .stage{overflow-y:auto!important}
+}
