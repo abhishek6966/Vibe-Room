@@ -21,32 +21,6 @@ const X=$$('div','xtra',`<div class="xrow"><button class="pill" id="xs" aria-lab
 const miniIcon=p=>`<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true">${p}</svg>`;
 const miniPlay=miniIcon('<path d="M7 4.5v15L19.5 12z"/>'),miniPause=miniIcon('<rect x="6" y="5" width="4.5" height="14" rx="1"/><rect x="13.5" y="5" width="4.5" height="14" rx="1"/>');
 const mini=$$('div','',`<img id="mi" alt="" width="36" height="36"><b id="mt" style="flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis"></b><button id="mprev" aria-label="Previous track">${miniIcon('<path d="M18 5v14l-9-7zM5 5h2v14H5z"/>')}</button><button id="mp" aria-label="Play">${miniPlay}</button><button id="mnext" aria-label="Next track">${miniIcon('<path d="M6 5v14l9-7zM17 5h2v14h-2z"/>')}</button>`);mini.id='mini';document.body.append(mini);
-/* v92.1: DRAGGABLE MINI-PLAYER — the bar floats over the list on Queue/Sing/
-   Room/More, so it can cover the item behind it (a playlist row's Queue
-   button, Clear playlist, ...). Drag the bar itself up or down to move it out
-   of the way; it never goes below its default spot (just above the bottom
-   nav) and never covers the nav. The lift is saved on this device, so it
-   stays where you put it. Tapping play/prev/next still works: a tap (no
-   movement) is a tap, a move is a drag. Double-tap the bar to snap it back
-   to its default spot. */
-(function(){var KEY='vibe-mini-lift',MAX=360,startY=0,startLift=0,lift=0,moved=false,pid=null,lastTap=0,suppressClick=false;
-try{lift=Math.max(0,Math.min(MAX,parseInt(localStorage.getItem(KEY)||'0',10)||0))}catch(e){lift=0}
-function maxLift(){return Math.max(0,Math.min(MAX,window.innerHeight-260))}
-function apply(v){lift=Math.max(0,Math.min(maxLift(),v));mini.style.setProperty('--mini-lift',lift+'px')}
-function save(){try{localStorage.setItem(KEY,String(Math.round(lift)))}catch(e){}}
-apply(lift);mini.title='Drag up or down to move \u2022 Double-tap to reset';
-mini.addEventListener('pointerdown',function(e){if(e.button!==undefined&&e.button>0)return;pid=e.pointerId;startY=e.clientY;startLift=lift;moved=false});
-/* v92.1 (fix): move/up listen on WINDOW, not on the bar — a fast drag down
-   leaves the 48px bar within a few px, and moves over the list/nav below it
-   would never reach the bar's own listener, so drag-down never started
-   (drag-up worked because the first move was still inside the bar). No
-   setPointerCapture: capturing on pointerdown retargeted the tap's click
-   to the bar, so play/prev/next never fired. Window listeners need neither. */
-window.addEventListener('pointermove',function(e){if(pid===null||e.pointerId!==pid)return;var dy=startY-e.clientY;if(!moved&&Math.abs(dy)<8)return;moved=true;mini.classList.add('dragging');apply(startLift+dy)});
-function endDrag(e){if(pid===null||(e.pointerId!==undefined&&e.pointerId!==pid))return;pid=null;mini.classList.remove('dragging');if(moved){save();suppressClick=true;setTimeout(function(){suppressClick=false},50)}else{var now=Date.now();if(now-lastTap<300&&!e.target.closest('button')){apply(0);save()}lastTap=now}}
-window.addEventListener('pointerup',endDrag);window.addEventListener('pointercancel',endDrag);
-mini.addEventListener('click',function(e){if(suppressClick){e.preventDefault();e.stopPropagation()}},true);
-window.addEventListener('resize',function(){apply(lift)})})();
 const updMini=()=>mini.classList.toggle('show',document.body.classList.contains('in-room')&&$('#room').dataset.tab!=='play'&&!!S?.cur);window.updMini=updMini;
 /* pink fill on the seek + volume sliders — v75: the 300ms interval that
    repainted these is DELETED (it woke the CPU 3x a second for nothing).
