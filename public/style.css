@@ -1667,3 +1667,17 @@ body.in-room{display:flex!important;flex-direction:column!important}
    column the player card needs. */
 html body:not(.in-room){display:block!important}
 html body.in-room{display:flex!important;flex-direction:column!important}
+
+/* ===== v92.1: DRAGGABLE MINI-PLAYER. Abhi (07:11 EST): on the Queue tab
+   the mini-player bar floats over the list and hides the content behind it
+   (the playlist row's Queue button, Clear playlist). Fix, and ONLY this:
+   the bar is now draggable up/down by its own body. Its lowest spot is
+   unchanged — just above the bottom nav, it can never go below that or over
+   the nav (lift is clamped 0..360px in extras.js, saved on the device).
+   touch-action:none so a vertical drag on the bar moves the bar instead of
+   scrolling the list behind it; the grip pill on top shows it can be
+   dragged; the play/prev/next buttons still work (a tap with no movement
+   is a tap, a move is a drag). Nothing else in v92 is touched. */
+#mini{--mini-lift:0px;bottom:calc(133px + var(--sab,env(safe-area-inset-bottom,0px)) + var(--sab,env(safe-area-inset-bottom,0px)) + var(--mini-lift,0px))!important;touch-action:none!important;cursor:grab!important}
+#mini.dragging{cursor:grabbing!important;transition:none!important}
+#mini::before{content:"";position:absolute;top:2px;left:50%;transform:translateX(-50%);width:32px;height:4px;border-radius:4px;background:rgba(255,255,255,.35);pointer-events:none}
