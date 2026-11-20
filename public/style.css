@@ -1562,3 +1562,21 @@ main#home,main#gate{position:static!important;top:auto!important;left:auto!impor
 body{background:radial-gradient(75% 38% at 100% 100%,rgba(205,35,175,.5),transparent),radial-gradient(90% 30% at 0 0,rgba(120,70,255,.35),transparent),linear-gradient(180deg,#4a1fc4,#2a1275 40%,#241068)!important}
 main#home,main#gate{min-height:100vh!important;min-height:100svh!important;min-height:100dvh!important;min-height:100%!important}
 #room{min-height:100vh!important;min-height:100svh!important;min-height:100dvh!important;min-height:100%!important}
+
+/* ===== v89: DEFINITIVE BOTTOM FIX. Abhi (03:53 EST): "it still same still
+   not fixed this bottom problem". Two changes:
+   (1) THE BACKGROUND NEVER GOES DARK. The body's gradient faded to
+   near-black (#14073f) at the bottom, so the bottom of the screen read as a
+   dark empty gap even when the page filled it. The gradient now stays in
+   the purple family all the way down — bright #4a1fc4 at the top, #2a1275
+   at 40%, and a vibrant #3a1a8f at the very bottom. There is no dark stop
+   left anywhere in the background, so no dark band can appear at the
+   bottom of any screen.
+   (2) A VERSION BADGE, so we finally know what his phone is actually
+   running. A tiny "v89" sits at the very bottom of the landing page. If
+   Abhi sees "v89" and the bottom is still wrong, the fix genuinely is not
+   working on his device and I will take a different approach. If he sees
+   an older version (or no version), his home-screen app is still serving
+   a stale cached copy and has never loaded any of v80-v89. */
+body{background:radial-gradient(75% 38% at 100% 100%,rgba(205,35,175,.5),transparent),radial-gradient(90% 30% at 0 0,rgba(120,70,255,.35),transparent),linear-gradient(180deg,#4a1fc4,#2a1275 40%,#3a1a8f)!important}
+#ver{font-size:11px;line-height:1;color:rgba(255,255,255,.45);text-align:center;padding:2px 0 0}
