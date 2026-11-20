@@ -1469,3 +1469,19 @@ main#home,main#gate{height:calc(var(--vh)*100)!important;min-height:calc(var(--v
 #room{padding-bottom:calc(92px + var(--sab,env(safe-area-inset-bottom,0px)))!important}
 #room[data-tab=play]{padding-bottom:calc(92px + var(--sab,env(safe-area-inset-bottom,0px)))!important}
 #room:not([data-tab=play]){padding-bottom:calc(92px + var(--sab,env(safe-area-inset-bottom,0px)))!important}
+
+/* ===== v83: PAGE FILLS THE SCREEN EVEN WHEN iPHONE UNDER-REPORTS innerHeight.
+   The landing page and the room both measured their height from --vh, which
+   comes from window.innerHeight. On a real iPhone 13 home-screen app that
+   number comes out ~50px shorter than the true screen, so the page itself
+   ended early and "Recent rooms" (which sits at the page's bottom) ended
+   early too — a dead gap below it. The sandbox cannot reproduce this:
+   desktop Chromium reports the full height, so it looked right there.
+   Fix: the page now takes the LARGER of the true dynamic viewport height
+   (100dvh) and the JS-measured height (--vh). If the phone under-reports,
+   100dvh takes over and the page fills the screen; if --vh is right, it
+   wins as before. Same for the room (its nav is already pinned by v82,
+   but the room content should fill too). */
+#home,#gate{height:max(100dvh,calc(var(--vh)*100))!important;min-height:max(100dvh,calc(var(--vh)*100))!important}
+main#home,main#gate{height:max(100dvh,calc(var(--vh)*100))!important;min-height:max(100dvh,calc(var(--vh)*100))!important}
+#room{min-height:max(100dvh,calc(var(--vh)*100))!important;height:max(100dvh,calc(var(--vh)*100))!important}
