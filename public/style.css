@@ -1543,3 +1543,22 @@ main#home,main#gate{height:100vh!important;height:100svh!important;height:100dvh
 body{display:flex!important;flex-direction:column!important}
 main#home,main#gate{position:static!important;top:auto!important;left:auto!important;right:auto!important;bottom:auto!important;height:auto!important;min-height:0!important;flex:1 1 auto!important;width:100%!important}
 #room{position:static!important;top:auto!important;left:auto!important;right:auto!important;bottom:auto!important;height:auto!important;min-height:0!important;flex:1 1 auto!important}
+
+/* ===== v88: USE THE FULL BOTTOM SPACE. Abhi (03:38-03:39 EST): "it still
+   have that gap in its bottom unnecessary" + "use full bottom space
+   available in screen". Two changes, both about the bottom:
+   (1) THE BACKGROUND STAYS VIBRANT TO THE VERY BOTTOM. The body's gradient
+   faded to near-black (#14073f) at the bottom, so the bottom of the screen
+   read as a dark empty gap even when the page filled it. The bottom stop is
+   now a deep vibrant purple (#241068, the nav's own bottom colour) — the
+   whole screen stays purple, top to bottom, with no dark band.
+   (2) THE CONTENT IS FORCED TO USE THE FULL HEIGHT. On top of v87's flex
+   grow (the body is a flex column and the landing/gate/room grow to fill
+   it), the landing, the gate and the room now also carry min-height:100dvh
+   AND min-height:100% as a redundant guarantee, so they are the full screen
+   height even if the flex stretch does not fire on a given device. The
+   content spreads with space-between, so the last item sits at the bottom,
+   just above the home indicator — the full bottom space is used. */
+body{background:radial-gradient(75% 38% at 100% 100%,rgba(205,35,175,.5),transparent),radial-gradient(90% 30% at 0 0,rgba(120,70,255,.35),transparent),linear-gradient(180deg,#4a1fc4,#2a1275 40%,#241068)!important}
+main#home,main#gate{min-height:100vh!important;min-height:100svh!important;min-height:100dvh!important;min-height:100%!important}
+#room{min-height:100vh!important;min-height:100svh!important;min-height:100dvh!important;min-height:100%!important}
