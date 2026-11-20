@@ -53,7 +53,7 @@ addEventListener('orientationchange',()=>setTimeout(safeArea,250));
    home-screen app on its very next open. It never reloads while a song is
    playing in a room (that would cut the music) — it waits until the app is
    on the landing page or the room is idle. */
-const APP_VERSION='v92';
+const APP_VERSION='v92.4';
 let verChecked=false;
 const checkVersion=()=>{
   if(verChecked) return; verChecked=true;
