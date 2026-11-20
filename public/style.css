@@ -1524,3 +1524,22 @@ main#home,main#gate{position:fixed!important;top:0!important;left:0!important;ri
    the page is the screen itself. The room and its bottom nav are left
    exactly as v84 (the player card in the middle was never the complaint). */
 main#home,main#gate{height:100vh!important;height:100svh!important;height:100dvh!important}
+
+/* ===== v87: LET IT DECIDE — no more restricting or limiting the height.
+   Abhi (03:22 EST): "why are you not just make it responsive and let it
+   decide instead of restricting or limiting it". He is right. v80-v86 kept
+   FORCING a height on the page (a measured --vh number, then max(100dvh,
+   --vh), then a fixed pin) — and every one of those numbers comes from the
+   phone, which reports it short on a real iPhone, so the page kept ending
+   early. This version REMOVES every height and position restriction and
+   lets the layout decide for itself: the body is a flex column that is the
+   screen, and the landing, the gate and the room are flex children that
+   GROW to fill it. No height is measured, no height is fixed, nothing is
+   pinned — the browser works out the size from the flow, on any screen,
+   including the iPhone's curved bottom edges. The content spreads with
+   space-between, so the last item (Recent rooms / the description) sits at
+   the bottom, just above the home indicator. The bottom nav stays pinned
+   (v82) — it is the one element that must sit on the screen's edge. */
+body{display:flex!important;flex-direction:column!important}
+main#home,main#gate{position:static!important;top:auto!important;left:auto!important;right:auto!important;bottom:auto!important;height:auto!important;min-height:0!important;flex:1 1 auto!important;width:100%!important}
+#room{position:static!important;top:auto!important;left:auto!important;right:auto!important;bottom:auto!important;height:auto!important;min-height:0!important;flex:1 1 auto!important}
