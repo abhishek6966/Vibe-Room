@@ -285,7 +285,9 @@ else{$('#gate').hidden=false;$('#home-link').hidden=false;$('#gn').value=me.name
  const s=document.createElement('script');s.src='https://www.youtube.com/iframe_api';document.head.append(s)}
 window.onYouTubeIframeAPIReady=()=>{window.ytr=1};
 function pReady(e){applyVolume(e.target);capQuality();sync()}
-function pState(e){if(e.target!==P)return;if(e.data===0&&S?.cur)act({type:'ended',v:S.cur.videoId});if(e.data===1){$('#audio-unlock').hidden=true;/* v45: tell the server this controller's player is actually sounding, so the server starts the track clock NOW (from 0) instead of from when the track was queued — the song then starts from second 1 instead of a few seconds in. */if(S?.cur&&me){const cc=S.hostId===me.id||(S.co||[]).includes(me.id)||(S.ctrl||[]).includes(me.id);if(cc)act({type:'started',v:S.cur.videoId})}}if(e.data===1||e.data===2)sync()}
+function pState(e){if(e.target!==P)return;
+ if(document.hidden&&e.target!==PAU&&e.data===1){try{e.target.pauseVideo?.()}catch(err){}return}
+ if(e.data===0&&S?.cur)act({type:'ended',v:S.cur.videoId});if(e.data===1){$('#audio-unlock').hidden=true;/* v45: tell the server this controller's player is actually sounding, so the server starts the track clock NOW (from 0) instead of from when the track was queued — the song then starts from second 1 instead of a few seconds in. */if(S?.cur&&me){const cc=S.hostId===me.id||(S.co||[]).includes(me.id)||(S.ctrl||[]).includes(me.id);if(cc)act({type:'started',v:S.cur.videoId})}}if(e.data===1||e.data===2)sync()}
 function pErr(e){if(e.target===P&&S?.cur)act({type:'bad',v:S.cur.videoId,code:e.data})}
 /* v52: UPLOADED AUDIO — a plain <audio> element plays the user's own
    uploaded file. Unlike the YouTube iframe (a video element, which iOS
@@ -304,18 +306,30 @@ function pErr(e){if(e.target===P&&S?.cur)act({type:'bad',v:S.cur.videoId,code:e.
 function makeAudioPlayer(){
   auEl=document.querySelector('#au-el');
   if(!auEl)return null;
-  /* v61: VOLUME THAT WORKS ON iOS — on iPhone/iPad the <audio> element's .volume is read-only (Apple locks it to the system volume), so setVolume() was ignored and the slider did nothing for uploaded songs. Route the element through a Web Audio GainNode, whose gain IS controllable on iOS. Set up lazily (only once the shared AudioContext is running) so a suspended context never silences the song — until then the element plays directly, as before. */
-  const ap={_st:2,_src:null,_gain:null,
-    _ensureGain(){if(ap._gain)return ap._gain;try{if(!__ac||__ac.state!=='running')return null;const src=__ac.createMediaElementSource(auEl);const g=__ac.createGain();g.gain.value=volume/100;src.connect(g);g.connect(__ac.destination);ap._gain=g;return g}catch(e){return null}},
-    _fire(st){ap._st=st;pState({target:ap,data:st})},
-    playVideo(){const p=auEl.play();if(p&&p.catch)p.catch(()=>{})},
+  /* v76: BACKGROUND-FRIENDLY UPLOADED AUDIO — the <audio> element's output is
+     intentionally NOT routed through Web Audio. A Web Audio AudioContext can be
+     suspended by the OS when the app is backgrounded, silencing its
+     MediaElementAudioSource even though the <audio> element is still playing.
+     Native element output keeps the browser's media lifecycle and lets the
+     song continue with the screen locked on supported devices. YouTube stays
+     a foreground embed. (Trade-off, stated plainly: on iPhone/iPad the app's
+     volume slider no longer changes uploaded songs — <audio>.volume is
+     read-only there, and the GainNode that made the slider work is what
+     could go silent in the background. Use the side buttons for uploaded
+     songs on iOS. On Android and desktop the slider still works, because
+     <audio>.volume is controllable there.) */
+  const ap={_st:2,_src:null,
+    _fire(st){if(ap._st===st)return;ap._st=st;pState({target:ap,data:st});updateMediaSession()},
+    playVideo(){const result=auEl.play();if(result&&result.catch)result.catch(()=>{
+      if(!document.hidden&&S?.cur?.playing){const b=$('#audio-unlock');if(b)b.hidden=false}
+    })},
     pauseVideo(){auEl.pause()},
-    stopVideo(){auEl.pause();auEl.removeAttribute('src');ap._src=null;ap._st=2},
+    stopVideo(){auEl.pause();auEl.removeAttribute('src');auEl.load();ap._src=null;ap._st=2},
     seekTo(t){try{auEl.currentTime=Math.max(0,t||0)}catch(e){}},
     getCurrentTime(){return auEl.currentTime||0},
     getDuration(){return (auEl.duration&&isFinite(auEl.duration))?auEl.duration:0},
     getPlayerState(){return ap._st},
-    setVolume(v){const vv=Math.max(0,Math.min(100,v||0))/100;try{auEl.volume=vv}catch(e){}const g=ap._ensureGain();if(g){try{g.gain.setTargetAtTime(vv,__ac.currentTime,.02)}catch(e){}}},
+    setVolume(v){const vv=Math.max(0,Math.min(100,v||0))/100;try{auEl.volume=vv}catch(e){}},
     getVolume(){return volume},
     isMuted(){return volume===0},
     getPlaybackQuality(){return 'small'},
@@ -329,7 +343,7 @@ function makeAudioPlayer(){
       if(!src)return;
       if(ap._src!==src){ap._src=src;auEl.src=src;auEl.load()}
       if(typeof t==='number'){try{auEl.currentTime=Math.max(0,t)}catch(e){}}
-      if(play){const p=auEl.play();if(p&&p.catch)p.catch(()=>{})}
+      if(play)ap.playVideo()
     }
   };
   auEl.addEventListener('play',()=>ap._fire(1));
@@ -392,6 +406,16 @@ function sync(){if(!P||!P.loadVideoById||!S)return;const c=S.cur;if(!c){P.stopVi
   else if(P2&&cv2===c.videoId&&P2.getPlayerState){const tmp=P;P=P2;P2=tmp;cv2=cv;cv=c.videoId;P2.stopVideo?.();capQuality()}
   else{cv=c.videoId;if(c.playing)P.loadVideoById(c.videoId,est());else P.cueVideoById(c.videoId,est());capQuality()}
   needCatchup=true /* v17: fresh load — jump straight to the live position instead of drifting there */}
+ /* v76: YOUTUBE IS FOREGROUND-ONLY — the YouTube IFrame API must not be used
+    for background video/audio playback. When the app hides, pause an active
+    YouTube video and leave the room state untouched. Once visible, the room
+    reloads the current video at the room position. Uploaded audio is
+    deliberately exempt; it uses the direct <audio> path. */
+ if(document.hidden&&c.kind!=='audio'){
+   if(P===PAU){try{P.stopVideo()}catch(e){} P=PYT||P}
+   try{if(P!==PAU&&P?.getPlayerState?.()===1)P.pauseVideo()}catch(e){}
+   cv=null;needCatchup=false;return
+ }
  const st=P.getPlayerState(),t=est(),now=P.getCurrentTime?.()||0,d=t-now,ad=Math.abs(d),rate=c.speed||1;
  /* v45: no cuts, completely. Three changes. (1) Seeks are now rare — only
     past 2.0s while playing (was 1.0s). Drift up to 2.0s is corrected gently
@@ -413,13 +437,19 @@ function sync(){if(!P||!P.loadVideoById||!S)return;const c=S.cur;if(!c){P.stopVi
     ~1.25%, a 2s drift gets 5%. That is barely audible, and the song no
     longer surges. Drift past 2s is still fixed by a seek (below). */
  /* v53: tighter sync — the speed nudge now covers 0.5s–1.5s (was 0.5s–2s) and the drift seek below fires at 1.5s (was 2s), so the room holds within ~1.5s instead of ~2s. The 3s seek cooldown stays, so seeks still cannot loop and cut the audio. */
- let target=rate;if(ad>=0.5&&ad<1.5){const corr=Math.min(0.05,ad*0.025);target=rate*(d>0?1+corr:1-corr)}
+ let target=rate;if(!document.hidden&&ad>=0.5&&ad<1.5){const corr=Math.min(0.05,ad*0.025);target=rate*(d>0?1+corr:1-corr)}
  if(target!==lastRate){P.setPlaybackRate(target);lastRate=target}
  /* v21: while your own tap is still on its way to the server (~200ms), don't
     let the sync loop undo it — it still sees the old server state. The guard
     expires after 1s, so if the broadcast is ever lost, sync resumes normally. */
  const localPending=localT&&Date.now()-localT<1000&&S.cur.playing===localWas;
  if(!localPending){if(c.playing&&st!==1&&st!==3)P.playVideo();if(!c.playing&&st===1)P.pauseVideo()}
+ /* v76: a background audio element must be allowed to continue playing
+    without repeated seek/speed corrections. Browser timer throttling can
+    make the estimated room clock unreliable and turn those corrections
+    into skips. On return to the foreground, normal room synchronization
+    resumes. */
+ if(document.hidden&&P===PAU)return;
  /* v17 catch-up: on a fresh load, seek straight to the live position the moment the player can seek (don't wait for the drift to grow past the normal threshold) */
  /* v43: seek cooldown — a seek itself briefly interrupts the audio, so
     never seek twice within 3s. Without this a drifting player could seek,
@@ -504,15 +534,16 @@ function render(){if(!joined)return;
  renderPlaylist();
  $('#ul').innerHTML=S.users.map(u=>{const hasCtrl=S.ctrl&&S.ctrl.includes(u.id);
   return `<li style="--c:${esc(u.color)}"><div><b>${esc(u.name)}${u.id===S.hostId?' '+IC.crown:S.co.includes(u.id)?' '+IC.star:hasCtrl?' '+IC.ctrl:''}</b></div>${isH&&u.id!==me.id?`<div class="uacts">${ku(u)}<button data-h="${u.id}">Make host</button><button data-c="${u.id}">Co-host</button><button data-ctrl="${u.id}">${hasCtrl?'Take control':'Give control'}</button><button data-k="${u.id}">Remove</button></div>`:M&&u.id!==S.hostId&&u.id!==me.id?`<div class="uacts"><button data-k="${u.id}">Remove</button></div>`:''}</li>`}).join('');karRender();wakeSync() /* v48: hold/release the screen wake lock with the playing state */
- /* v48: BACKGROUND PLAY TIP — only shown when the app runs from the home
-    screen (a PWA), where the phone pauses the music when you leave the
-    app. Safari keeps YouTube audio playing in the background, so the tip
-    links the current room there. In a normal browser tab the tip stays
-    hidden. */
+ /* v76: BACKGROUND PLAY TIP — explain the actual playback capabilities
+    regardless of install mode. Direct uploaded audio can use the OS
+    lock-screen media controls; the YouTube iframe must not be made to play
+    while this app is backgrounded. The tip is always shown (not just in a
+    PWA), with a status line naming which kind the current track is. */
  const bgTip=document.querySelector('#bg-tip');
- if(bgTip){const standalone=(window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches)||navigator.standalone===true;
-  bgTip.hidden=!standalone;
-  if(standalone){const a=document.querySelector('#bg-safari');if(a)a.href=location.origin+'/room/'+S.code}}}
+ if(bgTip){bgTip.hidden=false;const a=document.querySelector('#bg-safari');
+  if(a)a.href=location.origin+'/room/'+S.code;
+  const status=bgTip.querySelector('#bg-track-status');
+  if(status)status.textContent=S?.cur?.kind==='audio'?'Current track: uploaded audio (background-capable where supported).':S?.cur?'Current track: YouTube (foreground playback only).':'Upload a supported audio file to enable background-capable playback.'}}
 document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const d=b.dataset;
  if(d.rm)act({type:'remove',i:+d.rm});if(d.h)act({type:'host',id:d.h});if(d.c)act({type:'cohost',id:d.c});if(d.k)act({type:'kick',id:d.k});if(d.e)act({type:'react',e:d.e});
  if(d.ap)act({type:'approve',rid:d.ap});if(d.rj)act({type:'reject',rid:d.rj});if(d.ctrl)act({type:'ctrl',id:d.ctrl});if(d.replay){myPastes.add(d.replay);act({type:'add',url:'https://youtu.be/'+d.replay})}
@@ -604,7 +635,7 @@ $('#up-file').addEventListener('change',async e=>{
        argument, so a bare act() callback would read {ok:true} as an error. */
     socket.timeout(20000).emit('act',{type:'add',au:j.id},(err,result)=>{
       if(err||!result?.ok){note.textContent=result?.message||'Could not add the file.';return}
-      note.textContent='Added '+j.title+' — it will play for everyone and keeps playing in the background.';
+      note.textContent='Added '+j.title+' — background audio is available on supported devices.';
       toast('Added '+j.title);
     });
   }catch(err){note.textContent='Upload failed: '+(err&&err.message||'try again')}
@@ -673,7 +704,7 @@ function updateMediaSession(){
  if(playbackState!==mediaPlaybackState){mediaPlaybackState=playbackState;ms.playbackState=playbackState}
  if(!c||typeof ms.setPositionState!=='function'||!P?.getDuration)return;
  const duration=c.duration||P.getDuration(),position=est();
- if(Number.isFinite(duration)&&duration>0&&Number.isFinite(position))ms.setPositionState({duration,position:Math.max(0,Math.min(duration,position)),playbackRate:c.speed||1})
+ if(Number.isFinite(duration)&&duration>0&&Number.isFinite(position))try{ms.setPositionState({duration,position:Math.max(0,Math.min(duration,position)),playbackRate:c.speed||1})}catch(e){}
 }
 if('mediaSession'in navigator){
  const ms=navigator.mediaSession,setAction=(name,handler)=>{try{ms.setActionHandler(name,handler)}catch(e){if(e.name!=='NotSupportedError'&&e.name!=='TypeError')throw e}};
@@ -701,9 +732,9 @@ function fitTitle(){const t=$('#tt'),inner=$('#tt-in');if(!t||!inner)return;
  if(over>4){t.style.setProperty('--tt-dx',over+'px');t.style.setProperty('--tt-dur',Math.max(over/20,5).toFixed(1)+'s');t.classList.add('scroll')}
  else{t.classList.remove('scroll');t.style.removeProperty('--tt-dx');t.style.removeProperty('--tt-dur')}}
 window.addEventListener('resize',()=>{clearTimeout(fitTitle._t);fitTitle._t=setTimeout(fitTitle,150)});
-const keepPlaying=()=>{if(!S?.cur?.playing||!P)return;try{applyVolume(P)}catch(e){}try{if(P.getPlayerState&&P.getPlayerState()!==1&&P.playVideo)P.playVideo()}catch(e){}try{updateMediaSession()}catch(e){}};
+const keepPlaying=()=>{if(!S?.cur?.playing||!P||document.hidden&&S.cur.kind!=='audio')return;try{applyVolume(P)}catch(e){}try{if(P.getPlayerState&&P.getPlayerState()!==1&&P.playVideo)P.playVideo()}catch(e){}try{updateMediaSession()}catch(e){}};
 /* v64: LOCK-SCREEN RESUME — the Media Session 'play' action is what the lock-screen play button sends. The old handler only fired when the ROOM was paused, so when iOS paused the video on lock (room still "playing"), the button did nothing and Safari background audio looked broken. Now: room paused → resume the room (as before); room playing but THIS device's player not playing → just resume this device (keepPlaying + sync to the live position), no room action, so nobody else's playback is touched. */
-const mediaPlay=()=>{if(!S?.cur)return;
+const mediaPlay=()=>{if(!S?.cur||document.hidden&&S.cur.kind!=='audio')return;
  if(!S.cur.playing){[P,P2].forEach(applyVolume);localToggle();act({type:'play'})}
  else{keepPlaying();try{sync()}catch{}}};
 /* v48: SCREEN WAKE LOCK — the #1 reason music stops on lock is that the
@@ -728,36 +759,33 @@ const wakeSync=()=>{wakeWant=!!(S?.cur?.playing)&&!coolMode;if(wakeWant)wakeAcqu
    localT guard (same as sync) keeps it from undoing your own intentional
    pause — a tap you just made is left alone for 1s. */
 /* v57: SOUND CHECK — the app now watches whether sound is actually coming out. If the room is playing but THIS device's player is not playing (and not buffering — it is trying), the browser has blocked it (no valid tap yet) and the timer retries cannot fix it, because only a real tap counts as a gesture. After 2 seconds of silence, show the big "Tap to enable audio" button (it was never shown before — nothing ever unhid it, so a silent guest had no way to start the sound) and say so once. Tapping it calls playVideo() inside the tap, which the browser allows. It hides itself the moment the player starts (pState) or the room stops. */
-let silentSecs=0,silentTold=false,silentTick=0;
+let silentSecs=0,silentTold=false,silentTick=0,lastSndTrack='',lastSndTrackAt=0;
 setInterval(()=>{if(document.hidden||!joined||!S?.cur?.playing||!P||Date.now()-localT<1000)return;
  if(coolMode){silentTick++;if(silentTick%3!==0)return} /* v68: in Cool mode this 1s sound check runs every 3s instead — the screen is asleep, so a paused player resuming within 3s (not 1s) is fine, and the CPU wakes a third as often. */
  try{const st=P.getPlayerState&&P.getPlayerState();
   if(st===1){silentSecs=0;silentTold=false;return}
+  /* v76: TRACK-CHANGE GRACE — when a song ends and the next queued song starts, the player is briefly not playing (ended → unstarted → cued) while the new track loads. That is a normal transition, NOT a silent device. If the track just changed, reset the silence counter, hide any stale unlock button left over from the previous track, and give the new track 5 seconds to start before counting silence — otherwise the "Tap to enable audio" button flashes at every song change even though audio was already enabled and the previous song was playing. */
+  const vid=S.cur.videoId||'';
+  if(vid!==lastSndTrack){lastSndTrack=vid;lastSndTrackAt=Date.now();silentSecs=0;silentTold=false;const u0=$('#audio-unlock');if(u0)u0.hidden=true}
+  if(Date.now()-lastSndTrackAt<5000)return;
   if(st!==3){silentSecs++;if(silentSecs>=2){const u=$('#audio-unlock');if(u&&u.hidden){u.hidden=false;if(!silentTold){silentTold=true;toast('Tap to enable sound — the song is playing but your device is silent.')}}}}
   applyVolume(P);P.playVideo?.()}catch(e){}},1000);
-/* v45: BACKGROUND AUDIO — keep the song playing when the user switches
-   to another app or locks the screen. The old keepPlaying() ran ONCE
-   when the page hid, but the system pauses the YouTube player a moment
-   AFTER that (when the app is fully backgrounded), and by then JS is
-   throttled so nothing resumes it — the song stopped and stayed stopped.
-   Fix: when the page hides, retry the resume a few times over the next
-   seconds (JS is still briefly alive right after hiding), so one of the
-   retries catches the player after the system pauses it and starts it
-   again. Also listen for 'freeze' (the page is about to be suspended)
-   as a last chance. Coming back resumes instantly via resumeRoom().
-   HONEST LIMIT: the audio itself comes from a YouTube video embed, and
-   iOS/Android ultimately decide whether a backgrounded video keeps
-   sounding. This does everything a web page can do: an active Media
-   Session (lock-screen controls), an unmuted playing player at the
-   moment of hiding, and repeated resume attempts. If the system still
-   pauses it, it restarts the instant the user returns — no tap needed. */
-let keepT=null;
-const keepPlayingRetry=()=>{keepPlaying();if(keepT){clearInterval(keepT);keepT=null}/* v45: keep retrying while hidden — in a home-screen app iOS suspends JS fast and pauses the YouTube player a moment after you leave, so a few retries over 2.5s often miss it. Retry every 2s for up to 30s while hidden, so one of the retries catches the player after the system pauses it and starts it again. Stops when the page is visible again or after 30s. v70: the 30s cap is REMOVED — the retry now runs INDEFINITELY while the page is hidden and the room is playing. In the Android APK the screen-off throttles JS timers, so a 30s window can expire before a retry ever fires; an indefinite retry guarantees the music eventually resumes after a lock, no matter how throttled the timers are. It still stops the moment the page becomes visible again. */keepT=setInterval(()=>{if(document.hidden)keepPlaying();else if(keepT){clearInterval(keepT);keepT=null}},2000)};
-document.addEventListener('visibilitychange',()=>{if(document.hidden)keepPlayingRetry();else{resumeRoom();wakeSync()}});
-window.addEventListener('pagehide',keepPlayingRetry);
-document.addEventListener('freeze',keepPlayingRetry);
-window.addEventListener('blur',()=>{if(document.hidden)keepPlayingRetry()});
-window.addEventListener('pageshow',resumeRoom);
+/* v76: BACKGROUND AUDIO — let the browser/native media pipeline handle it.
+   The old approach retried the YouTube iframe every 2s while hidden, but
+   background retries against the YouTube iframe violate YouTube's policies
+   and wake the CPU without guaranteeing audio. Now: when the page hides,
+   pause the YouTube player at once (uploaded audio is exempt — it uses the
+   direct <audio> element and is NOT paused here); when the page is visible
+   again, resume the room and the lock-screen controls. The uploaded
+   <audio> element keeps playing through lock and app-switching on
+   supported devices. YouTube plays only while Vibe Room is visible. */
+document.addEventListener('visibilitychange',()=>{
+ if(document.hidden){smokeStop();wakeSync();
+  if(P&&P!==PAU){try{P.pauseVideo?.()}catch(e){}}
+  updateMediaSession()}
+ else{resumeRoom();wakeSync();updateMediaSession();if(S?.cur?.playing&&!coolMode&&!autoDimmed)smokeStart()}
+});
+window.addEventListener('pageshow',()=>{if(!document.hidden)resumeRoom()});
 window.addEventListener('focus',()=>{if(!document.hidden)keepPlaying()});
 /* v29: installable app — register the service worker so the app shell loads
    fast and the app can be added to the home screen. It never caches rooms or

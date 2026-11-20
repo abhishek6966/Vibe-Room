@@ -22,9 +22,12 @@ const miniIcon=p=>`<svg viewBox="0 0 24 24" width="18" height="18" fill="current
 const miniPlay=miniIcon('<path d="M7 4.5v15L19.5 12z"/>'),miniPause=miniIcon('<rect x="6" y="5" width="4.5" height="14" rx="1"/><rect x="13.5" y="5" width="4.5" height="14" rx="1"/>');
 const mini=$$('div','',`<img id="mi" alt="" width="36" height="36"><b id="mt" style="flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis"></b><button id="mprev" aria-label="Previous track">${miniIcon('<path d="M18 5v14l-9-7zM5 5h2v14H5z"/>')}</button><button id="mp" aria-label="Play">${miniPlay}</button><button id="mnext" aria-label="Next track">${miniIcon('<path d="M6 5v14l9-7zM17 5h2v14h-2z"/>')}</button>`);mini.id='mini';document.body.append(mini);
 const updMini=()=>mini.classList.toggle('show',document.body.classList.contains('in-room')&&$('#room').dataset.tab!=='play'&&!!S?.cur);window.updMini=updMini;
-/* pink fill on the seek + volume sliders */
-const setFill=el=>{if(el)el.style.setProperty('--p',((el.value-el.min)/(el.max-el.min)*100)+'%')};
-setInterval(()=>{setFill($('#sc'));setFill($('#vol'))},300);
+/* pink fill on the seek + volume sliders — v75: the 300ms interval that
+   repainted these is DELETED (it woke the CPU 3x a second for nothing).
+   The fills are already kept fresh without it: the seek fill is set by the
+   seek bar's own oninput while dragging (app.js) and by the 500ms interval
+   while a song plays; the volume fill is set by setVolume() and by the
+   volume slider's own oninput. Nothing else needs to touch them. */
 const likes=()=>JSON.parse(L.likes||'[]'),showLikes=()=>{const C=S&&(S.hostId===me.id||S.co.includes(me.id)||(S.ctrl&&S.ctrl.includes(me.id)));const el=$('#likes-list');if(!el)return;el.innerHTML=likes().map(x=>`<li><img src="https://i.ytimg.com/vi/${x.id}/mqdefault.jpg" alt="" loading="lazy" onerror="this.style.display='none'"><div><b>${esc(x.t)}</b></div><button data-like="${x.id}">${C?'Add to queue':'Request'}</button><button class="unlike" data-unlike="${x.id}" aria-label="Remove from liked songs">✕</button></li>`).join('')||'<li class="empty"><div><small>Tap Like on a song to save it here.</small></div></li>'};
 /* v43: liked songs slide-in panel — heart icon in the header opens it,
    ✕ / backdrop / Escape closes it. Songs are saved forever on the device. */
@@ -37,7 +40,7 @@ document.addEventListener('click',e=>{const u=e.target.closest('[data-unlike]');
 function paint(){const c=S?.cur,M=S&&(S.hostId===me.id||S.co.includes(me.id)),C=M||(S&&S.ctrl&&S.ctrl.includes(me.id)),can=C;stage.classList.toggle('on',!!c&&c.playing);deck.classList.toggle('on',!!c&&c.playing);
  dp.innerHTML=c&&c.playing?IC.pause:IC.play;dp.disabled=!can;
  const rp=S?.repeat||'off';$('#xr').classList.toggle('on',rp!=='off');const xrb=$('#xrb');xrb.hidden=rp==='off';xrb.textContent=rp==='one'?'1':'ALL';
- $('#xp').disabled=!can;['#xs','#xr','#xv'].forEach(i=>$(i).disabled=!C);$('#xv').closest('.pill').classList.toggle('off',!C);if(c)$('#xv').value=String(c.speed||1);
+ $('#xp').disabled=!can;['#xs','#xr','#xv'].forEach(i=>$(i).disabled=!C);$('#xv').closest('.pill').classList.toggle('off',!C);if(c){const xv=$('#xv');xv.value=String(c.speed||1);const lab=xv.previousElementSibling;if(lab&&lab.classList.contains('dd-l'))lab.textContent=xv.selectedOptions[0].text}
  $('#xl').innerHTML=(c&&likes().some(x=>x.id===c.videoId)?X_HEART('#ff5c8a'):X_HEART_O)+'<span>Like</span>';
  if(c){$('#mi').src=c.artwork;$('#mt').textContent=c.title;$('#mp').innerHTML=c.playing?miniPause:miniPlay;$('#mp').setAttribute('aria-label',c.playing?'Pause':'Play')}$('#mp').disabled=!C;$('#mprev').disabled=!C;$('#mnext').disabled=!C;updMini();showLikes()}
 socket.on('state',paint);

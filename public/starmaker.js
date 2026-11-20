@@ -23,7 +23,7 @@ function open(sel,pill){close();M=document.createElement('div');M.className='men
  document.body.append(M);const r=pill.getBoundingClientRect(),h=M.offsetHeight,w=Math.max(r.width,120);M.style.minWidth=w+'px';
  M.style.left=Math.max(8,Math.min(r.left,innerWidth-w-8))+'px';M.style.top=(r.bottom+8+h>innerHeight-120?r.top-h-8:r.bottom+8)+'px';setTimeout(()=>document.addEventListener('click',close,{once:true}))}
 document.querySelectorAll('.xtra select').forEach(sel=>{const pill=sel.closest('.pill'),lab=document.createElement('span');lab.className='dd-l';sel.before(lab);
- const upd=()=>lab.textContent=sel.selectedOptions[0].text;upd();setInterval(upd,300);pill.tabIndex=0;pill.setAttribute('role','button');
+ const upd=()=>lab.textContent=sel.selectedOptions[0].text;upd();sel.addEventListener('change',upd);pill.tabIndex=0;pill.setAttribute('role','button');
  pill.addEventListener('click',e=>{e.preventDefault();if(!sel.disabled)open(sel,pill)});pill.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();sel.disabled||open(sel,pill)}if(e.key==='Escape')close()}});
 })();
 /* ===== v11: premium icon set for the glass buttons ===== */
