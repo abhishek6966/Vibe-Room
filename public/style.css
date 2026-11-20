@@ -1321,54 +1321,349 @@ html.apk .disc{transform-style:flat!important;animation:spinFlat 24s linear infi
 html.apk .deck{transform-style:flat!important}
 @keyframes spinFlat{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
 
-/* ===== v76.2: ROOM ONLY — the player-card + nav fix, WITHOUT touching the
-   landing or the body. WHY (Abhi, 2026-11-20): v76's home-screen app works
-   instantly, but its player card does not fill properly in Chrome/Safari and
-   its bottom nav floats 12px above the screen's end. v77 fixed the card by
-   making the BODY a flex column too — and every version after that (v80–v92)
-   kept changing the LANDING, which is what broke the home-screen app. v76.2
-   does the opposite: it changes ONLY #room and #tabs. The body stays a
-   normal block (exactly as in v76, which is why the landing still works),
-   and main#home/main#gate are NOT touched at all. What changes:
-   (1) #room becomes a flex column that fills the screen (min-height 100dvh),
-   so the stage grows and the player card uses the full height in
-   Chrome/Safari — on the home-screen app the card already filled, so this
-   changes nothing there. (2) #tabs is pinned to the very bottom (bottom:0,
-   was 12px) so the nav sits at the screen's end, in the browser AND in the
-   home-screen app; the safe area stays INSIDE the nav's padding, so the
-   buttons still clear the home indicator. The 118px bottom padding on #room
-   still clears the fixed nav. Nothing else in the UI changes. */
-#room:not([hidden]){display:flex!important;flex-direction:column!important;min-height:100vh!important;min-height:100dvh!important}
-#tabs{bottom:0!important}
-/* v76.2: version badge (same as v89) — tiny, last item of the landing, so
-   Abhi can see exactly which version his phone is running. */
-#ver{font-size:11px;color:rgba(255,255,255,.45);text-align:center}
+/* v77: FULLY RESPONSIVE — same UI, fills the screen on any browser/device.
+   ROOT CAUSE (found by reading the CSS): the player card (.stage) and the
+   panes ALREADY had flex:1 + space-evenly + svh sizing — but their parent
+   #room was a plain block with no height, so flex:1 did NOTHING and the
+   card stayed content-height, leaving dead purple space below the nav.
+   And body used 100vh — the LARGE viewport (full screen height, including
+   the area behind the browser's address bar/tab bar). In the home-screen
+   app there is no browser chrome, so 100vh == the screen and it fit. In
+   Chrome/Safari the VISIBLE area is shorter, so the page never filled it.
+   FIX: #room becomes the flex column with min-height:100dvh (dynamic
+   viewport height — the VISIBLE area in the browser, the full screen in
+   the app). That SWITCHES ON the flex:1 the card/panes already had. The
+   transport buttons, disc and card gaps already scale with the viewport
+   via their existing svh clamp rules. No colour, icon, order or font
+   changes — only sizing. */
+body{min-height:100vh;min-height:100dvh}
+#room{display:flex;flex-direction:column;min-height:100vh;min-height:100dvh}
+/* v77 note: the transport buttons need NO new rule — they already scale
+   with the viewport via the existing #room[data-tab=play] #pp / #xp / #sk
+   clamp(...svh...) rules with !important. Verified: #pp is 62px at 844px
+   height and 47px at 644px height; #xp/#sk 50px -> 40px. Same for the disc
+   and the card gaps, which already use svh. */
 
-/* ===== v76.3: BROWSER CARD FIX — the player card's bottom buttons were
-   hidden behind the bottom nav in Chrome and Safari, but fine in the
-   home-screen app. WHY (measured on v76.2, PORT 3089): in a browser the
-   viewport is shorter (the URL bar + bottom toolbar take space), so the
-   stage is ~500px tall while its content is ~565px — the bottom ~65px
-   (the iOS volume tip, and the extras when video mode makes the deck
-   taller) is clipped by the stage's overflow:hidden. In the home-screen
-   app the viewport is the full 844px, so the card fits. The video button
-   made it worse: tapping it switches the deck to video mode (35svh),
-   ~95px taller, pushing the buttons further behind the nav. FIX (room
-   only — the landing and the tall home-screen app are NOT touched):
-   (1) On viewports 501–800px tall (every browser, and small phones) the
-   Play-tab stage can scroll vertically, so no button is ever permanently
-   hidden — the user can always reach the bottom. A tall home-screen app
-   (844px) is above 800px and stays exactly as it is, non-scrolling.
-   (2) The video deck is capped at 26svh on short screens (was 35svh),
-   so tapping the video button no longer shoves the buttons down.
-   (3) The deck and the gaps shrink a little on short screens so the
-   card mostly fits without needing to scroll. The range query keeps the
-   existing below-500px rules (which shrink harder) and the above-800px
-   behaviour (home-screen app) untouched. */
-@media(max-height:800px) and (min-height:501px){
-  #room[data-tab=play] .stage{overflow-y:auto!important;overflow-x:hidden!important;justify-content:flex-start!important;gap:2px!important;padding-bottom:16px!important}
-  #room[data-tab=play] .deck{width:clamp(84px,min(40vw,16svh),160px)!important}
-  #room[data-tab=play] .deck.vid{width:min(100%,26svh)!important}
-  #room[data-tab=play] .xtra{--pill-size:clamp(32px,4.6svh,40px)}
+/* ===== v79: UNIVERSAL LAYOUT — one layout for every screen ratio, in Chrome,
+   Safari, and the home-screen app. v77's 100dvh + fixed-nav fix passed in the
+   sandbox but NOT on a real iPhone: the nav floated ~90px above the screen
+   bottom and the player card's bottom hid behind it, in BOTH Chrome and the
+   home-screen app. The sandbox (desktop Chromium) cannot reproduce iOS
+   Safari's viewport behaviour, so v79 stops depending on it entirely:
+   (1) the room's height comes from --vh, set by JS in index.html to
+   window.innerHeight (the TRUE visible height on iOS); (2) the bottom nav
+   is now a normal flex child at the bottom of the room, NOT position:fixed
+   — so it is ALWAYS at the screen's end, on any ratio; (3) the page never
+   scrolls inside a room, so nothing can sit below the fold; (4) the stage
+   content shrinks harder on short screens so the WHOLE card is visible.
+   No colour, icon, order or font changes — only sizing/positioning. */
+:root{--vh:1dvh}
+body.in-room{overflow:hidden!important}
+#room{min-height:calc(var(--vh)*100)!important;height:calc(var(--vh)*100)!important;padding-bottom:0!important}
+#room[data-tab=play]{padding-bottom:0!important}
+#room:not([data-tab=play]){padding-bottom:0!important}
+/* the nav is in-flow now: it sits at the bottom of the flex column, so it is
+   at the screen's end on every device. Its look is unchanged. */
+#tabs{position:static!important;left:auto!important;bottom:auto!important;transform:none!important;
+  width:100%!important;max-width:520px!important;margin:6px auto 12px!important;flex:0 0 auto!important}
+#room>header{flex:0 0 auto!important}
+/* the Sing mic sticks 34px above the nav; give the stage bottom padding so
+   its last line (the iOS volume tip) never hides under the mic. */
+#room[data-tab=play] .stage{padding-bottom:clamp(44px,6.5svh,52px)!important}
+/* short screens: shrink the card harder so the WHOLE card is visible. */
+@media (max-height:760px){
+  #room[data-tab=play] .deck{width:clamp(80px,min(40vw,15svh),150px)!important}
+  #room[data-tab=play] #pp{width:clamp(44px,6.5svh,56px)!important;height:clamp(44px,6.5svh,56px)!important}
+  #room[data-tab=play] #xp,#room[data-tab=play] #sk{width:clamp(38px,5.5svh,46px)!important;height:clamp(38px,5.5svh,46px)!important}
+  #room[data-tab=play] .stage{gap:clamp(1px,.5svh,4px)!important}
+  #addlink{padding:6px 11px!important;font-size:.75rem!important}
+}
+@media (max-height:620px){
+  #room[data-tab=play] .deck{width:clamp(72px,min(36vw,13svh),120px)!important}
+  #room[data-tab=play] .xtra{--pill-size:clamp(30px,4.5svh,38px)}
+  .ios-vol-tip{font-size:.68rem!important}
+  /* last resort on a very short screen: the card scrolls inside itself
+     rather than hiding anything behind the nav. */
+  #room[data-tab=play] .stage{overflow-y:auto!important}
 }
 
+/* ===== v80: LANDING PAGE FILLS THE SCREEN TOO (universal). The v79 fix made
+   the ROOM fill the screen, but the LANDING page still used 100dvh for its
+   height — and on a real iPhone 100dvh is shorter than the screen. In Chrome
+   the bottom is taken by the browser's own toolbar, so the page looked full;
+   in the home-screen app that toolbar is gone, the screen is taller, and the
+   landing content ended early leaving a dead gap at the bottom. Fix: the
+   landing page's height now comes from --vh (the JS-set true visible height,
+   same as the room), and its content spreads out evenly (space-evenly) so
+   there is no dead gap at the bottom on any screen. On a short screen the
+   content can scroll inside the page rather than being clipped. No colour,
+   icon, order or font changes — only sizing/distribution. */
+main#home,main#gate{height:calc(var(--vh)*100)!important;min-height:calc(var(--vh)*100)!important}
+#home{align-content:space-between!important}
+/* short screen safety: if the landing content is taller than the visible
+   area (a browser with its bars), let it scroll instead of clipping.
+   The threshold is 780px, not 700px: on a tall phone Safari and Chrome keep
+   a top URL bar AND a bottom toolbar, so the visible page is only ~725-780px
+   even though the screen is 844-932px. Below 780px the landing content
+   shrinks so Recent rooms stays visible in every browser, while the
+   home-screen app (taller, no bars) keeps the full-size layout. */
+@media (max-height:780px){
+  main#home{overflow-y:auto!important}
+  /* shrink the landing content on a short screen so EVERYTHING — including
+     Recent rooms at the bottom — fits without scrolling. The hero and the
+     gaps are the biggest consumers; shrinking them buys ~80px, which covers
+     the worst short-Chrome overflow. */
+  #home{gap:4px!important}
+  /* the base `main` rule forces padding-top:7vh with !important (~45px on a
+     short screen) — that alone eats the space Recent rooms needs. Bring the
+     top padding down to the safe area on short screens. */
+  #home{padding-top:max(10px,env(safe-area-inset-top))!important}
+  #home .hero3d{width:clamp(80px,min(38vw,15svh),120px)!important}
+  #home .hero-title{font-size:clamp(1.5rem,4.5svh,1.8rem)!important}
+  #home .lead{font-size:clamp(.72rem,1.8svh,.8rem)!important}
+  #home .eq{height:clamp(12px,2.2svh,20px)!important}
+}
+/* very short AND narrow screens (small phones in Chrome): the Recent-rooms
+   chips wrap to two rows, so the page needs a little more room. Tighten
+   the hero and the gaps a touch further so Recent rooms still fits. */
+@media (max-height:650px){
+  #home{gap:3px!important}
+  #home .hero3d{width:clamp(72px,min(34vw,13svh),100px)!important}
+}
+
+/* ===== v80 (tiny screens): the very smallest phones (iPhone SE 320x568).
+   At 320px wide the 5 Recent-rooms chips wrap to two rows and the page is
+   56px too tall, so Recent rooms falls below the fold. On these tiny screens
+   only, show the 3 most recent rooms (the other 2 stay in history, one tap
+   away) and shrink the hero/gaps a touch more, so everything fits and
+   Recent rooms is visible without scrolling. */
+@media (max-height:600px) and (max-width:360px){
+  #home .recent-list a:nth-child(n+4){display:none!important}
+  #home .hero3d{width:64px!important}
+  #home{gap:2px!important}
+}
+
+/* ===== v81: FRESH HOME-SCREEN INSTALL HAS NO DEAD GAP. A home-screen app
+   keeps its OWN storage, separate from Safari/Chrome — so a freshly added
+   app has no Recent rooms saved yet and #recent is empty. An empty #recent
+   still sat in the grid as the last item, so space-between left a gap
+   between the description and the (invisible) empty section at the bottom.
+   Fix: when #recent is empty it leaves the layout entirely, so the
+   description becomes the last item and sits at the bottom. Once the user
+   joins/creates a room from the app, Recent rooms appears as normal. */
+#home #recent:empty{display:none!important}
+
+/* ===== v82: NAV PINNED TO THE VIEWPORT BOTTOM. v79 made the nav a flex
+   child of #room (position:static) so it sits at the bottom of the room.
+   That only works if #room is exactly as tall as the screen — and on a real
+   iPhone home-screen app, window.innerHeight (which --vh comes from) reads
+   a little shorter than the true screen, so #room ends ~50px short and the
+   nav floats ~60px above the screen's end with dead space below it.
+   Fix: the nav no longer depends on #room's height at all — it is pinned
+   to the viewport itself (position:fixed; bottom:0), so it is ALWAYS at the
+   screen's very end, in the browser and in the home-screen app. The safe
+   area stays INSIDE the nav (its bottom padding), so the buttons still
+   clear the home indicator. #room gets its bottom padding back so the
+   card/panes end above the fixed nav instead of sliding under it. */
+#tabs{position:fixed!important;left:50%!important;bottom:0!important;transform:translateX(-50%)!important;width:min(calc(100% - 24px),520px)!important;max-width:520px!important;margin:0 auto!important;flex:none!important}
+#room{padding-bottom:calc(92px + var(--sab,env(safe-area-inset-bottom,0px)))!important}
+#room[data-tab=play]{padding-bottom:calc(92px + var(--sab,env(safe-area-inset-bottom,0px)))!important}
+#room:not([data-tab=play]){padding-bottom:calc(92px + var(--sab,env(safe-area-inset-bottom,0px)))!important}
+
+/* ===== v83: PAGE FILLS THE SCREEN EVEN WHEN iPHONE UNDER-REPORTS innerHeight.
+   The landing page and the room both measured their height from --vh, which
+   comes from window.innerHeight. On a real iPhone 13 home-screen app that
+   number comes out ~50px shorter than the true screen, so the page itself
+   ended early and "Recent rooms" (which sits at the page's bottom) ended
+   early too — a dead gap below it. The sandbox cannot reproduce this:
+   desktop Chromium reports the full height, so it looked right there.
+   Fix: the page now takes the LARGER of the true dynamic viewport height
+   (100dvh) and the JS-measured height (--vh). If the phone under-reports,
+   100dvh takes over and the page fills the screen; if --vh is right, it
+   wins as before. Same for the room (its nav is already pinned by v82,
+   but the room content should fill too). */
+#home,#gate{height:max(100dvh,calc(var(--vh)*100))!important;min-height:max(100dvh,calc(var(--vh)*100))!important}
+main#home,main#gate{height:max(100dvh,calc(var(--vh)*100))!important;min-height:max(100dvh,calc(var(--vh)*100))!important}
+#room{min-height:max(100dvh,calc(var(--vh)*100))!important;height:max(100dvh,calc(var(--vh)*100))!important}
+
+/* ===== v84: PIN THE LANDING TO THE SCREEN ITSELF. v80-v83 all measured the
+   page height (innerHeight, then 100dvh, then the larger of the two) — but
+   every one of those numbers still comes from the phone, and on a real
+   iPhone 13 the number comes out short, so the page ended early and
+   "Recent rooms" ended early with it. The iPhone's bottom edge is curved,
+   and the page kept stopping where the curve begins.
+   This version does not measure anything. The landing and the gate are
+   pinned to the viewport itself (position:fixed; inset:0 — top, bottom,
+   left and right all 0), so they ARE the screen, whatever the phone
+   reports. The content inside still spreads with space-between, so
+   "Recent rooms" sits at the bottom, just above the home indicator. The
+   safe-area padding stays, so nothing hides behind the home indicator. */
+main#home,main#gate{position:fixed!important;top:0!important;left:0!important;right:0!important;bottom:0!important}
+
+/* ===== v84b: PIN THE ROOM TO THE SCREEN TOO. Same idea as the landing:
+   the room also measured its height (--vh / 100dvh), and on a real iPhone
+   that number comes out short, so the room ended early. Now the room is
+   pinned to the viewport itself (position:fixed; inset:0), so it IS the
+   screen, whatever the phone reports. The bottom nav is already pinned
+   (v82) and the room's bottom padding still keeps the card and panes
+   clear of it. Every bottom-anchored element — landing, gate, room, nav —
+   now adapts to the screen itself, including its curved bottom edges. */
+#room{position:fixed!important;top:0!important;left:0!important;right:0!important;bottom:0!important}
+
+/* ===== v85: BOTTOM FIX, TAKING REFERENCE FROM v69. Abhi (02:42 EST):
+   "still not covering that full bottom area" — "see v69 version there it
+   was fixed properly for bottom only not player card in middel take
+   reference fro that to fix its bottom". v69's landing was SIMPLE: just
+   height:100dvh (with 100vh/100svh fallbacks) and the body's fixed
+   background covering the whole screen. v80-v84 then layered --vh, then
+   max(100dvh,--vh), then position:fixed on top of it — and the --vh
+   number comes from the phone, which keeps reporting it short on a real
+   iPhone, so the page kept ending early. This version goes back to v69's
+   simple height for the landing and the gate (plain 100dvh, no --vh in
+   it at all) while KEEPING the viewport pin (position:fixed inset:0) so
+   the page is the screen itself. The room and its bottom nav are left
+   exactly as v84 (the player card in the middle was never the complaint). */
+main#home,main#gate{height:100vh!important;height:100svh!important;height:100dvh!important}
+
+/* ===== v87: LET IT DECIDE — no more restricting or limiting the height.
+   Abhi (03:22 EST): "why are you not just make it responsive and let it
+   decide instead of restricting or limiting it". He is right. v80-v86 kept
+   FORCING a height on the page (a measured --vh number, then max(100dvh,
+   --vh), then a fixed pin) — and every one of those numbers comes from the
+   phone, which reports it short on a real iPhone, so the page kept ending
+   early. This version REMOVES every height and position restriction and
+   lets the layout decide for itself: the body is a flex column that is the
+   screen, and the landing, the gate and the room are flex children that
+   GROW to fill it. No height is measured, no height is fixed, nothing is
+   pinned — the browser works out the size from the flow, on any screen,
+   including the iPhone's curved bottom edges. The content spreads with
+   space-between, so the last item (Recent rooms / the description) sits at
+   the bottom, just above the home indicator. The bottom nav stays pinned
+   (v82) — it is the one element that must sit on the screen's edge. */
+body{display:flex!important;flex-direction:column!important}
+main#home,main#gate{position:static!important;top:auto!important;left:auto!important;right:auto!important;bottom:auto!important;height:auto!important;min-height:0!important;flex:1 1 auto!important;width:100%!important}
+#room{position:static!important;top:auto!important;left:auto!important;right:auto!important;bottom:auto!important;height:auto!important;min-height:0!important;flex:1 1 auto!important}
+
+/* ===== v88: USE THE FULL BOTTOM SPACE. Abhi (03:38-03:39 EST): "it still
+   have that gap in its bottom unnecessary" + "use full bottom space
+   available in screen". Two changes, both about the bottom:
+   (1) THE BACKGROUND STAYS VIBRANT TO THE VERY BOTTOM. The body's gradient
+   faded to near-black (#14073f) at the bottom, so the bottom of the screen
+   read as a dark empty gap even when the page filled it. The bottom stop is
+   now a deep vibrant purple (#241068, the nav's own bottom colour) — the
+   whole screen stays purple, top to bottom, with no dark band.
+   (2) THE CONTENT IS FORCED TO USE THE FULL HEIGHT. On top of v87's flex
+   grow (the body is a flex column and the landing/gate/room grow to fill
+   it), the landing, the gate and the room now also carry min-height:100dvh
+   AND min-height:100% as a redundant guarantee, so they are the full screen
+   height even if the flex stretch does not fire on a given device. The
+   content spreads with space-between, so the last item sits at the bottom,
+   just above the home indicator — the full bottom space is used. */
+body{background:radial-gradient(75% 38% at 100% 100%,rgba(205,35,175,.5),transparent),radial-gradient(90% 30% at 0 0,rgba(120,70,255,.35),transparent),linear-gradient(180deg,#4a1fc4,#2a1275 40%,#241068)!important}
+main#home,main#gate{min-height:100vh!important;min-height:100svh!important;min-height:100dvh!important;min-height:100%!important}
+#room{min-height:100vh!important;min-height:100svh!important;min-height:100dvh!important;min-height:100%!important}
+
+/* ===== v89: DEFINITIVE BOTTOM FIX. Abhi (03:53 EST): "it still same still
+   not fixed this bottom problem". Two changes:
+   (1) THE BACKGROUND NEVER GOES DARK. The body's gradient faded to
+   near-black (#14073f) at the bottom, so the bottom of the screen read as a
+   dark empty gap even when the page filled it. The gradient now stays in
+   the purple family all the way down — bright #4a1fc4 at the top, #2a1275
+   at 40%, and a vibrant #3a1a8f at the very bottom. There is no dark stop
+   left anywhere in the background, so no dark band can appear at the
+   bottom of any screen.
+   (2) A VERSION BADGE, so we finally know what his phone is actually
+   running. A tiny "v89" sits at the very bottom of the landing page. If
+   Abhi sees "v89" and the bottom is still wrong, the fix genuinely is not
+   working on his device and I will take a different approach. If he sees
+   an older version (or no version), his home-screen app is still serving
+   a stale cached copy and has never loaded any of v80-v89. */
+body{background:radial-gradient(75% 38% at 100% 100%,rgba(205,35,175,.5),transparent),radial-gradient(90% 30% at 0 0,rgba(120,70,255,.35),transparent),linear-gradient(180deg,#4a1fc4,#2a1275 40%,#3a1a8f)!important}
+#ver{font-size:11px;line-height:1;color:rgba(255,255,255,.45);text-align:center;padding:2px 0 0}
+
+/* ===== v90: STANDALONE GETS ITS OWN LAYOUT. Abhi's insight (04:00 EST):
+   "previously we fixed it for Chrome's browsers bottom settings because in
+   Chrome's bottom area there are few buttons ... so we have fixed the bottom
+   for the Chrome browser's bottom limitations ... when I added as a home
+   screen app web app it follows through same and it has that gap ... where
+   there is no any of browser's button in the bottom there is no need of
+   bottom limitation bottom gap". He is right: every fix so far sized the
+   page for a BROWSER viewport (visible area above the browser's own bottom
+   toolbar) and reserved bottom space for that toolbar. The home-screen app
+   has NO browser toolbar — the full screen is free. So in standalone mode
+   (the home-screen app) the page gets its own layout: html/body are the
+   full screen, the landing/gate/room are flex children that GROW to fill
+   it, and the bottom padding is ONLY the home-indicator safe area — no
+   extra bottom reservation for a browser toolbar that is not there.
+   Browser mode is untouched. */
+@media (display-mode: standalone){
+ html,body{height:100%!important;min-height:100%!important}
+ body{display:flex!important;flex-direction:column!important}
+ main#home,main#gate{position:static!important;top:auto!important;left:auto!important;right:auto!important;bottom:auto!important;height:auto!important;min-height:0!important;flex:1 1 auto!important;width:100%!important}
+ #room{position:static!important;top:auto!important;left:auto!important;right:auto!important;bottom:auto!important;height:auto!important;min-height:0!important;flex:1 1 auto!important}
+ main#home,main#gate{padding-bottom:env(safe-area-inset-bottom,0px)!important}
+}
+
+/* v90 (continued): the same standalone layout via the html.standalone class
+   that app.js sets (safeArea), so it applies even where the display-mode
+   media query is not honoured. In the home-screen app the bottom padding
+   is ONLY the home-indicator safe area — no extra bottom reservation for
+   a browser toolbar that is not there. */
+html.standalone,html.standalone body{height:100%!important;min-height:100%!important}
+html.standalone body{display:flex!important;flex-direction:column!important}
+html.standalone main#home,html.standalone main#gate{position:static!important;top:auto!important;left:auto!important;right:auto!important;bottom:auto!important;height:auto!important;min-height:0!important;flex:1 1 auto!important;width:100%!important}
+html.standalone #room{position:static!important;top:auto!important;left:auto!important;right:auto!important;bottom:auto!important;height:auto!important;min-height:0!important;flex:1 1 auto!important}
+html.standalone main#home,html.standalone main#gate{padding-bottom:env(safe-area-inset-bottom,0px)!important}
+
+/* ===== v91: PIN TO THE VIEWPORT. Abhi (04:13 EST): "v90 is still wrong
+   not fixed". v87-v90 all relied on the BODY (flex column) to stretch the
+   landing/gate/room to the full height — if the body's own height is not
+   definite on the real iPhone, flex:1 has nothing to stretch into and the
+   page ends early. v91 stops depending on the body entirely: the landing,
+   the gate and the room are PINNED to the viewport itself
+   (position:fixed; inset:0), so they are exactly the screen size no matter
+   what the body measures. The nav stays pinned to the viewport bottom
+   (v82) and the room keeps its bottom padding so content clears it. The
+   min-height:100svh/100dvh is a fallback in case fixed positioning is ever
+   constrained. This rule is appended LAST so it wins over v87's
+   position:static and v90's standalone static rules. */
+main#home,main#gate{position:fixed!important;top:0!important;left:0!important;right:0!important;bottom:0!important;height:auto!important;min-height:100svh!important;min-height:100dvh!important}
+#room{position:fixed!important;top:0!important;left:0!important;right:0!important;bottom:0!important;height:auto!important;min-height:100svh!important;min-height:100dvh!important}
+
+/* v91 (specificity fix): the fixed pin above lost to v90's
+   html.standalone rules (ID+class+element beats plain ID+element). These
+   use the same selectors so they win by source order. */
+html.standalone main#home,html.standalone main#gate{position:fixed!important;top:0!important;left:0!important;right:0!important;bottom:0!important;height:auto!important;min-height:100svh!important;min-height:100dvh!important}
+html.standalone #room{position:fixed!important;top:0!important;left:0!important;right:0!important;bottom:0!important;height:auto!important;min-height:100svh!important;min-height:100dvh!important}
+html main#home,html main#gate{position:fixed!important;top:0!important;left:0!important;right:0!important;bottom:0!important;height:auto!important;min-height:100svh!important;min-height:100dvh!important}
+html #room{position:fixed!important;top:0!important;left:0!important;right:0!important;bottom:0!important;height:auto!important;min-height:100svh!important;min-height:100dvh!important}
+
+/* ===== v92: RESTORE THE v76 LANDING. Abhi (04:17 EST): "till version 76
+   everything was correct except for it player card on chrome browser and
+   safari browser — what did [you] change after that is the real issue
+   started". He is right. In v76 the landing was a SIMPLE layout that
+   worked: main#home/main#gate had a plain height (100vh/100svh/100dvh),
+   min-height:0, and the content was CENTERED; the body was a normal block,
+   not a flex container. v77 fixed the player card by making the BODY and
+   #room flex columns — but every version after that (v80 --vh height, v83
+   max(), v84 fixed pin, v85 100dvh+pin, v87 flex grow, v88 min-height,
+   v90 standalone, v91 fixed pin) kept piling NEW height/position rules
+   onto the LANDING too, and the landing's simple v76 layout was buried
+   under them. v92 restores the v76 landing EXACTLY (same height, same
+   centering, same padding) and scopes the flex layout to the ROOM ONLY:
+   the body is a normal block on the landing and a flex column ONLY when
+   body has class in-room. The v77 player-card fix stays (the room is
+   still a flex column that fills the screen in Chrome/Safari); the landing
+   is untouched by it. The version badge and the vibrant background stay. */
+html.standalone main#home,html.standalone main#gate,html main#home,html main#gate,main#home,main#gate{position:static!important;top:auto!important;left:auto!important;right:auto!important;bottom:auto!important;height:100vh!important;height:100svh!important;height:100dvh!important;min-height:0!important;flex:none!important;overflow:hidden!important;width:100%!important}
+html.standalone #home,html #home,#home{align-content:center!important}
+body{display:block!important}
+body.in-room{display:flex!important;flex-direction:column!important}
+
+/* v92 (body scope fix): the plain `body{display:block}` above lost to v90's
+   html.standalone body rule (higher specificity). These use the same
+   specificity and win by source order. On the landing (no in-room class)
+   the body is a normal block, exactly as in v76; in a room it is the flex
+   column the player card needs. */
+html body:not(.in-room){display:block!important}
+html body.in-room{display:flex!important;flex-direction:column!important}

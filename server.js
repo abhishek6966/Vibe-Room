@@ -68,7 +68,10 @@ async function youtubeEmbedStatus(id){
   return result;
 }
 function succeed(r){const c=online(r).filter(u=>u.id!==r.hostId);if(!c.length)return;
-  const n=c.find(u=>r.co.has(u.id))||c.sort((a,b)=>a.at-b.at)[0];r.co.delete(n.id);r.prevHostId=r.hostId;r.hostId=n.id;say(r,n.name+' is now the host');push(r)}
+  const n=c.find(u=>r.co.has(u.id))||c.sort((a,b)=>a.at-b.at)[0];
+  /* v78: remember who just lost the seat, so they can reclaim it the instant
+     they rejoin (a mistaken leave/disconnect does not cost them the room). */
+  r.prevHostId=r.hostId;r.co.delete(n.id);r.hostId=n.id;say(r,n.name+' is now the host');push(r)}
 io.on('connection',s=>{let r=null,me=null,lastVideoCheck=0;
   s.on('ping',t=>s.emit('pong',t)); /* v13: round-trip measurement for sync */
   s.on('create',(u,cb)=>{const c=newCode();rooms.set(c,{code:c,hostId:u.id,prevHostId:null,co:new Set(),ctrl:new Set(),reqs:[],locked:false,queue:[],history:[],cur:null,bans:new Set(),bad:new Set(),users:new Map(),speed:1,repeat:'off',mode:'music',adders:new Set(),last:now()});cb({code:c})});
@@ -89,12 +92,16 @@ io.on('connection',s=>{let r=null,me=null,lastVideoCheck=0;
     r=x;s.join(r.code);old=r.users.get(id);
     me={id,name:String(u.name).slice(0,20)||'Guest',color:String(u.color).slice(0,30),connected:true,at:old?old.at:now(),sid:s.id};
     r.users.set(me.id,me);clearTimeout(r.t);if(!old)say(r,me.name+' joined');
-    /* v76.2 (host rules, from v77+v78): one user in the room is the host,
-       forever — if you are alone you hold the seat. And the ORIGINAL host
-       gets the seat back the moment they rejoin (they may have left by
-       mistake): the displaced host becomes a co-host and keeps control. */
+    /* v77: ONE USER = HOST, FOREVER. If this is the only person online in
+       the room, they are the host — covers joining an empty room, and a
+       lone user rejoining after a drop. A single user never loses the seat
+       to nobody. */
     if(online(r).length===1)r.hostId=me.id;
-    if(r.prevHostId===me.id&&r.hostId!==me.id){const oldHost=r.hostId;if(oldHost&&r.users.has(oldHost))r.co.add(oldHost);r.co.delete(me.id);r.prevHostId=oldHost||null;r.hostId=me.id;say(r,me.name+' is back as the host')}
+    /* v78: the previous host reclaims the seat the instant they rejoin.
+       If the person who was host before (and lost it by leaving or going
+       offline) comes back, they are host again at once. The host they
+       displace becomes a co-host, so they keep control. */
+    if(r.prevHostId===me.id&&r.hostId!==me.id){const old=r.hostId;if(old&&r.users.has(old))r.co.add(old);r.co.delete(me.id);r.prevHostId=old||null;r.hostId=me.id;say(r,me.name+' is back as the host')}
     push(r);cb({ok:1,id:me.id})});
   s.on('check-video',async(url,cb)=>{if(typeof cb!=='function')return;if(!r||!me)return cb({status:'error'});
     if(now()-lastVideoCheck<600)return cb({status:'rate-limited'});lastVideoCheck=now();
@@ -176,9 +183,12 @@ io.on('connection',s=>{let r=null,me=null,lastVideoCheck=0;
     if(rr.hostId===me.id)succeed(rr);rr.last=now()}); /* v20: explicit Leave — host passes on at once instead of the 12s disconnect grace */
   s.on('rtc',m=>{const u=r&&me&&r.users.get(m.to);if(u&&u.connected)io.to(u.sid).emit('rtc',{from:me.id,data:m.data})});
   s.on('disconnect',()=>{if(!r||!me)return;const u=r.users.get(me.id);if(!u||u.sid!==s.id)return;u.connected=false;if(r.cur&&r.cur.singerId===me.id)r.cur.live=false;push(r);const rr=r;
-    /* v76.2: no grace — the moment the host goes offline, the next user is
-       the host at once. (The original host gets the seat back on rejoin,
-       see the join handler.) */
+    /* v77: HOST HANDOVER IS INSTANT ON DISCONNECT. The moment the host goes
+       offline, the next user becomes host at once — no 12s grace. (v25's
+       grace is removed: it protected a host whose network blipped for a few
+       seconds, but Abhi wants the handover instant. Trade-off: a host whose
+       connection blips for 2s loses the seat and rejoins as a regular user;
+       they do NOT get it back automatically.) */
     if(rr.hostId===me.id)succeed(rr);rr.last=now()})});
 setInterval(()=>{for(const [c,r] of rooms){if(r.cur&&r.cur.playing)push(r);else if(online(r).length)push(r);if(!online(r).length&&now()-r.last>864e5)rooms.delete(c)}},1000); /* v53: 1s heartbeat (was 2s) so drift is corrected sooner — fresher state for the tighter sync */
 srv.listen(process.env.PORT||3000,()=>console.log('Vibe Room on :'+(process.env.PORT||3000)));

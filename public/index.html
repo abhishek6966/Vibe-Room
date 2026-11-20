@@ -30,6 +30,13 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
 <!-- v69: APK SMOOTH — detect the native app (Android WebView) BEFORE the CSS loads, so the apk-safe rendering (no backdrop-filter) applies from the very first paint with no flash of flicker. The Android WebView user agent contains "wv". app.js re-checks for window.Capacitor as a backup. -->
 <script>try{if(/\bwv\b/.test(navigator.userAgent))document.documentElement.classList.add('apk')}catch(e){}</script>
+<!-- v79: UNIVERSAL LAYOUT — set --vh to the TRUE visible height (window.innerHeight).
+     On real iOS Safari (Chrome and the home-screen app) 100dvh/100vh does not
+     match the visible area, so the room ended up shorter than the screen and
+     the nav floated ~90px above the bottom. innerHeight IS the visible area,
+     so --vh is exact on every device and ratio. Re-set on resize,
+     orientationchange and visualViewport resize (browser chrome showing/hiding). -->
+<script>(function(){function setVH(){try{document.documentElement.style.setProperty('--vh',(window.innerHeight*0.01)+'px')}catch(e){}}setVH();window.addEventListener('resize',setVH);window.addEventListener('orientationchange',setVH);if(window.visualViewport)window.visualViewport.addEventListener('resize',setVH)})();</script>
 <link rel="stylesheet" href="/style.css"></head><body>
 <div class="glow"></div>
 <div id="fx" aria-hidden="true"><div class="smoke s1"></div><div class="smoke s2"></div><div class="smoke s3"></div><div class="smoke s4"></div><div class="smoke s5"></div><div class="smoke s6"></div><div class="smoke s7"></div><div id="stars"></div><div id="fnotes"></div></div>
@@ -44,7 +51,7 @@
  <button id="scan-qr" type="button" class="scan-btn"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><rect x="7" y="7" width="10" height="10" rx="2"/><line x1="7" y1="12" x2="17" y2="12"/></svg> Scan QR code to join</button>
  <p class="steps">Create a room, share the link, paste YouTube links, listen together.</p>
  <div id="recent"></div>
- <div id="ver" aria-hidden="true">v76.3</div>
+ <div id="ver" aria-hidden="true">v92</div>
 </main>
 <main id="gate" hidden>
  <div class="gate-badge"><img src="/gate-vibe.jpg" alt="Join the vibe"></div>
