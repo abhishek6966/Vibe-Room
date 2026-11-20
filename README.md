@@ -90,7 +90,7 @@ It runs as a web app on any phone or computer, and it can be added to a phone's 
 - **Bottom navigation** — docked at the very bottom of the screen, with all four corners the same radius, following your device's own bottom screen shape.
 - **Cool mode** — a switch in the More tab turns the page flat and dark and lets the screen sleep, so the phone stays cool while music plays; leave it untouched for 30 seconds and the animations freeze instead (same colours, nothing moving) until you tap.
 - **Installable (PWA)** — add it to your home screen from Safari or Chrome for a full-screen app experience.
-- **Android app** — a native APK wrapper loads the live site, with background audio that keeps playing after the screen locks (the lock-screen play/pause buttons control the room), mic/files/Bluetooth permissions, the Vibe Room logo as its icon, and a self-update check that offers a new version whenever one is released.
+- **Android app** — a native APK wrapper loads the live site, with background audio that keeps playing after the screen locks (the lock-screen play/pause buttons control the room), a flicker-free interface (buttons, cards and notifications stay steady while music plays), mic/files/Bluetooth permissions, the Vibe Room logo as its icon, and a self-update check that offers a new version whenever one is released.
 - **Share card & favicon** — sharing the room link shows a proper preview card (the neon emblem, the name, and the tagline) on WhatsApp, iMessage, X, and Facebook, and the browser tab shows the emblem as its icon.
 - **Mini-player** — a compact player bar follows you across the Queue, Sing, Room, and More tabs.
 - **Media Session** — lock-screen play, pause, skip, previous, and seek on supported browsers.
