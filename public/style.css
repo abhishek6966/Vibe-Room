@@ -1386,3 +1386,59 @@ body.in-room{overflow:hidden!important}
      rather than hiding anything behind the nav. */
   #room[data-tab=play] .stage{overflow-y:auto!important}
 }
+
+/* ===== v80: LANDING PAGE FILLS THE SCREEN TOO (universal). The v79 fix made
+   the ROOM fill the screen, but the LANDING page still used 100dvh for its
+   height — and on a real iPhone 100dvh is shorter than the screen. In Chrome
+   the bottom is taken by the browser's own toolbar, so the page looked full;
+   in the home-screen app that toolbar is gone, the screen is taller, and the
+   landing content ended early leaving a dead gap at the bottom. Fix: the
+   landing page's height now comes from --vh (the JS-set true visible height,
+   same as the room), and its content spreads out evenly (space-evenly) so
+   there is no dead gap at the bottom on any screen. On a short screen the
+   content can scroll inside the page rather than being clipped. No colour,
+   icon, order or font changes — only sizing/distribution. */
+main#home,main#gate{height:calc(var(--vh)*100)!important;min-height:calc(var(--vh)*100)!important}
+#home{align-content:space-between!important}
+/* short screen safety: if the landing content is taller than the visible
+   area (a browser with its bars), let it scroll instead of clipping.
+   The threshold is 780px, not 700px: on a tall phone Safari and Chrome keep
+   a top URL bar AND a bottom toolbar, so the visible page is only ~725-780px
+   even though the screen is 844-932px. Below 780px the landing content
+   shrinks so Recent rooms stays visible in every browser, while the
+   home-screen app (taller, no bars) keeps the full-size layout. */
+@media (max-height:780px){
+  main#home{overflow-y:auto!important}
+  /* shrink the landing content on a short screen so EVERYTHING — including
+     Recent rooms at the bottom — fits without scrolling. The hero and the
+     gaps are the biggest consumers; shrinking them buys ~80px, which covers
+     the worst short-Chrome overflow. */
+  #home{gap:4px!important}
+  /* the base `main` rule forces padding-top:7vh with !important (~45px on a
+     short screen) — that alone eats the space Recent rooms needs. Bring the
+     top padding down to the safe area on short screens. */
+  #home{padding-top:max(10px,env(safe-area-inset-top))!important}
+  #home .hero3d{width:clamp(80px,min(38vw,15svh),120px)!important}
+  #home .hero-title{font-size:clamp(1.5rem,4.5svh,1.8rem)!important}
+  #home .lead{font-size:clamp(.72rem,1.8svh,.8rem)!important}
+  #home .eq{height:clamp(12px,2.2svh,20px)!important}
+}
+/* very short AND narrow screens (small phones in Chrome): the Recent-rooms
+   chips wrap to two rows, so the page needs a little more room. Tighten
+   the hero and the gaps a touch further so Recent rooms still fits. */
+@media (max-height:650px){
+  #home{gap:3px!important}
+  #home .hero3d{width:clamp(72px,min(34vw,13svh),100px)!important}
+}
+
+/* ===== v80 (tiny screens): the very smallest phones (iPhone SE 320x568).
+   At 320px wide the 5 Recent-rooms chips wrap to two rows and the page is
+   56px too tall, so Recent rooms falls below the fold. On these tiny screens
+   only, show the 3 most recent rooms (the other 2 stay in history, one tap
+   away) and shrink the hero/gaps a touch more, so everything fits and
+   Recent rooms is visible without scrolling. */
+@media (max-height:600px) and (max-width:360px){
+  #home .recent-list a:nth-child(n+4){display:none!important}
+  #home .hero3d{width:64px!important}
+  #home{gap:2px!important}
+}
