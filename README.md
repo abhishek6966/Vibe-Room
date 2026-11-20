@@ -43,6 +43,7 @@ Vibe Room is a shared listening room for YouTube. One person hosts, everyone lis
 - **Scan a room QR code** — the home page has a **Scan QR code to join** button that opens your camera; point it at a room's QR code and you join instantly.
 - **Hand over control** — the host can give playback control to any guest.
 - **Switch to karaoke** — the host picks a singer and their live voice streams to everyone, over the music.
+- **Free, supported by ads** — a small ad card appears only inside a joined room, after 5 seconds of no activity, and a bigger ad board over the middle of the player on the Play tab; closing one closes both. Ads never show on the landing page and never cover the player controls.
 
 It runs as a web app on any phone or computer, and it can be added to a phone's home screen like a native app.
 

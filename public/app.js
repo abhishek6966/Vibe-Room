@@ -751,3 +751,58 @@ window.addEventListener('focus',()=>{if(!document.hidden)keepPlaying()});
    fast and the app can be added to the home screen. It never caches rooms or
    live data, so a room is never stale. */
 if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('/sw.js').catch(()=>{})})}
+/* v66: ADS — Google AdSense, hovering small-card board. ONE small card, fixed over the screen on EVERY page (landing, Play, Queue, Sing, Room, More). It never changes the layout (position:fixed = no reflow, nothing moves or resizes), it is silent (AdSense display ads make no sound), and it is clean and attractive (small rounded glass card in the app's own purple, tiny "Ad" label, round ×).
+   v67: ADS — ONE BIG board too, over the middle of the playboard (Play tab only, 320×250, centred over the vinyl disc, ending just above the seek bar so the seek bar, controls and volume stay tappable). It follows the same rules as the small card (5s idle, joined rooms only, hidden until AdSense is connected) and has its own ×. CLOSE ONE, CLOSE ALL: closing either board (small or big) hides BOTH at the same time (adHide always hides both); after 5s more idle they come back together.
+   RULES (Abhi's): (1) they show ONLY inside a joined room — never on the main landing page (Create / Join a room); (2) they show ONLY after 5 seconds of no activity — any tap, key, scroll or swipe hides them and restarts the 5s timer; (3) the × closes them the moment it is touched (and closing one closes both); (4) they NEVER show if Google AdSense is not connected — until the developer replaces ADSENSE_CLIENT and ADSENSE_SLOT below with real AdSense values, both boards stay hidden and the app looks exactly as before (zero change). Both boards share the SAME ad unit (one Publisher ID + one Slot ID to paste), so the developer only creates one Display ad unit.
+   HOW TO CONNECT (developer): create a free account at https://adsense.google.com, add the site (vibe-room-0isd.onrender.com), wait for approval, then copy your Publisher ID (ca-pub-XXXXXXXXXXXXXXXX) into ADSENSE_CLIENT and one Ad Unit ID into ADSENSE_SLOT, push, and the board starts showing. Earnings appear in the AdSense dashboard; payout is at $100 to your bank. */
+const ADSENSE_CLIENT=(typeof window!=='undefined'&&window.__adsenseClient)?window.__adsenseClient:'ca-pub-XXXXXXXXXXXXXXXX';
+const ADSENSE_SLOT=(typeof window!=='undefined'&&window.__adsenseSlot)?window.__adsenseSlot:'0000000000';
+const ADS_CONFIGURED=!ADSENSE_CLIENT.includes('XXXX')&&ADSENSE_SLOT!=='0000000000';
+const AD_IDLE_MS=5000;
+const adBoard=document.querySelector('#ad-board');
+const adBoardBig=document.querySelector('#ad-board-big'); /* v67: the BIG board over the middle of the playboard (Play tab only). */
+let adTimer=null,adPushed=false,adPushedBig=false,adScriptDone=false;
+function adLoadScript(){if(!ADS_CONFIGURED||adScriptDone||window.adsbygoogle)return;adScriptDone=true;try{const s=document.createElement('script');s.async=true;s.crossOrigin='anonymous';s.src='https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client='+encodeURIComponent(ADSENSE_CLIENT);document.head.appendChild(s)}catch(e){}}
+function adPlace(){ /* v66: put the small card where it covers NOTHING — measured at show time, so it works on any tab/device. Play tab: just below the extras row / iOS tip (the stage's empty bottom padding). Other tabs: just below the mini-player if it fits above the nav, else just above the mini-player (floating over the scrolling list). v67: also places the BIG board — centred over the vinyl disc, ending just above the seek bar, so it never covers the seek bar, controls or volume. */
+  if(!adBoard)return;const H=44,GAP=4;
+  const nav=document.querySelector('#tabs');
+  const navTop=nav?nav.getBoundingClientRect().top:innerHeight;
+  const isPlay=(document.querySelector('#room')?.dataset.tab==='play');
+  adBoard.style.top='auto';adBoard.style.bottom='auto';
+  if(isPlay){
+    const xtra=document.querySelector('.xtra');
+    const tip=document.querySelector('.ios-vol-tip');
+    let below=0;
+    if(xtra)below=Math.max(below,xtra.getBoundingClientRect().bottom);
+    if(tip&&tip.getBoundingClientRect().height>0)below=Math.max(below,tip.getBoundingClientRect().bottom);
+    let top=below+GAP;
+    if(top+H>navTop-7)top=navTop-7-H;
+    adBoard.style.top=Math.max(0,top)+'px';
+  }else{
+    const mini=document.querySelector('#mini');
+    const miniShown=mini&&mini.classList.contains('show');
+    if(miniShown){
+      const mb=mini.getBoundingClientRect().bottom,mt=mini.getBoundingClientRect().top;
+      if(mb+GAP+H<=navTop-7){adBoard.style.bottom=(innerHeight-(mb+GAP+H))+'px'}
+      else{adBoard.style.bottom=(innerHeight-(mt-GAP))+'px'}
+    }else{
+      adBoard.style.bottom=(innerHeight-(navTop-7))+'px';
+    }
+  }
+  if(adBoardBig&&isPlay){ /* v67: BIG board over the middle of the playboard — its bottom sits 12px above the seek bar (#sc), so the disc and title are covered but the seek bar, controls and volume stay tappable. */
+    const sc=document.querySelector('#sc');
+    const scTop=sc?sc.getBoundingClientRect().top:innerHeight*0.5;
+    adBoardBig.style.top=Math.max(0,scTop-12-250)+'px';
+  }
+}
+function adShow(){if(!ADS_CONFIGURED||!adBoard||!window.adsbygoogle||!inRoom())return;if(!adPushed){adPushed=true;try{const ins=adBoard.querySelector('ins');if(ins){ins.setAttribute('data-ad-client',ADSENSE_CLIENT);ins.setAttribute('data-ad-slot',ADSENSE_SLOT)}(window.adsbygoogle=window.adsbygoogle||[]).push({})}catch(e){}}adPlace();adBoard.classList.add('show');
+  const isPlay=(document.querySelector('#room')?.dataset.tab==='play'); /* v67: the BIG board shows ONLY on the Play tab, over the middle of the playboard. */
+  if(isPlay&&adBoardBig){if(!adPushedBig){adPushedBig=true;try{const ins=adBoardBig.querySelector('ins');if(ins){ins.setAttribute('data-ad-client',ADSENSE_CLIENT);ins.setAttribute('data-ad-slot',ADSENSE_SLOT)}(window.adsbygoogle=window.adsbygoogle||[]).push({})}catch(e){}}adBoardBig.classList.add('show')}}
+function adHide(){if(adBoard)adBoard.classList.remove('show');if(adBoardBig)adBoardBig.classList.remove('show')} /* v67: closing ONE board closes BOTH at the same time — adHide always hides the small card AND the big board. */
+const inRoom=()=>document.body.classList.contains('in-room'); /* v66: the app adds 'in-room' to <body> only once the user is inside a joined room (app.js line 281); the landing page (Create / Join) never has it, so ads never show there. */
+function adArm(){if(!ADS_CONFIGURED)return;if(adTimer)clearTimeout(adTimer);adHide();if(!inRoom())return;adTimer=setTimeout(adShow,AD_IDLE_MS)}
+['pointerdown','touchstart','touchmove','click','keydown','input','wheel'].forEach(ev=>document.addEventListener(ev,adArm,{passive:true}));
+document.addEventListener('scroll',adArm,{passive:true,capture:true});
+document.querySelector('#ad-x')?.addEventListener('click',()=>{adHide();adArm()});
+document.querySelector('#ad-x-big')?.addEventListener('click',()=>{adHide();adArm()}); /* v67: closing the BIG board also closes the small card (adHide hides both). */
+if(ADS_CONFIGURED){if(adBoard)adBoard.removeAttribute('hidden');if(adBoardBig)adBoardBig.removeAttribute('hidden');adLoadScript();adArm()}
