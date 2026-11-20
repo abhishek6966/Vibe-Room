@@ -1343,3 +1343,31 @@ html.apk .deck{transform-style:flat!important}
 /* v76.2: version badge (same as v89) — tiny, last item of the landing, so
    Abhi can see exactly which version his phone is running. */
 #ver{font-size:11px;color:rgba(255,255,255,.45);text-align:center}
+
+/* ===== v76.3: BROWSER CARD FIX — the player card's bottom buttons were
+   hidden behind the bottom nav in Chrome and Safari, but fine in the
+   home-screen app. WHY (measured on v76.2, PORT 3089): in a browser the
+   viewport is shorter (the URL bar + bottom toolbar take space), so the
+   stage is ~500px tall while its content is ~565px — the bottom ~65px
+   (the iOS volume tip, and the extras when video mode makes the deck
+   taller) is clipped by the stage's overflow:hidden. In the home-screen
+   app the viewport is the full 844px, so the card fits. The video button
+   made it worse: tapping it switches the deck to video mode (35svh),
+   ~95px taller, pushing the buttons further behind the nav. FIX (room
+   only — the landing and the tall home-screen app are NOT touched):
+   (1) On viewports 501–800px tall (every browser, and small phones) the
+   Play-tab stage can scroll vertically, so no button is ever permanently
+   hidden — the user can always reach the bottom. A tall home-screen app
+   (844px) is above 800px and stays exactly as it is, non-scrolling.
+   (2) The video deck is capped at 26svh on short screens (was 35svh),
+   so tapping the video button no longer shoves the buttons down.
+   (3) The deck and the gaps shrink a little on short screens so the
+   card mostly fits without needing to scroll. The range query keeps the
+   existing below-500px rules (which shrink harder) and the above-800px
+   behaviour (home-screen app) untouched. */
+@media(max-height:800px) and (min-height:501px){
+  #room[data-tab=play] .stage{overflow-y:auto!important;overflow-x:hidden!important;justify-content:flex-start!important;gap:2px!important;padding-bottom:16px!important}
+  #room[data-tab=play] .deck{width:clamp(84px,min(40vw,16svh),160px)!important}
+  #room[data-tab=play] .deck.vid{width:min(100%,26svh)!important}
+  #room[data-tab=play] .xtra{--pill-size:clamp(32px,4.6svh,40px)}
+}
